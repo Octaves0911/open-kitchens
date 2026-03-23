@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#5C2D0E"/>
+  <title>Checkout — Open Kitchens</title>
+  <link rel="icon" href="/images/logo.png" type="image/png"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header class="header">
+  <a href="/menu" class="header-logo" style="gap:8px;">
+    <span style="font-size:22px;color:var(--cream);">←</span>
+    <div class="header-logo-text">
+      <span class="brand-name">Checkout</span>
+      <span class="brand-tagline">Open Kitchens</span>
+    </div>
+  </a>
+  <div style="font-size:13px;color:rgba(255,255,255,.6);">Step 1 of 2</div>
+</header>
+
+<!-- ── Order Summary ──────────────────────────────────────────────────────── -->
+<div class="checkout-section" style="margin-top:12px;">
+  <h3>🧾 Order Summary</h3>
+  <div id="orderSummary">
+    <div style="color:var(--text-light);font-size:14px;text-align:center;padding:8px;">Loading cart...</div>
+  </div>
+  <div class="divider"></div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+    <span style="font-size:13px;color:var(--text-light);">Item Total</span>
+    <span id="itemTotal" style="font-size:13px;font-weight:600;color:var(--text-dark);">₹0</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+    <span style="font-size:13px;color:var(--text-light);">Delivery Fee</span>
+    <span style="font-size:13px;font-weight:600;color:#2E7D32;">FREE</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:6px;" id="discountRow" style="display:none;">
+    <span style="font-size:13px;color:var(--text-light);">Discount (FIRST50)</span>
+    <span style="font-size:13px;font-weight:600;color:#C62828;">− ₹50</span>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
+    <span style="font-size:13px;color:var(--text-light);">Packing & GST</span>
+    <span style="font-size:13px;font-weight:600;color:var(--text-dark);">₹20</span>
+  </div>
+  <div class="divider"></div>
+  <div style="display:flex;justify-content:space-between;margin-top:8px;">
+    <span style="font-size:15px;font-weight:800;color:var(--brown-dark);">Grand Total</span>
+    <span id="grandTotal" style="font-size:18px;font-weight:800;color:var(--rust);">₹0</span>
+  </div>
+</div>
+
+<!-- ── Coupon ──────────────────────────────────────────────────────────────── -->
+<div class="checkout-section">
+  <h3>🎁 Have a Coupon?</h3>
+  <div style="display:flex;gap:8px;">
+    <input type="text" id="couponCode" class="form-input" placeholder="Enter coupon code (try FIRST50)" style="flex:1;text-transform:uppercase;"/>
+    <button class="btn btn-amber btn-sm" onclick="applyCoupon()">Apply</button>
+  </div>
+  <div id="couponMsg" style="margin-top:8px;font-size:12px;"></div>
+</div>
+
+<!-- ── Delivery Address ────────────────────────────────────────────────────── -->
+<div class="checkout-section">
+  <h3>📍 Delivery Address</h3>
+  <div id="savedAddresses">
+    <div class="address-option selected" id="addr1" onclick="selectAddress('addr1')" style="padding:12px;border:2px solid var(--rust);border-radius:10px;margin-bottom:10px;cursor:pointer;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="font-size:12px;font-weight:700;color:var(--rust);background:#fff5f2;padding:2px 8px;border-radius:4px;">🏠 Home</span>
+        <span style="font-size:11px;color:var(--rust);font-weight:700;">Selected ✓</span>
+      </div>
+      <div style="font-size:14px;font-weight:600;color:var(--text-dark);">Flat 302, Sunrise Apartments</div>
+      <div style="font-size:12px;color:var(--text-light);">3rd Main, Hebbal · Bengaluru · 560024</div>
+    </div>
+  </div>
+  <button class="btn btn-outline btn-sm" onclick="showAddAddressForm()" style="width:100%;justify-content:center;">
+    + Add New Address
+  </button>
+  <div id="addAddressForm" style="display:none;margin-top:14px;">
+    <div class="form-group">
+      <label class="form-label">Flat / House No.</label>
+      <input type="text" class="form-input" placeholder="e.g. Flat 302, Tower B"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Building / Society</label>
+      <input type="text" class="form-input" placeholder="e.g. Sunrise Apartments"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Street / Area</label>
+      <input type="text" class="form-input" placeholder="e.g. 3rd Main, Hebbal"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Landmark</label>
+      <input type="text" class="form-input" placeholder="e.g. Near SBI ATM"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Pincode</label>
+      <input type="number" class="form-input" id="newPincode" placeholder="6-digit pincode"/>
+    </div>
+    <div class="map-placeholder" style="margin-bottom:14px;">
+      <span class="map-pin">📍</span>
+      <span style="font-size:13px;color:var(--text-mid);margin-left:10px;">Drop pin on map</span>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveAddress()">Save Address</button>
+  </div>
+</div>
+
+<!-- ── Delivery Time ───────────────────────────────────────────────────────── -->
+<div class="checkout-section">
+  <h3>⏱️ Estimated Delivery</h3>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div style="font-size:36px;">🛵</div>
+    <div>
+      <div style="font-size:18px;font-weight:800;color:var(--brown-dark);">28–35 minutes</div>
+      <div style="font-size:12px;color:var(--text-light);">From our kitchen at Hebbal to your doorstep</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Payment Method ─────────────────────────────────────────────────────── -->
+<div class="checkout-section">
+  <h3>💳 Payment Method</h3>
+  <div class="payment-options" id="paymentOptions">
+    <div class="payment-option selected" onclick="selectPayment(this,'upi')">
+      <div class="pay-icon">📱</div>
+      <div class="pay-label">UPI</div>
+    </div>
+    <div class="payment-option" onclick="selectPayment(this,'card')">
+      <div class="pay-icon">💳</div>
+      <div class="pay-label">Card</div>
+    </div>
+    <div class="payment-option" onclick="selectPayment(this,'netbanking')">
+      <div class="pay-icon">🏦</div>
+      <div class="pay-label">Net Banking</div>
+    </div>
+    <div class="payment-option" onclick="selectPayment(this,'cod')">
+      <div class="pay-icon">💵</div>
+      <div class="pay-label">Cash on Delivery</div>
+    </div>
+  </div>
+  <div id="upiSection" style="margin-top:14px;">
+    <div class="form-group">
+      <label class="form-label">UPI ID</label>
+      <input type="text" class="form-input" placeholder="yourname@upi"/>
+    </div>
+  </div>
+  <div id="cardSection" style="display:none;margin-top:14px;">
+    <div class="form-group">
+      <label class="form-label">Card Number</label>
+      <input type="text" class="form-input" placeholder="•••• •••• •••• ••••"/>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">Expiry</label>
+        <input type="text" class="form-input" placeholder="MM/YY"/>
+      </div>
+      <div class="form-group" style="margin-bottom:0;">
+        <label class="form-label">CVV</label>
+        <input type="text" class="form-input" placeholder="•••"/>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Special Instructions ───────────────────────────────────────────────── -->
+<div class="checkout-section">
+  <h3>📝 Special Instructions</h3>
+  <textarea class="form-input" rows="2" placeholder="Any special requests? (e.g. extra spicy, less oil, no onion...)" style="resize:none;"></textarea>
+</div>
+
+<!-- ── Place Order CTA ────────────────────────────────────────────────────── -->
+<div style="padding:16px;padding-bottom:32px;">
+  <div class="alert alert-info" style="margin-bottom:12px;">
+    🎥 <strong>Watch your food live!</strong> After placing your order, get a link to stream our kitchen in real-time.
+  </div>
+  <button class="btn btn-primary btn-full" style="font-size:16px;padding:16px;" onclick="placeOrder()">
+    🛒 Place Order — <span id="payBtnTotal">₹0</span>
+  </button>
+  <p style="text-align:center;font-size:11px;color:var(--text-light);margin-top:8px;">Secured by Razorpay · 100% safe payments</p>
+</div>
+
+<!-- ── Order Placed Confirmation ──────────────────────────────────────────── -->
+<div id="orderConfirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:20px;padding:32px 24px;margin:20px;text-align:center;max-width:380px;width:100%;animation:slideUp .3s ease;">
+    <div style="font-size:64px;margin-bottom:12px;">🎉</div>
+    <h2 style="font-size:22px;font-weight:800;color:var(--brown-dark);margin-bottom:8px;">Order Placed!</h2>
+    <p style="font-size:14px;color:var(--text-light);margin-bottom:16px;">Your order <strong id="confirmOrderId"></strong> has been confirmed. The kitchen is starting to prepare your food!</p>
+    <div style="background:var(--cream);border-radius:10px;padding:12px;margin-bottom:20px;border:1.5px solid var(--amber);">
+      <div style="font-size:13px;font-weight:700;color:var(--brown-dark);margin-bottom:6px;">🎥 Your kitchen stream is ready!</div>
+      <div style="font-size:12px;color:var(--text-light);">Watch our chef prepare your order live in the kitchen.</div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="goToTracking()">Track My Order →</button>
+  </div>
+</div>
+
+<script src="/js/menu-data.js"></script>
+<script>
+let selectedPayment = 'upi';
+let discount = 0;
+
+// ─── Render order summary ─────────────────────────────────────────────────────
+function renderSummary() {
+  const container = document.getElementById('orderSummary');
+  if (!cart || cart.length === 0) {
+    container.innerHTML = '<p style="color:var(--text-light);font-size:14px;">Cart is empty. <a href="/menu" style="color:var(--rust);font-weight:700;">Browse Menu →</a></p>';
+    return;
+  }
+  container.innerHTML = cart.map(item => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:14px;">
+      <span>${item.emoji} ${item.name} × ${item.qty}</span>
+      <span style="font-weight:600;color:var(--brown-dark);">₹${item.price * item.qty}</span>
+    </div>
+  `).join('');
+  updateTotals();
+}
+
+function updateTotals() {
+  const itemTotal = getCartTotal();
+  const grand = itemTotal + 20 - discount;
+  document.getElementById('itemTotal').textContent = `₹${itemTotal}`;
+  document.getElementById('grandTotal').textContent = `₹${grand}`;
+  document.getElementById('payBtnTotal').textContent = `₹${grand}`;
+}
+
+// ─── Coupon ───────────────────────────────────────────────────────────────────
+function applyCoupon() {
+  const code = document.getElementById('couponCode').value.trim().toUpperCase();
+  const msg = document.getElementById('couponMsg');
+  if (code === 'FIRST50') {
+    discount = 50;
+    msg.innerHTML = '<span style="color:#2E7D32;font-weight:600;">✅ FIRST50 applied — ₹50 off!</span>';
+    document.getElementById('discountRow').style.display = 'flex';
+    showToast('🎉 ₹50 discount applied!');
+  } else if (code === 'WELCOME10') {
+    discount = Math.floor(getCartTotal() * 0.1);
+    msg.innerHTML = `<span style="color:#2E7D32;font-weight:600;">✅ 10% off applied — ₹${discount} off!</span>`;
+    document.getElementById('discountRow').style.display = 'flex';
+    showToast('🎉 10% discount applied!');
+  } else {
+    discount = 0;
+    msg.innerHTML = '<span style="color:#C62828;font-weight:600;">❌ Invalid coupon code</span>';
+  }
+  updateTotals();
+}
+
+// ─── Address ──────────────────────────────────────────────────────────────────
+function showAddAddressForm() {
+  const form = document.getElementById('addAddressForm');
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectAddress(id) {
+  document.querySelectorAll('.address-option').forEach(a => {
+    a.style.borderColor = 'var(--border)';
+    a.querySelector('.selected-marker')?.remove();
+  });
+  const el = document.getElementById(id);
+  el.style.borderColor = 'var(--rust)';
+}
+
+function saveAddress() {
+  const pincode = document.getElementById('newPincode')?.value;
+  const zones = Object.keys(DELIVERY_ZONES);
+  if (!zones.includes(pincode)) {
+    showToast('❌ We don\'t deliver to this pincode yet');
+    return;
+  }
+  showToast('✅ Address saved!');
+  document.getElementById('addAddressForm').style.display = 'none';
+}
+
+// ─── Payment ──────────────────────────────────────────────────────────────────
+function selectPayment(el, type) {
+  selectedPayment = type;
+  document.querySelectorAll('.payment-option').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('upiSection').style.display = type === 'upi' ? 'block' : 'none';
+  document.getElementById('cardSection').style.display = type === 'card' ? 'block' : 'none';
+}
+
+// ─── Place order ──────────────────────────────────────────────────────────────
+function placeOrder() {
+  if (!cart || cart.length === 0) {
+    showToast('❌ Your cart is empty!');
+    return;
+  }
+  const btn = event.target;
+  btn.textContent = '⏳ Processing...';
+  btn.disabled = true;
+
+  // Simulate payment processing
+  setTimeout(() => {
+    const orderId = 'OK' + Date.now().toString().slice(-6);
+    localStorage.setItem('ok_order_id', orderId);
+    localStorage.setItem('ok_cart', '[]');
+    document.getElementById('confirmOrderId').textContent = `#${orderId}`;
+    document.getElementById('orderConfirm').style.display = 'flex';
+  }, 1800);
+}
+
+function goToTracking() {
+  window.location.href = '/tracking';
+}
+
+document.addEventListener('DOMContentLoaded', renderSummary);
+</script>
+</body>
+</html>

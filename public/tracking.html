@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#5C2D0E"/>
+  <title>Track Order — Open Kitchens</title>
+  <link rel="icon" href="/images/logo.png" type="image/png"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body class="has-bottom-nav">
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header class="header">
+  <a href="/menu" class="header-logo">
+    <img src="/images/logo.png" alt="Open Kitchens"/>
+    <div class="header-logo-text">
+      <span class="brand-name">Track Order</span>
+      <span class="brand-tagline">See What You Eat</span>
+    </div>
+  </a>
+  <div style="color:var(--amber);font-size:13px;font-weight:700;" id="headerOrderId"></div>
+</header>
+
+<!-- ── Order ID Banner ────────────────────────────────────────────────────── -->
+<div style="background:var(--surface);padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+  <div>
+    <div style="font-size:12px;color:var(--text-light);">Order ID</div>
+    <div style="font-size:16px;font-weight:800;color:var(--brown-dark);" id="orderIdDisplay">Loading...</div>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-size:12px;color:var(--text-light);">Est. Delivery</div>
+    <div style="font-size:14px;font-weight:700;color:var(--rust);" id="etaDisplay">28–35 mins</div>
+  </div>
+</div>
+
+<!-- ── Live Video Stream ──────────────────────────────────────────────────── -->
+<div style="margin:12px 16px 0;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+    <div style="font-size:15px;font-weight:700;color:var(--brown-dark);">🎥 Kitchen Live Stream</div>
+    <span id="streamStatus" style="font-size:11px;background:#E3F2FD;color:#1565C0;padding:3px 8px;border-radius:50px;font-weight:700;">Waiting...</span>
+  </div>
+  <div class="video-placeholder" id="videoArea">
+    <div class="live-badge" id="liveBadge" style="display:none;">
+      <span class="live-dot"></span> LIVE
+    </div>
+    <div id="videoInner" style="text-align:center;position:relative;z-index:1;">
+      <div style="font-size:48px;margin-bottom:12px;">👩‍🍳</div>
+      <div style="color:rgba(255,255,255,.8);font-size:14px;font-weight:600;">Chef will go live soon</div>
+      <div style="color:rgba(255,255,255,.5);font-size:12px;margin-top:6px;">Your food is being prepared with love</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-top:10px;">
+    <button id="watchBtn" class="btn btn-amber" style="flex:1;justify-content:center;" onclick="activateStream()">
+      ▶ Watch Live
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="showToast('📤 Share link copied!')">
+      Share 📤
+    </button>
+  </div>
+</div>
+
+<!-- ── Order Status Timeline ──────────────────────────────────────────────── -->
+<div style="margin:16px;">
+  <div style="font-size:15px;font-weight:700;color:var(--brown-dark);margin-bottom:12px;">📦 Order Progress</div>
+  <div class="tracking-timeline" style="background:var(--surface);border-radius:var(--radius);padding:20px;">
+    <div class="timeline-step" id="step-confirmed">
+      <div class="timeline-dot">
+        <div class="dot done" id="dot-confirmed"></div>
+        <div class="dot-line done" id="line-confirmed"></div>
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-step-title">✅ Order Confirmed</div>
+        <div class="timeline-step-sub" id="time-confirmed">Just now</div>
+      </div>
+    </div>
+    <div class="timeline-step active" id="step-preparing">
+      <div class="timeline-dot">
+        <div class="dot active" id="dot-preparing"></div>
+        <div class="dot-line" id="line-preparing"></div>
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-step-title">👩‍🍳 Preparing Your Order</div>
+        <div class="timeline-step-sub" id="time-preparing">Chef is cooking...</div>
+      </div>
+    </div>
+    <div class="timeline-step" id="step-dispatched">
+      <div class="timeline-dot">
+        <div class="dot" id="dot-dispatched"></div>
+        <div class="dot-line" id="line-dispatched"></div>
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-step-title">🛵 Out for Delivery</div>
+        <div class="timeline-step-sub" id="time-dispatched">—</div>
+      </div>
+    </div>
+    <div class="timeline-step" id="step-delivered">
+      <div class="timeline-dot">
+        <div class="dot" id="dot-delivered"></div>
+      </div>
+      <div class="timeline-content">
+        <div class="timeline-step-title">🎉 Delivered!</div>
+        <div class="timeline-step-sub" id="time-delivered">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Map Tracking ───────────────────────────────────────────────────────── -->
+<div style="margin:0 16px 16px;">
+  <div style="font-size:15px;font-weight:700;color:var(--brown-dark);margin-bottom:10px;">🗺️ Live Rider Tracking</div>
+  <div id="mapArea" style="border-radius:var(--radius);overflow:hidden;border:2px solid var(--border);position:relative;">
+    <!-- Simulated map -->
+    <div style="background:linear-gradient(135deg,#e8f5e9,#f1f8e9);height:220px;display:flex;align-items:center;justify-content:center;position:relative;">
+      <!-- Road lines -->
+      <svg style="position:absolute;inset:0;width:100%;height:100%;" viewBox="0 0 400 220">
+        <line x1="0" y1="110" x2="400" y2="110" stroke="#bdbdbd" stroke-width="6" stroke-dasharray="20,10"/>
+        <line x1="200" y1="0" x2="200" y2="220" stroke="#bdbdbd" stroke-width="6" stroke-dasharray="20,10"/>
+        <line x1="0" y1="0" x2="400" y2="220" stroke="#e0e0e0" stroke-width="3"/>
+      </svg>
+      <!-- Kitchen pin -->
+      <div id="kitchenPin" style="position:absolute;top:40px;left:60px;text-align:center;z-index:2;">
+        <div style="font-size:24px;">🏠</div>
+        <div style="font-size:9px;background:var(--brown-dark);color:#fff;padding:2px 6px;border-radius:4px;white-space:nowrap;">Kitchen</div>
+      </div>
+      <!-- Rider pin -->
+      <div id="riderPin" style="position:absolute;top:80px;left:140px;text-align:center;z-index:2;transition:all 0.5s ease;">
+        <div style="font-size:28px;animation:bounce 1s infinite;">🛵</div>
+        <div style="font-size:9px;background:var(--rust);color:#fff;padding:2px 6px;border-radius:4px;white-space:nowrap;">Rider</div>
+      </div>
+      <!-- Delivery pin -->
+      <div id="deliveryPin" style="position:absolute;top:60px;right:50px;text-align:center;z-index:2;">
+        <div style="font-size:24px;">📍</div>
+        <div style="font-size:9px;background:var(--amber);color:var(--brown-dark);padding:2px 6px;border-radius:4px;white-space:nowrap;">You</div>
+      </div>
+    </div>
+    <!-- Map overlay info -->
+    <div style="padding:10px 12px;background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:center;gap:10px;">
+      <span style="font-size:20px;">🛵</span>
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--brown-dark);" id="riderName">Rajesh K.</div>
+        <div style="font-size:12px;color:var(--text-light);">⭐ 4.8 · KA 05 AA 1234</div>
+      </div>
+      <div style="margin-left:auto;">
+        <button class="btn btn-secondary btn-sm" onclick="showToast('📞 Calling rider...')">📞 Call</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Rating Sheet ───────────────────────────────────────────────────────── -->
+<div class="cart-overlay" id="ratingOverlay"></div>
+<div class="cart-sheet" id="ratingSheet">
+  <div class="cart-handle"></div>
+  <div style="padding:20px;text-align:center;">
+    <div style="font-size:56px;margin-bottom:12px;">🎉</div>
+    <h2 style="font-size:20px;font-weight:800;color:var(--brown-dark);margin-bottom:8px;">Order Delivered!</h2>
+    <p style="font-size:14px;color:var(--text-light);margin-bottom:24px;">How was your Open Kitchens experience?</p>
+
+    <div style="margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text-mid);margin-bottom:8px;">Food Quality</div>
+      <div class="star-rating" style="justify-content:center;" id="foodRating">
+        <span class="star" onclick="rate('food',1)">⭐</span>
+        <span class="star" onclick="rate('food',2)">⭐</span>
+        <span class="star" onclick="rate('food',3)">⭐</span>
+        <span class="star" onclick="rate('food',4)">⭐</span>
+        <span class="star" onclick="rate('food',5)">⭐</span>
+      </div>
+    </div>
+    <div style="margin-bottom:20px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text-mid);margin-bottom:8px;">Delivery Speed</div>
+      <div class="star-rating" style="justify-content:center;" id="deliveryRating">
+        <span class="star" onclick="rate('delivery',1)">⭐</span>
+        <span class="star" onclick="rate('delivery',2)">⭐</span>
+        <span class="star" onclick="rate('delivery',3)">⭐</span>
+        <span class="star" onclick="rate('delivery',4)">⭐</span>
+        <span class="star" onclick="rate('delivery',5)">⭐</span>
+      </div>
+    </div>
+    <div style="margin-bottom:24px;">
+      <div style="font-size:13px;font-weight:600;color:var(--text-mid);margin-bottom:8px;">Overall</div>
+      <div class="star-rating" style="justify-content:center;" id="overallRating">
+        <span class="star" onclick="rate('overall',1)">⭐</span>
+        <span class="star" onclick="rate('overall',2)">⭐</span>
+        <span class="star" onclick="rate('overall',3)">⭐</span>
+        <span class="star" onclick="rate('overall',4)">⭐</span>
+        <span class="star" onclick="rate('overall',5)">⭐</span>
+      </div>
+    </div>
+    <textarea class="form-input" rows="2" placeholder="Any comments? (optional)" style="resize:none;margin-bottom:14px;text-align:left;"></textarea>
+    <button class="btn btn-primary btn-full" onclick="submitRating()">Submit Rating</button>
+    <button class="btn btn-secondary btn-full" style="margin-top:8px;" onclick="skipRating()">Skip for now</button>
+  </div>
+</div>
+
+<!-- ── Bottom Nav ─────────────────────────────────────────────────────────── -->
+<nav class="bottom-nav">
+  <a href="/" class="nav-item"><span class="nav-icon">🏠</span><span class="nav-label">Home</span></a>
+  <a href="/menu" class="nav-item"><span class="nav-icon">🍽️</span><span class="nav-label">Menu</span></a>
+  <a href="/tracking" class="nav-item active"><span class="nav-icon">📦</span><span class="nav-label">Orders</span></a>
+  <a href="#" class="nav-item"><span class="nav-icon">👤</span><span class="nav-label">Profile</span></a>
+</nav>
+
+<script src="/js/menu-data.js"></script>
+<script>
+const orderId = localStorage.getItem('ok_order_id') || 'OK' + Math.floor(Math.random()*999999);
+document.getElementById('orderIdDisplay').textContent = '#' + orderId;
+document.getElementById('headerOrderId').textContent = '#' + orderId;
+
+const ratings = { food: 0, delivery: 0, overall: 0 };
+let currentStep = 1; // 0=confirmed, 1=preparing, 2=dispatched, 3=delivered
+let streamActive = false;
+
+// ─── Simulate order progress ──────────────────────────────────────────────────
+const now = new Date();
+const fmt = (d) => d.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+document.getElementById('time-confirmed').textContent = fmt(now);
+
+function advanceStep(step, timeLabel) {
+  // step 2 = dispatched, step 3 = delivered
+  if (step >= 2) {
+    document.getElementById('dot-preparing').className = 'dot done';
+    document.getElementById('line-preparing').className = 'dot-line done';
+    document.getElementById('step-preparing').classList.remove('active');
+    document.getElementById('time-preparing').textContent = timeLabel;
+    document.getElementById('dot-dispatched').className = 'dot active';
+    document.getElementById('step-dispatched').classList.add('active');
+    document.getElementById('time-dispatched').textContent = 'On the way!';
+
+    // Switch to map tracking
+    document.getElementById('streamStatus').textContent = 'Order Dispatched';
+    document.getElementById('streamStatus').style.background = '#E8F5E9';
+    document.getElementById('streamStatus').style.color = '#2E7D32';
+    document.getElementById('videoArea').innerHTML = `
+      <div style="text-align:center;position:relative;z-index:1;padding:24px;">
+        <div style="font-size:48px;margin-bottom:12px;">🛵</div>
+        <div style="color:rgba(255,255,255,.8);font-size:14px;font-weight:600;">Your order is on the way!</div>
+        <div style="color:rgba(255,255,255,.5);font-size:12px;margin-top:6px;">Track the rider on the map below</div>
+      </div>`;
+    animateRider();
+  }
+  if (step >= 3) {
+    document.getElementById('dot-dispatched').className = 'dot done';
+    document.getElementById('line-dispatched').className = 'dot-line done';
+    document.getElementById('step-dispatched').classList.remove('active');
+    document.getElementById('time-dispatched').textContent = timeLabel;
+    document.getElementById('dot-delivered').className = 'dot active done';
+    document.getElementById('time-delivered').textContent = 'Just now!';
+    document.getElementById('step-delivered').classList.add('active');
+    document.getElementById('etaDisplay').textContent = 'Delivered! 🎉';
+
+    setTimeout(showRatingSheet, 1500);
+  }
+}
+
+// Auto-advance: preparing after 8s, dispatched after 20s, delivered after 35s
+setTimeout(() => {
+  document.getElementById('streamStatus').textContent = '🔴 LIVE';
+  document.getElementById('streamStatus').style.background = '#FCE4EC';
+  document.getElementById('streamStatus').style.color = '#C62828';
+  activateStream();
+}, 3000);
+
+setTimeout(() => advanceStep(2, fmt(new Date(Date.now() + 8000))), 20000);
+setTimeout(() => advanceStep(3, fmt(new Date(Date.now() + 20000))), 35000);
+
+// ─── Rider animation ──────────────────────────────────────────────────────────
+let riderLeft = 140, riderTop = 80;
+function animateRider() {
+  const target = { left: 290, top: 60 };
+  const steps = 40;
+  let s = 0;
+  const iv = setInterval(() => {
+    s++;
+    riderLeft += (target.left - riderLeft) / (steps - s + 1);
+    riderTop += (target.top - riderTop) / (steps - s + 1);
+    const pin = document.getElementById('riderPin');
+    if (pin) { pin.style.left = riderLeft + 'px'; pin.style.top = riderTop + 'px'; }
+    if (s >= steps) clearInterval(iv);
+  }, 500);
+}
+
+// ─── Video stream ─────────────────────────────────────────────────────────────
+function activateStream() {
+  if (streamActive) return;
+  streamActive = true;
+  const area = document.getElementById('videoArea');
+  document.getElementById('liveBadge').style.display = 'flex';
+  document.getElementById('streamStatus').textContent = '🔴 LIVE';
+  document.getElementById('watchBtn').textContent = '⏸ Live Stream Active';
+
+  area.innerHTML = `
+    <div class="live-badge"><span class="live-dot"></span> LIVE</div>
+    <div style="text-align:center;position:relative;z-index:1;padding:20px;">
+      <div style="font-size:52px;margin-bottom:8px;">👩‍🍳</div>
+      <div style="font-size:40px;line-height:1.2;">🍳 🥘 🫕</div>
+      <div style="color:rgba(255,255,255,.9);font-size:14px;font-weight:600;margin-top:10px;">Chef is cooking your order</div>
+      <div style="color:rgba(255,255,255,.55);font-size:11px;margin-top:4px;">Kitchen: 195, 3rd Cross, Kempapura, Hebbal</div>
+      <div style="margin-top:12px;display:flex;justify-content:center;gap:4px;">
+        <div style="width:3px;height:16px;background:var(--rust);border-radius:2px;animation:wave 1s infinite ease-in-out 0s;"></div>
+        <div style="width:3px;height:22px;background:var(--amber);border-radius:2px;animation:wave 1s infinite ease-in-out .1s;"></div>
+        <div style="width:3px;height:28px;background:var(--rust);border-radius:2px;animation:wave 1s infinite ease-in-out .2s;"></div>
+        <div style="width:3px;height:20px;background:var(--amber);border-radius:2px;animation:wave 1s infinite ease-in-out .3s;"></div>
+        <div style="width:3px;height:14px;background:var(--rust);border-radius:2px;animation:wave 1s infinite ease-in-out .4s;"></div>
+      </div>
+    </div>`;
+}
+
+// ─── Rating ───────────────────────────────────────────────────────────────────
+function rate(type, val) {
+  ratings[type] = val;
+  const container = document.getElementById(type + 'Rating');
+  container.querySelectorAll('.star').forEach((s, i) => s.classList.toggle('active', i < val));
+}
+
+function showRatingSheet() {
+  document.getElementById('ratingOverlay').classList.add('open');
+  document.getElementById('ratingSheet').classList.add('open');
+}
+
+function submitRating() {
+  showToast('🙏 Thank you for rating us!');
+  document.getElementById('ratingOverlay').classList.remove('open');
+  document.getElementById('ratingSheet').classList.remove('open');
+  setTimeout(() => {
+    showSharePrompt();
+  }, 1000);
+}
+
+function skipRating() {
+  document.getElementById('ratingOverlay').classList.remove('open');
+  document.getElementById('ratingSheet').classList.remove('open');
+}
+
+function showSharePrompt() {
+  if (navigator.share) {
+    navigator.share({
+      title: 'Open Kitchens',
+      text: '🍽️ Just ordered from Open Kitchens — and watched my food being made LIVE! Try it: #OpenKitchens #SeeWhatYouEat',
+      url: window.location.origin
+    }).catch(() => {});
+  } else {
+    showToast('📸 Share your experience on Instagram with #OpenKitchens!');
+  }
+}
+</script>
+<style>
+@keyframes wave { 0%,100% { transform: scaleY(1); } 50% { transform: scaleY(1.8); } }
+</style>
+</body>
+</html>

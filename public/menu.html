@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#5C2D0E"/>
+  <title>Menu — Open Kitchens</title>
+  <link rel="icon" href="/images/logo.png" type="image/png"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body class="has-bottom-nav">
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header class="header">
+  <a href="/" class="header-logo">
+    <img src="/images/logo.png" alt="Open Kitchens"/>
+    <div class="header-logo-text">
+      <span class="brand-name">Open Kitchens</span>
+      <span class="brand-tagline">See What You Eat</span>
+    </div>
+  </a>
+  <div class="header-actions">
+    <button class="cart-btn" onclick="openCart()">
+      🛒 Cart
+      <span class="cart-count" style="display:none;">0</span>
+    </button>
+  </div>
+</header>
+
+<!-- ── Banner Carousel ────────────────────────────────────────────────────── -->
+<div class="banner-carousel">
+  <div class="banner-track" id="bannerTrack">
+    <div class="banner-slide">
+      <div class="offer-tag">🔥 Today's Special</div>
+      <div class="offer-title">Veg Thali at ₹229</div>
+      <div class="offer-sub">2 Rotis + Dal + Sabzi + Rice + Salad + Papad</div>
+    </div>
+    <div class="banner-slide" style="background:linear-gradient(135deg,#8B3A15,var(--amber));">
+      <div class="offer-tag">⭐ Best Seller</div>
+      <div class="offer-title">Indori Poha — ₹119</div>
+      <div class="offer-sub">Light, fluffy & authentic — most ordered breakfast</div>
+    </div>
+    <div class="banner-slide" style="background:linear-gradient(135deg,#4A1D0A,var(--rust));">
+      <div class="offer-tag">🎥 Open Kitchens USP</div>
+      <div class="offer-title">Watch Your Food Live!</div>
+      <div class="offer-sub">Get a live kitchen stream with every order you place</div>
+    </div>
+  </div>
+  <div class="banner-dots">
+    <span class="banner-dot active" onclick="goSlide(0)"></span>
+    <span class="banner-dot" onclick="goSlide(1)"></span>
+    <span class="banner-dot" onclick="goSlide(2)"></span>
+  </div>
+</div>
+
+<!-- ── Kitchen Status ─────────────────────────────────────────────────────── -->
+<div style="margin:0 16px;background:var(--surface);border-radius:var(--radius);padding:10px 14px;display:flex;align-items:center;gap:10px;border:1.5px solid #c8e6c9;margin-top:8px;">
+  <span style="width:10px;height:10px;border-radius:50%;background:#4CAF50;display:inline-block;animation:pulse 2s infinite;"></span>
+  <span style="font-size:13px;font-weight:600;color:#2E7D32;">Kitchen Open</span>
+  <span style="font-size:12px;color:var(--text-light);margin-left:4px;">· Avg delivery 28–35 mins · 2 km away</span>
+</div>
+
+<!-- ── Search ─────────────────────────────────────────────────────────────── -->
+<div style="padding:10px 16px 0;">
+  <div style="position:relative;">
+    <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search dishes..." oninput="filterMenu()"
+      style="width:100%;padding:11px 14px 11px 38px;border:2px solid var(--border);border-radius:10px;font-size:14px;background:var(--cream);"/>
+  </div>
+</div>
+
+<!-- ── Veg / Non-Veg Toggle ───────────────────────────────────────────────── -->
+<div style="padding:10px 16px 0;display:flex;gap:8px;">
+  <button id="filterAll" class="cat-pill active" onclick="setFilter('all')">All</button>
+  <button id="filterVeg" class="cat-pill" onclick="setFilter('veg')">🟢 Veg Only</button>
+  <button id="filterNonVeg" class="cat-pill" onclick="setFilter('nonveg')">🔴 Non-Veg</button>
+</div>
+
+<!-- ── Category Bar ───────────────────────────────────────────────────────── -->
+<div class="category-bar" id="categoryBar"></div>
+
+<!-- ── Menu Content ───────────────────────────────────────────────────────── -->
+<div id="menuContent"></div>
+
+<!-- ── Cart Bottom Sheet ──────────────────────────────────────────────────── -->
+<div class="cart-overlay"></div>
+<div class="cart-sheet">
+  <div class="cart-handle"></div>
+  <div class="cart-header">
+    <h3>🛒 Your Cart</h3>
+  </div>
+  <div class="cart-items"></div>
+  <div class="cart-footer">
+    <div class="cart-total-row">
+      <span class="cart-total-label">Total</span>
+      <span class="cart-total-amount">₹0</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:8px;">
+      <input type="text" id="couponInput" class="form-input" placeholder="Coupon code" style="flex:1;padding:10px 12px;"/>
+      <button class="btn btn-secondary btn-sm" onclick="applyCoupon()">Apply</button>
+    </div>
+    <a href="/checkout" class="btn btn-primary btn-full" id="checkoutBtn">Proceed to Checkout →</a>
+  </div>
+</div>
+
+<!-- ── Food Detail Modal ──────────────────────────────────────────────────── -->
+<div class="modal-overlay" id="foodModal">
+  <div class="modal-sheet" style="position:relative;">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<!-- ── Bottom Nav ─────────────────────────────────────────────────────────── -->
+<nav class="bottom-nav">
+  <a href="/" class="nav-item">
+    <span class="nav-icon">🏠</span>
+    <span class="nav-label">Home</span>
+  </a>
+  <a href="/menu" class="nav-item active">
+    <span class="nav-icon">🍽️</span>
+    <span class="nav-label">Menu</span>
+  </a>
+  <a href="#" class="nav-item" onclick="openCart();return false;">
+    <span class="nav-icon">🛒</span>
+    <span class="nav-label">Cart</span>
+  </a>
+  <a href="#" class="nav-item" onclick="openAuthSheet();return false;">
+    <span class="nav-icon">👤</span>
+    <span class="nav-label">Profile</span>
+  </a>
+</nav>
+
+<!-- ── Auth Sheet ──────────────────────────────────────────────────────────── -->
+<div class="cart-overlay" id="authOverlay" onclick="closeAuthSheet()"></div>
+<div class="cart-sheet" id="authSheet">
+  <div class="cart-handle"></div>
+  <div class="cart-header"><h3>Sign In to Order</h3></div>
+  <div style="padding:20px;">
+    <button class="btn btn-full" style="background:#fff;border:2px solid var(--border);color:var(--text-dark);margin-bottom:12px;" onclick="showToast('Google Sign-In — coming soon!')">
+      <span style="font-size:18px;margin-right:8px;">G</span> Continue with Google
+    </button>
+    <div class="form-group">
+      <label class="form-label">Phone Number</label>
+      <div style="display:flex;gap:8px;">
+        <span style="padding:11px 10px;background:var(--cream);border:2px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;">🇮🇳 +91</span>
+        <input type="tel" class="form-input" placeholder="10-digit mobile" style="flex:1;"/>
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" onclick="showToast('OTP sent! — demo mode');closeAuthSheet()">Send OTP</button>
+  </div>
+</div>
+
+<script src="/js/menu-data.js"></script>
+<script>
+let currentFilter = 'all';
+let currentSlide = 0;
+let selectedItem = null;
+
+// ─── Render category bar ─────────────────────────────────────────────────────
+function renderCategoryBar() {
+  const bar = document.getElementById('categoryBar');
+  bar.innerHTML = CATEGORIES.map(cat => `
+    <button class="cat-pill" id="pill-${cat.replace(/\s/g,'')}" onclick="scrollToCategory('${cat}')">${cat}</button>
+  `).join('');
+}
+
+// ─── Filter helpers ───────────────────────────────────────────────────────────
+function setFilter(f) {
+  currentFilter = f;
+  ['All','Veg','NonVeg'].forEach(x => document.getElementById('filter'+x)?.classList.remove('active'));
+  document.getElementById('filter' + (f==='all'?'All':f==='veg'?'Veg':'NonVeg'))?.classList.add('active');
+  renderMenu();
+}
+
+function filterMenu() {
+  renderMenu();
+}
+
+function getFilteredItems() {
+  const q = document.getElementById('searchInput')?.value.trim().toLowerCase() || '';
+  return MENU_DATA.filter(item => {
+    const matchFilter = currentFilter === 'all' ||
+      (currentFilter === 'veg' && item.veg) ||
+      (currentFilter === 'nonveg' && !item.veg);
+    const matchSearch = !q || item.name.toLowerCase().includes(q) || item.category.toLowerCase().includes(q) || item.desc.toLowerCase().includes(q);
+    return matchFilter && matchSearch;
+  });
+}
+
+// ─── Render menu ──────────────────────────────────────────────────────────────
+function renderMenu() {
+  const items = getFilteredItems();
+  const grouped = {};
+  CATEGORIES.forEach(c => { grouped[c] = items.filter(i => i.category === c); });
+
+  const catIcons = {
+    'Breakfast': '🌅', 'Maggi': '🍜', 'Main Course': '🍛',
+    'Rice & Breads': '🍚', 'Parathas': '🫓', 'Combos': '🍱',
+    'Snacks': '🥙', 'Sides': '🥣'
+  };
+
+  let html = '';
+  for (const [cat, catItems] of Object.entries(grouped)) {
+    if (!catItems.length) continue;
+    html += `<div class="menu-section" id="cat-${cat.replace(/\s/g,'')}">
+      <div class="menu-section-title">${catIcons[cat] || '🍽️'} ${cat} <span style="font-size:12px;color:var(--text-light);font-weight:400;">(${catItems.length} items)</span></div>`;
+    catItems.forEach(item => {
+      const cartItem = cart.find(c => c.id === item.id);
+      const qty = cartItem ? cartItem.qty : 0;
+      html += `
+      <div class="menu-item">
+        <span class="item-veg-icon">${item.veg ? '🟢' : '🔴'}</span>
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-desc">${item.desc}</div>
+          <div class="item-badges">
+            ${item.bestSeller ? '<span class="badge badge-best">⭐ Best Seller</span>' : ''}
+            ${item.spicy ? '<span class="badge badge-spicy">🌶️ Spicy</span>' : ''}
+          </div>
+        </div>
+        <div class="item-right">
+          <div class="item-price">₹${item.price}</div>
+          ${qty > 0
+            ? `<div class="qty-control">
+                <button class="qty-btn" onclick="event.stopPropagation();updateQty(${item.id},-1);renderMenu()">−</button>
+                <span class="qty-num">${qty}</span>
+                <button class="qty-btn" onclick="event.stopPropagation();updateQty(${item.id},1);renderMenu()">+</button>
+               </div>`
+            : `<button class="add-btn" onclick="openItemModal(${item.id})">ADD</button>`
+          }
+        </div>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  if (!html) {
+    html = '<div style="text-align:center;padding:48px 16px;"><div style="font-size:48px;margin-bottom:12px;">🔍</div><p style="color:var(--text-light);">No items found matching your search</p></div>';
+  }
+  document.getElementById('menuContent').innerHTML = html;
+}
+
+// ─── Category scroll ──────────────────────────────────────────────────────────
+function scrollToCategory(cat) {
+  const el = document.getElementById('cat-' + cat.replace(/\s/g,''));
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+  document.getElementById('pill-' + cat.replace(/\s/g,''))?.classList.add('active');
+}
+
+// Intersection observer for auto-highlight category pill
+function setupCategoryObserver() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const id = e.target.id.replace('cat-', '');
+        document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+        document.getElementById('pill-' + id)?.classList.add('active');
+      }
+    });
+  }, { threshold: 0.3, rootMargin: '-80px 0px -50% 0px' });
+
+  document.querySelectorAll('.menu-section').forEach(s => observer.observe(s));
+}
+
+// ─── Item modal ───────────────────────────────────────────────────────────────
+function openItemModal(itemId) {
+  const item = MENU_DATA.find(i => i.id === itemId);
+  if (!item) return;
+  selectedItem = item;
+
+  const addons = [
+    { name: 'Extra Pickle', price: 10 },
+    { name: 'Extra Butter', price: 15 },
+    { name: 'Extra Roti', price: 15 },
+    { name: 'Extra Gravy', price: 20 }
+  ];
+
+  document.getElementById('modalContent').innerHTML = `
+    <div class="modal-img-placeholder">${item.emoji}</div>
+    <div class="modal-body">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+        <span>${item.veg ? '🟢' : '🔴'}</span>
+        <h2 style="font-size:20px;font-weight:800;color:var(--brown-dark);">${item.name}</h2>
+      </div>
+      <p style="font-size:14px;color:var(--text-light);line-height:1.5;margin-bottom:12px;">${item.desc}</p>
+      <div style="display:flex;gap:6px;margin-bottom:16px;">
+        ${item.bestSeller ? '<span class="badge badge-best">⭐ Best Seller</span>' : ''}
+        ${item.spicy ? '<span class="badge badge-spicy">🌶️ Spicy</span>' : ''}
+      </div>
+
+      <div style="font-size:22px;font-weight:800;color:var(--brown-dark);margin-bottom:16px;">₹${item.price}</div>
+
+      <div style="margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:700;color:var(--brown-dark);margin-bottom:10px;">Add-ons (Optional)</div>
+        ${addons.map((a,i) => `
+          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <input type="checkbox" id="addon-${i}" style="width:18px;height:18px;accent-color:var(--rust);" onchange="updateModalTotal()"/>
+              <span style="font-size:14px;">${a.name}</span>
+            </div>
+            <span style="font-size:14px;font-weight:600;color:var(--text-mid);">+₹${a.price}</span>
+          </label>
+        `).join('')}
+      </div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+        <span style="font-size:15px;font-weight:700;color:var(--text-mid);">Total</span>
+        <span id="modalTotal" style="font-size:22px;font-weight:800;color:var(--rust);">₹${item.price}</span>
+      </div>
+
+      <button class="btn btn-primary btn-full" onclick="addToCartFromModal(${item.id})" style="font-size:16px;padding:14px;">
+        Add to Cart
+      </button>
+    </div>
+  `;
+
+  document.getElementById('foodModal').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('foodModal').classList.remove('open');
+  selectedItem = null;
+}
+
+function updateModalTotal() {
+  if (!selectedItem) return;
+  const addonPrices = [10, 15, 15, 20];
+  let extra = 0;
+  addonPrices.forEach((p, i) => {
+    if (document.getElementById('addon-' + i)?.checked) extra += p;
+  });
+  document.getElementById('modalTotal').textContent = `₹${selectedItem.price + extra}`;
+}
+
+function addToCartFromModal(itemId) {
+  addToCart(itemId);
+  closeModal();
+  renderMenu();
+}
+
+document.getElementById('foodModal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ─── Coupon ───────────────────────────────────────────────────────────────────
+function applyCoupon() {
+  const code = document.getElementById('couponInput')?.value.trim().toUpperCase();
+  if (code === 'FIRST50') {
+    showToast('🎉 ₹50 off applied!');
+  } else if (code === 'OPENKITCHENS') {
+    showToast('🎉 10% off applied!');
+  } else {
+    showToast('❌ Invalid coupon code');
+  }
+}
+
+// ─── Banner autoplay ──────────────────────────────────────────────────────────
+function goSlide(n) {
+  currentSlide = n;
+  document.getElementById('bannerTrack').style.transform = `translateX(-${n * 100}%)`;
+  document.querySelectorAll('.banner-dot').forEach((d, i) => d.classList.toggle('active', i === n));
+}
+
+setInterval(() => goSlide((currentSlide + 1) % 3), 4000);
+
+// ─── Auth sheet ───────────────────────────────────────────────────────────────
+function openAuthSheet() {
+  document.getElementById('authOverlay').classList.add('open');
+  document.getElementById('authSheet').classList.add('open');
+}
+function closeAuthSheet() {
+  document.getElementById('authOverlay').classList.remove('open');
+  document.getElementById('authSheet').classList.remove('open');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderCategoryBar();
+  renderMenu();
+  setTimeout(setupCategoryObserver, 300);
+});
+</script>
+</body>
+</html>

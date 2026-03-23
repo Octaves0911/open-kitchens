@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#5C2D0E"/>
+  <title>Restaurant Portal — Open Kitchens</title>
+  <link rel="icon" href="/images/logo.png" type="image/png"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body>
+
+<!-- ── Portal Header ──────────────────────────────────────────────────────── -->
+<div class="portal-header">
+  <div>
+    <div class="portal-title">🍳 Kitchen Portal</div>
+    <div class="portal-sub">195, 3rd Cross, Kempapura, Hebbal · Bengaluru</div>
+  </div>
+  <div class="toggle-kitchen" onclick="toggleKitchen()">
+    <span id="kitchenLabel" style="font-size:12px;">Open</span>
+    <div class="toggle-switch on" id="kitchenSwitch">
+      <div class="toggle-knob"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Stats Row ──────────────────────────────────────────────────────────── -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--rust);" id="statToday">7</div>
+    <div class="stat-label">Today's Orders</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:#2E7D32;" id="statRevenue">₹1,243</div>
+    <div class="stat-label">Revenue Today</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:var(--amber);" id="statPending">2</div>
+    <div class="stat-label">Pending Orders</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-number" style="color:#1565C0;" id="statAvgTime">29m</div>
+    <div class="stat-label">Avg Delivery Time</div>
+  </div>
+</div>
+
+<!-- ── Tab Bar ────────────────────────────────────────────────────────────── -->
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('orders')">📋 Orders</div>
+  <div class="tab" onclick="switchTab('menu')">🍽️ Menu</div>
+  <div class="tab" onclick="switchTab('camera')">🎥 Camera</div>
+  <div class="tab" onclick="switchTab('riders')">🛵 Riders</div>
+</div>
+
+<!-- ── ORDERS Tab ──────────────────────────────────────────────────────────── -->
+<div class="tab-panel active" id="tab-orders">
+  <div style="padding:12px 16px 0;">
+    <div style="font-size:13px;font-weight:600;color:var(--text-mid);margin-bottom:10px;">Live Orders</div>
+    <!-- New order notification alert -->
+    <div class="alert alert-warn" id="newOrderAlert">
+      🔔 New order received! <strong>OK287461</strong> — tap to view ↓
+    </div>
+  </div>
+
+  <div style="padding:0 16px;" id="ordersList">
+    <!-- New order -->
+    <div class="order-card new">
+      <div class="order-card-header">
+        <div class="order-id">#OK287461</div>
+        <span class="order-status-badge status-new">🆕 New</span>
+      </div>
+      <div class="order-items-list">
+        🍛 Indori Poha × 1<br>
+        🫓 Aloo Paratha × 2 + curd<br>
+        🥛 Lassi × 1
+      </div>
+      <div style="font-size:12px;color:var(--text-light);margin-bottom:10px;">📍 Flat 302, Sunrise Apts, Hebbal · ₹357 · COD</div>
+      <div style="font-size:11px;color:var(--text-light);margin-bottom:8px;">⏰ Received 2 mins ago</div>
+      <div class="order-actions">
+        <button class="btn btn-primary btn-sm" onclick="acceptOrder(this,'OK287461')">✅ Accept</button>
+        <button class="btn btn-secondary btn-sm" onclick="rejectOrder(this,'OK287461')">❌ Reject</button>
+        <button class="btn btn-outline btn-sm" onclick="goLive('OK287461')">🔴 Go Live</button>
+      </div>
+    </div>
+
+    <!-- Preparing order -->
+    <div class="order-card">
+      <div class="order-card-header">
+        <div class="order-id">#OK287460</div>
+        <span class="order-status-badge status-preparing">👩‍🍳 Preparing</span>
+      </div>
+      <div class="order-items-list">
+        🧀 Paneer Butter Masala × 1<br>
+        🍚 Jeera Rice × 1<br>
+        🫓 Butter Roti × 3
+      </div>
+      <div style="font-size:12px;color:var(--text-light);margin-bottom:10px;">📍 #12, MG Road, RT Nagar · ₹299 · UPI</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div style="flex:1;background:var(--border);border-radius:10px;height:6px;overflow:hidden;">
+          <div id="prog-OK287460" style="width:60%;height:100%;background:var(--rust);border-radius:10px;transition:width .5s;"></div>
+        </div>
+        <span style="font-size:11px;color:var(--text-light);">~12 min left</span>
+      </div>
+      <div class="order-actions">
+        <button class="btn btn-amber btn-sm" onclick="markReady(this,'OK287460')">✅ Mark Ready</button>
+        <button class="btn btn-outline btn-sm" onclick="goLive('OK287460')">🎥 Live Stream</button>
+      </div>
+    </div>
+
+    <!-- Ready order -->
+    <div class="order-card">
+      <div class="order-card-header">
+        <div class="order-id">#OK287459</div>
+        <span class="order-status-badge status-ready">✅ Ready</span>
+      </div>
+      <div class="order-items-list">
+        🍱 Veg Thali × 2
+      </div>
+      <div style="font-size:12px;color:var(--text-light);margin-bottom:10px;">📍 Malleshwaram · ₹458 · Card</div>
+      <div class="order-actions">
+        <button class="btn btn-primary btn-sm" onclick="dispatch('OK287459')">🛵 Assign Rider</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MENU Tab ────────────────────────────────────────────────────────────── -->
+<div class="tab-panel" id="tab-menu">
+  <div style="padding:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:15px;font-weight:700;color:var(--brown-dark);">Menu Items (64)</div>
+      <button class="btn btn-primary btn-sm" onclick="openAddItem()">+ Add Item</button>
+    </div>
+
+    <!-- Sample menu items for management -->
+    <div id="adminMenuList"></div>
+  </div>
+
+  <!-- Add Item Form -->
+  <div id="addItemForm" style="display:none;padding:16px;">
+    <h3 style="font-size:15px;font-weight:700;color:var(--brown-dark);margin-bottom:14px;">Add New Menu Item</h3>
+    <div class="form-group">
+      <label class="form-label">Item Name</label>
+      <input type="text" class="form-input" placeholder="e.g. Paneer Tikka Masala"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Category</label>
+      <select class="form-input">
+        <option>Breakfast</option><option>Main Course</option><option>Rice & Breads</option>
+        <option>Parathas</option><option>Combos</option><option>Snacks</option>
+        <option>Sides</option><option>Maggi</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Base Price (₹)</label>
+      <input type="number" class="form-input" placeholder="e.g. 199"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Description</label>
+      <textarea class="form-input" rows="2" placeholder="Brief description (max 100 chars)" style="resize:none;"></textarea>
+    </div>
+    <div style="display:flex;gap:12px;margin-bottom:14px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
+        <input type="checkbox" checked style="accent-color:var(--green-veg);width:16px;height:16px;"/> Vegetarian
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
+        <input type="checkbox" style="accent-color:var(--amber);width:16px;height:16px;"/> Best Seller
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
+        <input type="checkbox" style="accent-color:var(--rust);width:16px;height:16px;"/> Spicy
+      </label>
+    </div>
+    <div style="display:flex;gap:8px;">
+      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveItem()">Save Item</button>
+      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('addItemForm').style.display='none';document.getElementById('adminMenuList').style.display='block';">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CAMERA Tab ──────────────────────────────────────────────────────────── -->
+<div class="tab-panel" id="tab-camera">
+  <div style="padding:16px;">
+    <div class="alert alert-info" style="margin-bottom:14px;">
+      🎥 Configure your RTSP camera to enable live kitchen streaming for customers
+    </div>
+
+    <div class="checkout-section" style="margin:0 0 14px;">
+      <h3>📷 RTSP Camera Configuration</h3>
+      <div class="form-group">
+        <label class="form-label">RTSP Stream URL</label>
+        <div style="position:relative;">
+          <input type="password" class="form-input" id="rtspUrl" placeholder="rtsp://username:password@ip:port/stream" value="rtsp://admin:****@192.168.1.100:554/stream"/>
+          <button onclick="toggleRtsp()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:14px;cursor:pointer;">👁️</button>
+        </div>
+        <div style="font-size:11px;color:var(--text-light);margin-top:4px;">URL is encrypted and stored securely</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="testRtsp()">🔌 Test Connection</button>
+        <button class="btn btn-amber" style="flex:1;justify-content:center;" onclick="saveRtsp()">💾 Save</button>
+      </div>
+      <div id="rtspStatus" style="margin-top:10px;"></div>
+    </div>
+
+    <div class="checkout-section" style="margin:0 0 14px;">
+      <h3>📡 Stream Preview</h3>
+      <div class="video-placeholder" style="margin:0;">
+        <div class="live-badge" id="previewBadge" style="display:none;"><span class="live-dot"></span> PREVIEW</div>
+        <div style="text-align:center;position:relative;z-index:1;padding:20px;">
+          <div style="font-size:48px;margin-bottom:8px;">📷</div>
+          <div style="color:rgba(255,255,255,.7);font-size:13px;">Camera preview will appear here</div>
+          <button class="btn btn-amber btn-sm" style="margin-top:12px;" onclick="previewCamera()">▶ Start Preview</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="checkout-section" style="margin:0;">
+      <h3>🎬 Active Streams</h3>
+      <div style="font-size:13px;color:var(--text-light);">No active streams right now.<br>Click "Go Live" on an order to start streaming.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── RIDERS Tab ──────────────────────────────────────────────────────────── -->
+<div class="tab-panel" id="tab-riders">
+  <div style="padding:16px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div style="font-size:15px;font-weight:700;color:var(--brown-dark);">Rider Fleet</div>
+      <span style="font-size:12px;color:#2E7D32;font-weight:700;background:#E8F5E9;padding:4px 10px;border-radius:50px;">3 Online</span>
+    </div>
+
+    <div id="ridersList"></div>
+
+    <div class="divider"></div>
+    <div style="font-size:14px;font-weight:700;color:var(--brown-dark);margin-bottom:10px;">📝 Pending Approvals</div>
+    <div style="background:var(--surface);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <div>
+          <div style="font-size:14px;font-weight:700;">Suresh M.</div>
+          <div style="font-size:12px;color:var(--text-light);">📱 +91 98765 43210 · 🏍️ Hero Splendor</div>
+          <div style="font-size:11px;color:var(--amber);margin-top:2px;">⏳ Documents pending review</div>
+        </div>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-primary btn-sm" onclick="showToast('✅ Rider approved!')">Approve</button>
+          <button class="btn btn-secondary btn-sm" onclick="showToast('❌ Rider rejected')">Reject</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/menu-data.js"></script>
+<script>
+let kitchenOpen = true;
+
+// ─── Tab switching ────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach((t,i) => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  const tabs = ['orders','menu','camera','riders'];
+  const idx = tabs.indexOf(name);
+  document.querySelectorAll('.tab')[idx]?.classList.add('active');
+  document.getElementById('tab-' + name)?.classList.add('active');
+  if (name === 'menu') renderAdminMenu();
+  if (name === 'riders') renderRiders();
+}
+
+// ─── Kitchen toggle ───────────────────────────────────────────────────────────
+function toggleKitchen() {
+  kitchenOpen = !kitchenOpen;
+  const sw = document.getElementById('kitchenSwitch');
+  const label = document.getElementById('kitchenLabel');
+  sw.classList.toggle('on', kitchenOpen);
+  label.textContent = kitchenOpen ? 'Open' : 'Paused';
+  showToast(kitchenOpen ? '✅ Kitchen is now accepting orders' : '⏸️ Orders paused — kitchen closed');
+}
+
+// ─── Order actions ────────────────────────────────────────────────────────────
+function acceptOrder(btn, orderId) {
+  const card = btn.closest('.order-card');
+  card.querySelector('.order-status-badge').className = 'order-status-badge status-preparing';
+  card.querySelector('.order-status-badge').textContent = '👩‍🍳 Preparing';
+  card.querySelector('.order-actions').innerHTML = `
+    <button class="btn btn-amber btn-sm" onclick="markReady(this,'${orderId}')">✅ Mark Ready</button>
+    <button class="btn btn-outline btn-sm" onclick="goLive('${orderId}')">🎥 Go Live</button>`;
+  showToast(`✅ Order #${orderId} accepted`);
+  document.getElementById('newOrderAlert').style.display = 'none';
+}
+
+function rejectOrder(btn, orderId) {
+  btn.closest('.order-card').remove();
+  showToast(`❌ Order #${orderId} rejected`);
+}
+
+function markReady(btn, orderId) {
+  const card = btn.closest('.order-card');
+  card.querySelector('.order-status-badge').className = 'order-status-badge status-ready';
+  card.querySelector('.order-status-badge').textContent = '✅ Ready';
+  card.querySelector('.order-actions').innerHTML = `
+    <button class="btn btn-primary btn-sm" onclick="dispatch('${orderId}')">🛵 Assign Rider</button>`;
+  showToast(`📦 Order #${orderId} is ready for pickup!`);
+}
+
+function dispatch(orderId) {
+  showToast(`🛵 Rider assigned to order #${orderId}`);
+  const card = document.querySelector(`[onclick*="${orderId}"]`)?.closest('.order-card');
+  if (card) {
+    card.querySelector('.order-status-badge').className = 'order-status-badge status-dispatched';
+    card.querySelector('.order-status-badge').textContent = '🛵 Dispatched';
+    card.querySelector('.order-actions').innerHTML = `<span style="font-size:12px;color:var(--text-light);">Order picked up by rider</span>`;
+  }
+}
+
+function goLive(orderId) {
+  showToast(`🔴 Live stream started for order #${orderId}`);
+  switchTab('camera');
+  document.getElementById('previewBadge').style.display = 'flex';
+  previewCamera();
+}
+
+// ─── Admin menu render ────────────────────────────────────────────────────────
+function renderAdminMenu() {
+  const container = document.getElementById('adminMenuList');
+  if (!container) return;
+  const items = MENU_DATA.slice(0, 12); // Show first 12 for demo
+  container.innerHTML = items.map(item => `
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
+      <span style="font-size:24px;">${item.emoji}</span>
+      <div style="flex:1;">
+        <div style="font-size:14px;font-weight:600;color:var(--text-dark);">${item.name}</div>
+        <div style="font-size:12px;color:var(--text-light);">${item.category} · ₹${item.price}</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
+        <div class="toggle-switch on" style="width:30px;height:16px;" onclick="this.classList.toggle('on');showToast('Item availability updated')">
+          <div class="toggle-knob" style="width:12px;height:12px;top:2px;left:2px;"></div>
+        </div>
+      </label>
+      <button class="btn btn-secondary btn-sm" onclick="editItem(${item.id})">✏️</button>
+    </div>
+  `).join('') + `<div style="text-align:center;padding:12px;font-size:13px;color:var(--text-light);">+ 52 more items</div>`;
+}
+
+function openAddItem() {
+  document.getElementById('adminMenuList').style.display = 'none';
+  document.getElementById('addItemForm').style.display = 'block';
+}
+
+function saveItem() {
+  showToast('✅ New item added to menu!');
+  document.getElementById('addItemForm').style.display = 'none';
+  document.getElementById('adminMenuList').style.display = 'block';
+}
+
+function editItem(id) {
+  const item = MENU_DATA.find(i => i.id === id);
+  showToast(`✏️ Editing: ${item?.name}`);
+}
+
+// ─── RTSP ─────────────────────────────────────────────────────────────────────
+function toggleRtsp() {
+  const input = document.getElementById('rtspUrl');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function testRtsp() {
+  const status = document.getElementById('rtspStatus');
+  status.innerHTML = '<div class="alert alert-info">⏳ Testing RTSP connection...</div>';
+  setTimeout(() => {
+    status.innerHTML = '<div class="alert alert-success">✅ RTSP stream connected! Resolution: 1280×720 @ 25fps</div>';
+  }, 2000);
+}
+
+function saveRtsp() {
+  showToast('💾 RTSP URL saved securely');
+}
+
+function previewCamera() {
+  showToast('📷 Camera preview started');
+}
+
+// ─── Riders ───────────────────────────────────────────────────────────────────
+function renderRiders() {
+  const riders = [
+    { name: 'Rajesh K.', phone: '+91 98765 12345', vehicle: 'Honda Activa', status: 'online', rating: 4.8, orders: 3 },
+    { name: 'Priya S.', phone: '+91 87654 23456', vehicle: 'TVS Jupiter', status: 'busy', rating: 4.6, orders: 1 },
+    { name: 'Mohan R.', phone: '+91 76543 34567', vehicle: 'Hero Splendor', status: 'online', rating: 4.9, orders: 5 },
+    { name: 'Anita V.', phone: '+91 65432 45678', vehicle: 'Honda Dio', status: 'offline', rating: 4.7, orders: 0 }
+  ];
+
+  const statusClasses = { online: '#E8F5E9 / #2E7D32', busy: '#FFF8E1 / #F57F17', offline: '#FAFAFA / #9E9E9E' };
+  document.getElementById('ridersList').innerHTML = riders.map(r => `
+    <div style="background:var(--surface);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--cream-dark);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🛵</div>
+        <div style="flex:1;">
+          <div style="font-size:14px;font-weight:700;color:var(--brown-dark);">${r.name}</div>
+          <div style="font-size:12px;color:var(--text-light);">${r.phone} · ${r.vehicle}</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
+            <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:50px;background:${r.status==='online'?'#E8F5E9':r.status==='busy'?'#FFF8E1':'#F5F5F5'};color:${r.status==='online'?'#2E7D32':r.status==='busy'?'#F57F17':'#9E9E9E'};">
+              ${r.status==='online'?'🟢 Online':r.status==='busy'?'🟡 On Delivery':'⚫ Offline'}
+            </span>
+            <span style="font-size:11px;color:var(--text-light);">⭐ ${r.rating} · ${r.orders} deliveries today</span>
+          </div>
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="showToast('📞 Calling ${r.name}...')">📞</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  renderAdminMenu();
+});
+</script>
+</body>
+</html>

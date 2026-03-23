@@ -1,0 +1,12 @@
+{
+  "name": "open-kitchens",
+  "version": "1.0.0",
+  "description": "Open Kitchens - See What You Eat | Cloud Kitchen PWA Prototype",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
