@@ -244,62 +244,62 @@ input, select, textarea { font-family: inherit; outline: none; }
 .cart-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; opacity: 0; pointer-events: none; transition: opacity .3s; }
 .cart-overlay.open { opacity: 1; pointer-events: all; }
 
-/* ── Auth Modal (centered popup on desktop, bottom sheet on mobile) ── */
+/* ── Auth Modal — centered dialog, responsive on all screen sizes ── */
 .auth-modal {
-  position: fixed; z-index: 202;
+  display: none;                      /* hidden by default; JS adds .open */
+  position: fixed;
+  inset: 0;
+  z-index: 300;                       /* above everything */
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.auth-modal.open { display: flex; }
+.auth-modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.55);
+  backdrop-filter: blur(3px);
+  cursor: pointer;
+}
+.auth-modal-dialog {
+  position: relative; z-index: 1;
   background: var(--surface);
-  overflow-y: auto;
-  transition: transform .3s ease, opacity .3s ease;
-  opacity: 0; pointer-events: none;
+  border-radius: 20px;
+  width: 100%; max-width: 420px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 24px 64px rgba(0,0,0,.35);
+  animation: authModalIn .25s ease;
 }
-/* Desktop: centered dialog */
-@media (min-width: 540px) {
-  .auth-modal {
-    top: 50%; left: 50%;
-    transform: translate(-50%, -48%) scale(0.96);
-    width: 100%; max-width: 440px; max-height: 90vh;
-    border-radius: 20px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.3);
-  }
-  .auth-modal.open {
-    transform: translate(-50%, -50%) scale(1);
-    opacity: 1; pointer-events: all;
-  }
-  .auth-modal .auth-handle { display: none; }
+@keyframes authModalIn {
+  from { opacity: 0; transform: scale(0.94) translateY(12px); }
+  to   { opacity: 1; transform: scale(1)    translateY(0); }
 }
-/* Mobile: slide-up bottom sheet */
-@media (max-width: 539px) {
-  .auth-modal {
-    bottom: 0; left: 0; right: 0;
-    transform: translateY(100%);
-    border-radius: 20px 20px 0 0;
-    max-height: 92vh;
-    opacity: 1;
-    padding-bottom: env(safe-area-inset-bottom, 16px);
-  }
-  .auth-modal.open {
-    transform: translateY(0);
-    pointer-events: all;
-  }
+/* On very small phones: near full-screen */
+@media (max-width: 440px) {
+  .auth-modal-dialog { max-width: 100%; border-radius: 16px; }
 }
 .auth-modal-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 16px 20px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between;
+  padding: 20px 20px 14px; border-bottom: 1px solid var(--border);
 }
 .auth-modal-header h3 { font-size: 18px; font-weight: 800; color: var(--brown-dark); margin: 0; }
-.auth-modal-header p { font-size: 12px; color: var(--text-light); margin: 2px 0 0; }
+.auth-modal-header p  { font-size: 12px; color: var(--text-light); margin: 3px 0 0; }
 .auth-modal-close {
-  width: 32px; height: 32px; border-radius: 50%;
+  flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 50%;
   border: none; background: var(--cream); cursor: pointer;
-  font-size: 18px; line-height: 1; color: var(--text-mid);
+  font-size: 16px; color: var(--text-mid);
   display: flex; align-items: center; justify-content: center;
-  transition: background .2s;
+  transition: background .2s; margin-left: 8px;
 }
 .auth-modal-close:hover { background: var(--border); }
 .auth-modal-body { padding: 20px; }
-.auth-divider { display: flex; align-items: center; gap: 10px; margin: 14px 0; color: var(--text-light); font-size: 12px; }
+.auth-divider {
+  display: flex; align-items: center; gap: 10px;
+  margin: 14px 0; color: var(--text-light); font-size: 12px;
+}
 .auth-divider::before, .auth-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-.auth-handle { width: 40px; height: 4px; background: var(--border); border-radius: 2px; margin: 12px auto 0; }
+.auth-handle { display: none; }
 .cart-sheet {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%) translateY(100%);
   background: var(--surface); border-radius: 20px 20px 0 0;
