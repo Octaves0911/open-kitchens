@@ -33,6 +33,7 @@ app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, 'public', '
 app.get('/tracking', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tracking.html')));
 app.get('/restaurant', (req, res) => res.sendFile(path.join(__dirname, 'public', 'restaurant.html')));
 app.get('/rider', (req, res) => res.sendFile(path.join(__dirname, 'public', 'rider.html')));
+app.get('/why-us', (req, res) => res.sendFile(path.join(__dirname, 'public', 'why-us.html')));
 
 // Health check
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Open Kitchens', version: '1.0.0' }));

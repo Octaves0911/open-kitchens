@@ -12,15 +12,22 @@
 
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <header class="header">
-  <a href="/menu" class="header-logo" style="gap:8px;">
-    <span style="font-size:22px;color:var(--cream);">←</span>
-    <div class="header-logo-text">
-      <span class="brand-name">Checkout</span>
-      <span class="brand-tagline">Open Kitchens</span>
-    </div>
-  </a>
-  <div style="font-size:13px;color:rgba(255,255,255,.6);">Step 1 of 2</div>
+  <div class="header-inner">
+    <a href="/menu" class="header-logo" style="gap:8px;">
+      <span style="font-size:22px;color:var(--cream);">←</span>
+      <div class="header-logo-text">
+        <span class="brand-name">Checkout</span>
+        <span class="brand-tagline">Open Kitchens</span>
+      </div>
+    </a>
+    <nav class="header-nav">
+      <a href="/">Home</a><a href="/menu">Menu</a>
+      <a href="/why-us">Why Us</a><a href="/rider">Ride With Us</a>
+    </nav>
+    <div style="font-size:13px;color:rgba(255,255,255,.6);">Step 1 of 2</div>
+  </div>
 </header>
+<div style="max-width:720px;margin:0 auto;">
 
 <!-- ── Order Summary ──────────────────────────────────────────────────────── -->
 <div class="checkout-section" style="margin-top:12px;">
@@ -195,6 +202,7 @@
   </div>
 </div>
 
+</div><!-- end max-width wrapper -->
 <script src="/js/menu-data.js"></script>
 <script>
 let selectedPayment = 'upi';

@@ -12,20 +12,33 @@
 
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <header class="header">
-  <a href="/" class="header-logo">
-    <img src="/images/logo.png" alt="Open Kitchens"/>
-    <div class="header-logo-text">
-      <span class="brand-name">Open Kitchens</span>
-      <span class="brand-tagline">See What You Eat</span>
+  <div class="header-inner">
+    <a href="/" class="header-logo">
+      <img src="/images/logo.png" alt="Open Kitchens"/>
+      <div class="header-logo-text">
+        <span class="brand-name">Open Kitchens</span>
+        <span class="brand-tagline">See What You Eat</span>
+      </div>
+    </a>
+    <nav class="header-nav">
+      <a href="/">Home</a>
+      <a href="/menu" class="active">Menu</a>
+      <a href="/why-us">Why Us</a>
+      <a href="/rider">Ride With Us</a>
+    </nav>
+    <div class="header-actions">
+      <button class="cart-btn" onclick="openCart()">
+        🛒 Cart
+        <span class="cart-count" style="display:none;">0</span>
+      </button>
     </div>
-  </a>
-  <div class="header-actions">
-    <button class="cart-btn" onclick="openCart()">
-      🛒 Cart
-      <span class="cart-count" style="display:none;">0</span>
-    </button>
   </div>
 </header>
+
+<!-- ── Menu layout wrapper — sidebar on desktop ───────────────────────────── -->
+<div class="menu-layout">
+<div class="menu-sidebar" id="menuSidebar"></div>
+<div class="menu-content-col">
 
 <!-- ── Banner Carousel ────────────────────────────────────────────────────── -->
 <div class="banner-carousel">
@@ -102,6 +115,9 @@
     <a href="/checkout" class="btn btn-primary btn-full" id="checkoutBtn">Proceed to Checkout →</a>
   </div>
 </div>
+
+</div><!-- end menu-content-col -->
+</div><!-- end menu-layout -->
 
 <!-- ── Food Detail Modal ──────────────────────────────────────────────────── -->
 <div class="modal-overlay" id="foodModal">
@@ -257,6 +273,8 @@ function setupCategoryObserver() {
         const id = e.target.id.replace('cat-', '');
         document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
         document.getElementById('pill-' + id)?.classList.add('active');
+        document.querySelectorAll('.menu-sidebar-item').forEach(p => p.classList.remove('active'));
+        document.getElementById('side-' + id)?.classList.add('active');
       }
     });
   }, { threshold: 0.3, rootMargin: '-80px 0px -50% 0px' });
@@ -375,9 +393,19 @@ function closeAuthSheet() {
   document.getElementById('authSheet').classList.remove('open');
 }
 
+// ─── Desktop sidebar ──────────────────────────────────────────────────────────
+function renderSidebar() {
+  const sidebar = document.getElementById('menuSidebar');
+  if (!sidebar) return;
+  const catIcons = { 'Breakfast':'🌅','Maggi':'🍜','Main Course':'🍛','Rice & Breads':'🍚','Parathas':'🫓','Combos':'🍱','Snacks':'🥙','Sides':'🥣' };
+  sidebar.innerHTML = `<div style="padding:16px 20px 8px;font-size:11px;font-weight:700;color:var(--text-light);text-transform:uppercase;letter-spacing:1px;">Categories</div>` +
+    CATEGORIES.map(cat => `<div class="menu-sidebar-item" id="side-${cat.replace(/\s/g,'')}" onclick="scrollToCategory('${cat}')">${catIcons[cat]||'🍽️'} ${cat}</div>`).join('');
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   renderCategoryBar();
+  renderSidebar();
   renderMenu();
   setTimeout(setupCategoryObserver, 300);
 });
