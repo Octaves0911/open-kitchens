@@ -6,8 +6,8 @@
   --rust-dark:    #9E3608;
   --amber:        #D4A520;
   --amber-light:  #F0C84A;
-  --cream:        #FFFDF7;
-  --cream-dark:   #F5EAD8;
+  --cream:        #F7EFE5;
+  --cream-dark:   #EDD9C0;
   --surface:      #FFFFFF;
   --text-dark:    #2C1406;
   --text-mid:     #5C3A1E;
@@ -228,6 +228,17 @@ input, select, textarea { font-family: inherit; outline: none; }
 .section-title { font-size: 20px; font-weight: 800; color: var(--brown-dark); margin-bottom: 4px; }
 .section-sub { font-size: 13px; color: var(--text-light); margin-bottom: 20px; }
 .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* ── Fan Favourites cards ── */
+.fav-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform .2s, box-shadow .2s;
+  border: 1.5px solid var(--border);
+  overflow: hidden;
+}
+.fav-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
 
 /* ─── Category Bar ───────────────────────────────────────────────────────── */
 .category-bar {
@@ -535,6 +546,7 @@ body.has-bottom-nav { padding-bottom: 64px; }
   /* Section grids */
   .features-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .fav-grid { grid-template-columns: repeat(4, 1fr) !important; }
+  .fav-cards-grid { grid-template-columns: repeat(4, 1fr) !important; }
   .section { padding: 40px 32px; }
 
   /* Footer multi-col */
