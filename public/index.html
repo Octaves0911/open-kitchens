@@ -68,23 +68,142 @@
 <!-- ── USP Strip ──────────────────────────────────────────────────────────── -->
 <div class="marquee-strip">
   <div class="marquee-track">
+    <!-- Set A -->
     <span style="color:var(--amber);font-size:13px;font-weight:700;white-space:nowrap;">🎥 Watch Live Kitchen Streams</span>
-    <span style="color:rgba(255,255,255,.4)">•</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
     <span style="color:#fff;font-size:13px;white-space:nowrap;">🏠 Bengaluru Home Kitchen</span>
-    <span style="color:rgba(255,255,255,.4)">•</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
     <span style="color:var(--amber);font-size:13px;font-weight:700;white-space:nowrap;">⏱️ 30 Min Avg Delivery</span>
-    <span style="color:rgba(255,255,255,.4)">•</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
     <span style="color:#fff;font-size:13px;white-space:nowrap;">✅ 100% Hygienic Kitchen</span>
-    <span style="color:rgba(255,255,255,.4)">•</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
+    <span style="color:var(--amber);font-size:13px;font-weight:700;white-space:nowrap;">🍛 64 Authentic Dishes</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
+    <span style="color:#fff;font-size:13px;white-space:nowrap;">💳 UPI &amp; Cards Accepted</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
+    <span style="color:var(--amber);font-size:13px;font-weight:700;white-space:nowrap;">📍 10 Delivery Zones in Bengaluru</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
+    <!-- Set B — exact clone for seamless loop -->
     <span style="color:var(--amber);font-size:13px;font-weight:700;white-space:nowrap;">🎥 Watch Live Kitchen Streams</span>
-    <span style="color:rgba(255,255,255,.4)">•</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
     <span style="color:#fff;font-size:13px;white-space:nowrap;">🏠 Bengaluru Home Kitchen</span>
-    <span style="color:rgba(255,255,255,.4)">•</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
     <span style="color:var(--amber);font-size:13px;font-weight:700;white-space:nowrap;">⏱️ 30 Min Avg Delivery</span>
-    <span style="color:rgba(255,255,255,.4)">•</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
     <span style="color:#fff;font-size:13px;white-space:nowrap;">✅ 100% Hygienic Kitchen</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
+    <span style="color:var(--amber);font-size:13px;font-weight:700;white-space:nowrap;">🍛 64 Authentic Dishes</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
+    <span style="color:#fff;font-size:13px;white-space:nowrap;">💳 UPI &amp; Cards Accepted</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
+    <span style="color:var(--amber);font-size:13px;font-weight:700;white-space:nowrap;">📍 10 Delivery Zones in Bengaluru</span>
+    <span style="color:rgba(255,255,255,.35);white-space:nowrap;">•</span>
   </div>
 </div>
+
+<!-- ── Offers Section ─────────────────────────────────────────────────────── -->
+<section class="offers-section" id="offersSection">
+  <div class="section-inner">
+    <div class="offers-header">
+      <h2>🔥 Today's Best Offers</h2>
+      <span>Swipe to explore →</span>
+    </div>
+    <div class="offers-track" id="offersTrack">
+
+      <!-- Card 1: First Order Special -->
+      <div class="offer-card" onclick="window.location.href='/menu'">
+        <div class="offer-badge">NEW USER</div>
+        <div class="offer-card-bg" style="background:linear-gradient(135deg,#FFF3E0,#FFE0B2);">🎉</div>
+        <div class="offer-card-body">
+          <div class="offer-card-name">First Order Special</div>
+          <div class="offer-card-desc">Get flat ₹50 off on your very first order. No minimum required!</div>
+          <div class="offer-card-footer">
+            <div>
+              <span class="offer-price-new">₹50 OFF</span>
+            </div>
+            <button class="offer-cta" onclick="event.stopPropagation();showToast('Use code FIRST50 at checkout!')">Grab Deal</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: Breakfast Combo -->
+      <div class="offer-card" onclick="window.location.href='/menu'">
+        <div class="offer-badge">20% OFF</div>
+        <div class="offer-card-bg" style="background:linear-gradient(135deg,#E8F5E9,#C8E6C9);">🍚</div>
+        <div class="offer-card-body">
+          <div class="offer-card-name">Rise & Shine Combo</div>
+          <div class="offer-card-desc">Indori Poha + Chai + Upma. The perfect weekday breakfast.</div>
+          <div class="offer-card-footer">
+            <div>
+              <span class="offer-price-new">₹179</span>
+              <span class="offer-price-old">₹224</span>
+            </div>
+            <button class="offer-cta" onclick="event.stopPropagation();showToast('Added to cart!')">Order</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Lunch Thali Deal -->
+      <div class="offer-card" onclick="window.location.href='/menu'">
+        <div class="offer-badge">BEST VALUE</div>
+        <div class="offer-card-bg" style="background:linear-gradient(135deg,#FFF8E1,#FFECB3);">🍱</div>
+        <div class="offer-card-body">
+          <div class="offer-card-name">Royal Thali Feast</div>
+          <div class="offer-card-desc">Veg Thali + Raita + Gulab Jamun. A complete home-style meal.</div>
+          <div class="offer-card-footer">
+            <div>
+              <span class="offer-price-new">₹269</span>
+              <span class="offer-price-old">₹329</span>
+            </div>
+            <button class="offer-cta" onclick="event.stopPropagation();showToast('Added to cart!')">Order</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: Family Pack -->
+      <div class="offer-card" onclick="window.location.href='/menu'">
+        <div class="offer-badge">FAMILY PACK</div>
+        <div class="offer-card-bg" style="background:linear-gradient(135deg,#FCE4EC,#F8BBD0);">👨‍👩‍👧‍👦</div>
+        <div class="offer-card-body">
+          <div class="offer-card-name">Family Dinner Pack</div>
+          <div class="offer-card-desc">2 Mains + 4 Rotis + Dal + Kheer. Feeds a family of 3–4.</div>
+          <div class="offer-card-footer">
+            <div>
+              <span class="offer-price-new">₹549</span>
+              <span class="offer-price-old">₹699</span>
+            </div>
+            <button class="offer-cta" onclick="event.stopPropagation();showToast('Added to cart!')">Order</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 5: Weekend Snack Binge -->
+      <div class="offer-card" onclick="window.location.href='/menu'">
+        <div class="offer-badge">WEEKEND</div>
+        <div class="offer-card-bg" style="background:linear-gradient(135deg,#E3F2FD,#BBDEFB);">🧆</div>
+        <div class="offer-card-body">
+          <div class="offer-card-name">Snack Binge Box</div>
+          <div class="offer-card-desc">Samosa (4 pcs) + Dahi Vada + Masala Chai. Weekend sorted!</div>
+          <div class="offer-card-footer">
+            <div>
+              <span class="offer-price-new">₹199</span>
+              <span class="offer-price-old">₹259</span>
+            </div>
+            <button class="offer-cta" onclick="event.stopPropagation();showToast('Added to cart!')">Order</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /offers-track -->
+    <div class="offers-dots" id="offersDots">
+      <button class="offer-dot active" onclick="scrollOfferTo(0)"></button>
+      <button class="offer-dot" onclick="scrollOfferTo(1)"></button>
+      <button class="offer-dot" onclick="scrollOfferTo(2)"></button>
+      <button class="offer-dot" onclick="scrollOfferTo(3)"></button>
+      <button class="offer-dot" onclick="scrollOfferTo(4)"></button>
+    </div>
+  </div>
+</section>
 
 <!-- ── Fan Favourites ─────────────────────────────────────────────────────── -->
 <section class="section" style="background:var(--surface);">
@@ -371,6 +490,30 @@ function closeAuthSheet() {
   document.body.style.overflow = '';
 }
 
+// ─── Offer cards auto-scroll ──────────────────────────────────────────────────
+let offerIndex = 0;
+let offerTimer = null;
+
+function scrollOfferTo(idx) {
+  const track = document.getElementById('offersTrack');
+  const dots  = document.querySelectorAll('.offer-dot');
+  const cards = track.querySelectorAll('.offer-card');
+  if (!track || !cards.length) return;
+  const cardW = cards[0].offsetWidth + 14; // card width + gap
+  track.scrollTo({ left: idx * cardW, behavior: 'smooth' });
+  dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+  offerIndex = idx;
+}
+
+function startOfferAutoScroll() {
+  offerTimer = setInterval(() => {
+    const track = document.getElementById('offersTrack');
+    const total = track ? track.querySelectorAll('.offer-card').length : 5;
+    offerIndex = (offerIndex + 1) % total;
+    scrollOfferTo(offerIndex);
+  }, 3000);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('pincodeInput')?.addEventListener('keypress', e => {
     if (e.key === 'Enter') checkPincode();
@@ -378,6 +521,26 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape') closeAuthSheet();
   });
+
+  // Sync dots on manual scroll
+  const track = document.getElementById('offersTrack');
+  if (track) {
+    track.addEventListener('scroll', () => {
+      const cards = track.querySelectorAll('.offer-card');
+      if (!cards.length) return;
+      const cardW = cards[0].offsetWidth + 14;
+      const idx   = Math.round(track.scrollLeft / cardW);
+      document.querySelectorAll('.offer-dot').forEach((d, i) => d.classList.toggle('active', i === idx));
+      offerIndex = idx;
+    });
+    // Pause on hover/touch, resume on leave
+    track.addEventListener('mouseenter', () => clearInterval(offerTimer));
+    track.addEventListener('mouseleave', startOfferAutoScroll);
+    track.addEventListener('touchstart',  () => clearInterval(offerTimer), { passive: true });
+    track.addEventListener('touchend',    startOfferAutoScroll, { passive: true });
+  }
+
+  startOfferAutoScroll();
 });
 </script>
 </body>
