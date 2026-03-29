@@ -275,13 +275,14 @@ input, select, textarea { font-family: inherit; outline: none; }
   padding: 20px 0 14px; border-bottom: 2px solid var(--amber);
   margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
-/* Card grid — 2 cols on mobile, 3 on tablet, 4 on wide desktop */
+/* Card grid — 1 col on mobile, 2 on tablet, 3 on desktop, 4 on wide */
 .menu-cards-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: 1fr;
   gap: 14px;
 }
-@media (min-width: 640px)  { .menu-cards-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 480px)  { .menu-cards-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 768px)  { .menu-cards-grid { grid-template-columns: repeat(3, 1fr); } }
 @media (min-width: 1024px) { .menu-cards-grid { grid-template-columns: repeat(4, 1fr); } }
 
 /* Individual card */
@@ -299,9 +300,9 @@ input, select, textarea { font-family: inherit; outline: none; }
 
 /* Image area — emoji centred on a warm gradient */
 .menu-card-img {
-  width: 100%; aspect-ratio: 4/3;
+  width: 100%; aspect-ratio: 16/9;
   display: flex; align-items: center; justify-content: center;
-  font-size: 52px;
+  font-size: 64px;
   background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
   position: relative;
 }
