@@ -113,16 +113,11 @@ input, select, textarea { font-family: inherit; outline: none; }
   background: url('/images/hero-background.jpg') center/cover no-repeat;
   z-index: 0;
 }
-/* Light overlay — image stays clearly visible, left side darker for text readability */
+/* Overlay at 40% so image is 60% visible */
 .hero-bg::after {
   content: '';
   position: absolute; inset: 0;
-  background: linear-gradient(
-    110deg,
-    rgba(30,10,2,.62) 0%,
-    rgba(40,14,4,.38) 40%,
-    rgba(20,8,2,.22) 100%
-  );
+  background: rgba(20,8,2,.40);
 }
 .hero-content {
   position: relative; z-index: 1;
