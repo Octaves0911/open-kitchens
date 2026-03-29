@@ -15,9 +15,9 @@
 <header class="header">
   <div class="header-inner">
     <!-- Location check pill — all screen sizes -->
-    <button class="mobile-location-btn" onclick="openLocationSheet()" style="max-width:480px;">
+    <button class="mobile-location-btn" onclick="openLocationSheet()">
       <span id="locationLabel">📍 Check Delivery Location</span>
-      <span class="mobile-location-chevron">›</span>
+      <span class="mobile-location-chevron">∨</span>
     </button>
   </div>
 </header>
@@ -71,10 +71,7 @@
       <!-- GPS button -->
       <button class="loc-gps-btn" onclick="useCurrentLocation()">
         <span class="loc-gps-icon">🎯</span>
-        <span>
-          <strong>Use current location</strong>
-          <small>Using GPS</small>
-        </span>
+        <strong>Use current location</strong>
         <span class="loc-gps-arrow">›</span>
       </button>
 
@@ -671,7 +668,8 @@ function useCurrentLocation() {
       reverseGeocode(pos.coords.latitude, pos.coords.longitude, result => {
         if (btn) btn.textContent = 'Use current location';
         if (!result) { showToast('Could not determine address. Please search manually.'); return; }
-        promptSaveLabel(result);
+        // Directly confirm — no save-label prompt
+        confirmLocation(result, null);
       });
     },
     err => {
