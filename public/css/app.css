@@ -73,7 +73,7 @@ input, select, textarea { font-family: inherit; outline: none; }
   max-width: var(--max-w);
   margin: 0 auto;
   padding: 6px 20px;
-  display: flex; align-items: center; justify-content: flex-end;
+  display: flex; align-items: center; justify-content: flex-start;
 }
 
 /* Location button in header — no box, just text */
