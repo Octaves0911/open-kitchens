@@ -613,41 +613,59 @@ function renderMenu() {
     'Rice & Breads':'🍚','Parathas':'🫓','Combos':'🍱',
     'Snacks':'🥙','Sides':'🥣'
   };
+  // Gradient per category for the image area
+  const catGrad = {
+    'Breakfast':'linear-gradient(135deg,#FFF8E1,#FFE082)',
+    'Maggi':'linear-gradient(135deg,#FBE9E7,#FFAB91)',
+    'Main Course':'linear-gradient(135deg,#FFF3E0,#FFCC80)',
+    'Rice & Breads':'linear-gradient(135deg,#F3E5F5,#CE93D8)',
+    'Parathas':'linear-gradient(135deg,#E8F5E9,#A5D6A7)',
+    'Combos':'linear-gradient(135deg,#E3F2FD,#90CAF9)',
+    'Snacks':'linear-gradient(135deg,#FCE4EC,#F48FB1)',
+    'Sides':'linear-gradient(135deg,#E0F2F1,#80CBC4)'
+  };
+
   let html = '';
   for (const [cat, catItems] of Object.entries(grouped)) {
     if (!catItems.length) continue;
     html += `<div class="menu-section" id="cat-${cat.replace(/\s/g,'')}">
       <div class="menu-section-title">${catIcons[cat]||'🍽️'} ${cat}
         <span style="font-size:12px;color:var(--text-light);font-weight:400;">(${catItems.length} items)</span>
-      </div>`;
+      </div>
+      <div class="menu-cards-grid">`;
+
     catItems.forEach(item => {
-      const qty = (cart.find(c => c.id === item.id) || {}).qty || 0;
+      const qty  = (cart.find(c => c.id === item.id) || {}).qty || 0;
+      const grad = catGrad[cat] || 'linear-gradient(135deg,#FFF3E0,#FFE0B2)';
       html += `
-      <div class="menu-item">
-        <span class="item-veg-icon">${item.veg?'🟢':'🔴'}</span>
-        <div class="item-info">
-          <div class="item-name">${item.name}</div>
-          <div class="item-desc">${item.desc}</div>
-          <div class="item-badges">
-            ${item.bestSeller?'<span class="badge badge-best">⭐ Best Seller</span>':''}
-            ${item.spicy?'<span class="badge badge-spicy">🌶️ Spicy</span>':''}
-          </div>
+      <div class="menu-card" onclick="openItemModal(${item.id})">
+        <div class="menu-card-img" style="background:${grad};">
+          <span>${item.emoji || '🍽️'}</span>
+          <span class="menu-card-veg">${item.veg ? '🟢' : '🔴'}</span>
+          ${item.bestSeller ? '<span class="menu-card-badge">⭐ Best Seller</span>' : ''}
+          ${item.spicy && !item.bestSeller ? '<span class="menu-card-badge" style="background:var(--amber-light);color:var(--brown-dark);">🌶️ Spicy</span>' : ''}
         </div>
-        <div class="item-right">
-          <div class="item-price">₹${item.price}</div>
-          ${qty > 0
-            ? `<div class="qty-control">
-                <button class="qty-btn" onclick="updateQty(${item.id},-1);renderMenu()">−</button>
-                <span class="qty-num">${qty}</span>
-                <button class="qty-btn" onclick="updateQty(${item.id},1);renderMenu()">+</button>
-               </div>`
-            : `<button class="add-btn" onclick="openItemModal(${item.id})">ADD</button>`
-          }
+        <div class="menu-card-body">
+          <div class="menu-card-name">${item.name}</div>
+          <div class="menu-card-desc">${item.desc}</div>
+          <div class="menu-card-footer">
+            <span class="menu-card-price">₹${item.price}</span>
+            ${qty > 0
+              ? `<div class="qty-control" onclick="event.stopPropagation()">
+                  <button class="qty-btn" onclick="updateQty(${item.id},-1);renderMenu()">−</button>
+                  <span class="qty-num">${qty}</span>
+                  <button class="qty-btn" onclick="updateQty(${item.id},1);renderMenu()">+</button>
+                 </div>`
+              : `<button class="add-btn" onclick="event.stopPropagation();openItemModal(${item.id})">ADD</button>`
+            }
+          </div>
         </div>
       </div>`;
     });
-    html += `</div>`;
+
+    html += `</div></div>`; // close grid + section
   }
+
   if (!html) html = '<div style="text-align:center;padding:48px 16px;"><div style="font-size:48px;margin-bottom:12px;">🔍</div><p style="color:var(--text-light);">No items found</p></div>';
   document.getElementById('menuContent').innerHTML = html;
 }

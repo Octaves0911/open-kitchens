@@ -268,34 +268,90 @@ input, select, textarea { font-family: inherit; outline: none; }
 .cat-pill.active, .cat-pill:hover { background: var(--brown-dark); color: #fff; border-color: var(--brown-dark); }
 
 /* ─── Menu Items ─────────────────────────────────────────────────────────── */
-.menu-section { padding: 0 16px 16px; max-width: var(--content-w); margin: 0 auto; }
+/* ─── Menu Section & Cards ──────────────────────────────────────────────── */
+.menu-section { padding: 0 16px 16px; }
 .menu-section-title {
   font-size: 17px; font-weight: 800; color: var(--brown-dark);
-  padding: 20px 0 12px; border-bottom: 2px solid var(--amber);
-  margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+  padding: 20px 0 14px; border-bottom: 2px solid var(--amber);
+  margin-bottom: 14px; display: flex; align-items: center; gap: 8px;
 }
-.menu-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
-.menu-item:last-child { border-bottom: none; }
-.item-veg-icon { font-size: 16px; flex-shrink: 0; margin-top: 2px; }
-.item-info { flex: 1; min-width: 0; }
-.item-name { font-size: 15px; font-weight: 700; color: var(--text-dark); margin-bottom: 2px; }
-.item-desc { font-size: 12px; color: var(--text-light); line-height: 1.4; }
+/* Card grid — 2 cols on mobile, 3 on tablet, 4 on wide desktop */
+.menu-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+@media (min-width: 640px)  { .menu-cards-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1024px) { .menu-cards-grid { grid-template-columns: repeat(4, 1fr); } }
+
+/* Individual card */
+.menu-card {
+  background: var(--surface);
+  border-radius: 14px;
+  border: 1.5px solid var(--border);
+  box-shadow: 0 2px 10px rgba(92,45,14,.08);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+  transition: transform .2s, box-shadow .2s;
+  cursor: pointer;
+}
+.menu-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(92,45,14,.15); }
+
+/* Image area — emoji centred on a warm gradient */
+.menu-card-img {
+  width: 100%; aspect-ratio: 4/3;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 52px;
+  background: linear-gradient(135deg, #FFF3E0, #FFE0B2);
+  position: relative;
+}
+.menu-card-veg {
+  position: absolute; top: 8px; left: 8px;
+  font-size: 13px; line-height: 1;
+}
+.menu-card-badge {
+  position: absolute; top: 8px; right: 8px;
+  background: var(--rust); color: #fff;
+  font-size: 9px; font-weight: 800; padding: 2px 7px;
+  border-radius: 20px; letter-spacing: .3px;
+}
+
+/* Body */
+.menu-card-body {
+  padding: 10px 12px 12px;
+  display: flex; flex-direction: column; flex: 1;
+}
+.menu-card-name {
+  font-size: 13px; font-weight: 700; color: var(--text-dark);
+  margin-bottom: 4px; line-height: 1.3;
+}
+.menu-card-desc {
+  font-size: 11px; color: var(--text-light);
+  line-height: 1.45; flex: 1; margin-bottom: 10px;
+}
+.menu-card-footer {
+  display: flex; align-items: center; justify-content: space-between; gap: 6px;
+}
+.menu-card-price {
+  font-size: 15px; font-weight: 800; color: var(--brown-dark);
+}
+
+/* Keep existing add / qty styles */
 .item-badges { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
 .badge { font-size: 10px; font-weight: 700; padding: 2px 7px; border-radius: 4px; }
 .badge-best { background: #FFF3CD; color: #856404; }
 .badge-popular { background: #E3F2FD; color: #1565C0; }
 .badge-spicy { background: #FCE4EC; color: #C62828; }
-.item-right { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; flex-shrink: 0; }
-.item-price { font-size: 16px; font-weight: 800; color: var(--brown-dark); }
 .add-btn {
   background: var(--surface); color: var(--rust);
   border: 2px solid var(--rust); border-radius: 8px;
-  padding: 5px 16px; font-size: 14px; font-weight: 800; transition: all .2s;
+  padding: 5px 12px; font-size: 13px; font-weight: 800;
+  cursor: pointer; transition: all .2s; white-space: nowrap;
 }
-.add-btn:hover, .add-btn.active { background: var(--rust); color: #fff; }
+.add-btn:hover { background: var(--rust); color: #fff; }
 .qty-control { display: flex; align-items: center; border: 2px solid var(--rust); border-radius: 8px; overflow: hidden; }
-.qty-btn { background: var(--rust); color: #fff; width: 30px; height: 30px; font-size: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
-.qty-num { width: 30px; text-align: center; font-size: 14px; font-weight: 800; color: var(--brown-dark); background: #fff; height: 30px; line-height: 30px; }
+.qty-btn { background: var(--rust); color: #fff; width: 28px; height: 28px; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
+.qty-num { width: 26px; text-align: center; font-size: 13px; font-weight: 800; color: var(--brown-dark); background: #fff; height: 28px; line-height: 28px; }
 
 /* ─── Banner Carousel ────────────────────────────────────────────────────── */
 .banner-carousel { overflow: hidden; position: relative; border-radius: var(--radius); margin: 16px; max-width: calc(var(--content-w) - 32px); margin-left: auto; margin-right: auto; }
