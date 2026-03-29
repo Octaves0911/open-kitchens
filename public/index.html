@@ -41,25 +41,75 @@
 <!-- ── Location Sheet (mobile) ───────────────────────────────────────────── -->
 <div class="auth-modal" id="locationSheet" role="dialog" aria-modal="true">
   <div class="auth-modal-backdrop" onclick="closeLocationSheet()"></div>
-  <div class="auth-modal-dialog">
+  <div class="auth-modal-dialog loc-dialog">
     <div class="auth-modal-header">
       <div>
-        <h3>📍 Check Delivery</h3>
-        <p>Enter your pincode or use GPS</p>
+        <h3>📍 Delivery Location</h3>
+        <p>Search or choose a saved address</p>
       </div>
       <button class="auth-modal-close" onclick="closeLocationSheet()">✕</button>
     </div>
-    <div class="auth-modal-body">
-      <div class="pincode-input-row" style="margin-bottom:10px;">
-        <input type="number" class="pincode-input form-input" id="pincodeInput"
-          placeholder="Enter 6-digit pincode" maxlength="6"
-          style="flex:1;padding:11px 14px;font-size:15px;"/>
-        <button class="btn btn-primary" onclick="checkPincode()" style="padding:11px 18px;">Check</button>
+    <div class="auth-modal-body loc-body">
+
+      <!-- Search input + autocomplete -->
+      <div class="loc-search-wrap">
+        <span class="loc-search-icon">🔍</span>
+        <input
+          type="text"
+          id="locSearchInput"
+          class="loc-search-input"
+          placeholder="Search area, street or landmark…"
+          autocomplete="off"
+          oninput="onLocSearch(this.value)"
+          onfocus="onLocSearchFocus()"
+        />
+        <button class="loc-search-clear" id="locSearchClear" onclick="clearLocSearch()" style="display:none;">✕</button>
       </div>
-      <button class="btn btn-location btn-full" onclick="useMyLocation()" style="margin-bottom:10px;">
-        📍 Use My Location
+      <!-- Suggestions dropdown -->
+      <ul class="loc-suggestions" id="locSuggestions" style="display:none;"></ul>
+
+      <!-- GPS button -->
+      <button class="loc-gps-btn" onclick="useCurrentLocation()">
+        <span class="loc-gps-icon">🎯</span>
+        <span>
+          <strong>Use current location</strong>
+          <small>Using GPS</small>
+        </span>
+        <span class="loc-gps-arrow">›</span>
       </button>
-      <div id="pincodeResult"></div>
+
+      <!-- Saved addresses -->
+      <div class="loc-saved-section" id="locSavedSection">
+        <div class="loc-section-label">Saved Addresses</div>
+        <ul class="loc-saved-list" id="locSavedList">
+          <!-- populated by JS -->
+        </ul>
+        <p class="loc-no-saved" id="locNoSaved" style="display:none;">No saved addresses yet.</p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Save address label dialog -->
+<div class="auth-modal" id="saveLabelSheet" role="dialog" aria-modal="true">
+  <div class="auth-modal-backdrop" onclick="closeSaveLabelSheet()"></div>
+  <div class="auth-modal-dialog" style="max-width:360px;">
+    <div class="auth-modal-header">
+      <div><h3>💾 Save Address</h3><p id="saveLabelAddr" style="font-size:12px;color:var(--text-light);max-width:240px;"></p></div>
+      <button class="auth-modal-close" onclick="closeSaveLabelSheet()">✕</button>
+    </div>
+    <div class="auth-modal-body">
+      <p style="font-size:13px;margin-bottom:12px;color:var(--text-mid);">Give this address a name (optional)</p>
+      <div class="loc-label-chips">
+        <button class="loc-label-chip active" data-label="Home">🏠 Home</button>
+        <button class="loc-label-chip" data-label="Work">💼 Work</button>
+        <button class="loc-label-chip" data-label="Other">📌 Other</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeSaveLabelSheet()" style="flex:1;">Skip</button>
+        <button class="btn btn-primary" onclick="confirmSaveLabel()" style="flex:1;">Save</button>
+      </div>
     </div>
   </div>
 </div>
@@ -421,73 +471,305 @@
 
 <script src="/js/menu-data.js"></script>
 <script>
-// ─── Pincode check ────────────────────────────────────────────────────────────
-function checkPincode() {
-  const val = document.getElementById('pincodeInput').value.trim();
-  const result = document.getElementById('pincodeResult');
-  if (val.length !== 6 || isNaN(val)) {
-    result.innerHTML = '<div class="alert alert-warn" style="margin-top:10px;">⚠️ Please enter a valid 6-digit pincode</div>';
-    return;
-  }
-  if (DELIVERY_ZONES[val]) {
-    result.innerHTML = `<div class="zone-result zone-available">✅ We deliver to <strong>${DELIVERY_ZONES[val]}</strong>! <a href="/#menu" style="color:var(--rust);margin-left:6px;font-weight:700;">Order Now →</a></div>`;
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── DELIVERY LOCATION SYSTEM ──────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LOC_KEY        = 'ok_delivery_location';   // current selected location
+const SAVED_ADDR_KEY = 'ok_saved_addresses';      // array of saved addresses
+const NOMINATIM      = 'https://nominatim.openstreetmap.org';
+
+let _locSearchTimer  = null;
+let _pendingLocation = null; // location awaiting label save
+
+// ── Helpers ─────────────────────────────────────────────────────────────────
+function getSavedAddresses() {
+  try { return JSON.parse(localStorage.getItem(SAVED_ADDR_KEY)) || []; }
+  catch { return []; }
+}
+function saveAddressToStore(addr) {
+  const list = getSavedAddresses().filter(a => a.id !== addr.id);
+  list.unshift(addr);
+  localStorage.setItem(SAVED_ADDR_KEY, JSON.stringify(list.slice(0, 10)));
+}
+function getCurrentLocation() {
+  try { return JSON.parse(localStorage.getItem(LOC_KEY)); }
+  catch { return null; }
+}
+function setCurrentLocation(loc) {
+  localStorage.setItem(LOC_KEY, JSON.stringify(loc));
+  updateHeaderPill(loc);
+}
+
+// ── Header pill ──────────────────────────────────────────────────────────────
+function updateHeaderPill(loc) {
+  const el = document.getElementById('locationLabel');
+  if (!el) return;
+  if (loc && loc.label) {
+    el.textContent = '📍 ' + loc.label + ' — ' + loc.shortName;
+  } else if (loc && loc.shortName) {
+    el.textContent = '📍 ' + loc.shortName;
   } else {
-    result.innerHTML = `<div class="zone-result zone-unavailable">😔 Sorry, we don't deliver to <strong>${val}</strong> yet. <button onclick="notifyMe()" style="background:none;border:none;color:var(--rust);font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">Notify me</button></div>`;
+    el.textContent = '📍 Check Delivery Location';
   }
 }
 
-// ─── Real geolocation via OpenStreetMap Nominatim ─────────────────────────────
-function useMyLocation() {
-  const result = document.getElementById('pincodeResult');
-  const input  = document.getElementById('pincodeInput');
+// ── Auto-detect on page load (silent) ────────────────────────────────────────
+function autoDetectLocation() {
+  // If a location is already saved, show it immediately
+  const cur = getCurrentLocation();
+  if (cur) { updateHeaderPill(cur); return; }
+
+  // Ask browser silently — no UI prompt
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    pos => reverseGeocode(pos.coords.latitude, pos.coords.longitude, result => {
+      if (!result) return;
+      // Check if matches any saved address (within ~1 km)
+      const saved = getSavedAddresses();
+      const match = saved.find(a => a.lat && a.lng &&
+        haversineKm(a.lat, a.lng, result.lat, result.lng) < 1);
+      const loc = match
+        ? { ...result, label: match.label, shortName: match.shortName }
+        : result;
+      setCurrentLocation(loc);
+    }),
+    () => {}, // silent on deny
+    { timeout: 8000, enableHighAccuracy: false }
+  );
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── Reverse geocode (coords → address) ───────────────────────────────────────
+function reverseGeocode(lat, lng, cb) {
+  fetch(`${NOMINATIM}/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
+    headers: { 'Accept-Language': 'en' }
+  })
+  .then(r => r.json())
+  .then(data => {
+    const a = data.address || {};
+    const shortName = a.suburb || a.neighbourhood || a.village ||
+                      a.town   || a.city_district  || a.city || 'Detected Location';
+    cb({ lat, lng, shortName, fullAddress: data.display_name || shortName });
+  })
+  .catch(() => cb(null));
+}
+
+// ── Location sheet open/close ─────────────────────────────────────────────────
+function openLocationSheet() {
+  document.getElementById('locationSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  renderSavedAddresses();
+  setTimeout(() => {
+    const inp = document.getElementById('locSearchInput');
+    if (inp) inp.focus();
+  }, 220);
+}
+function closeLocationSheet() {
+  document.getElementById('locationSheet').classList.remove('open');
+  document.body.style.overflow = '';
+  clearLocSearch();
+}
+
+// ── Search input ──────────────────────────────────────────────────────────────
+function onLocSearch(q) {
+  const clear = document.getElementById('locSearchClear');
+  if (clear) clear.style.display = q.length ? 'flex' : 'none';
+  clearTimeout(_locSearchTimer);
+  if (q.trim().length < 2) { hideSuggestions(); return; }
+  _locSearchTimer = setTimeout(() => fetchSuggestions(q.trim()), 380);
+}
+
+function onLocSearchFocus() {
+  const q = (document.getElementById('locSearchInput') || {}).value || '';
+  if (q.trim().length >= 2) fetchSuggestions(q.trim());
+}
+
+function clearLocSearch() {
+  const inp = document.getElementById('locSearchInput');
+  if (inp) { inp.value = ''; inp.focus(); }
+  const clear = document.getElementById('locSearchClear');
+  if (clear) clear.style.display = 'none';
+  hideSuggestions();
+}
+
+// ── Nominatim forward geocode ─────────────────────────────────────────────────
+function fetchSuggestions(q) {
+  const url = `${NOMINATIM}/search?q=${encodeURIComponent(q)}&format=json&limit=6&addressdetails=1&countrycodes=in`;
+  showSuggestionsLoading();
+  fetch(url, { headers: { 'Accept-Language': 'en' } })
+  .then(r => r.json())
+  .then(results => renderSuggestions(results))
+  .catch(() => hideSuggestions());
+}
+
+function showSuggestionsLoading() {
+  const ul = document.getElementById('locSuggestions');
+  ul.style.display = 'block';
+  ul.innerHTML = '<li class="loc-sug-loading">🔍 Searching…</li>';
+}
+
+function renderSuggestions(results) {
+  const ul = document.getElementById('locSuggestions');
+  if (!results || !results.length) {
+    ul.innerHTML = '<li class="loc-sug-empty">No results found. Try a different search.</li>';
+    ul.style.display = 'block';
+    return;
+  }
+  ul.innerHTML = results.map((r, i) => {
+    const a    = r.address || {};
+    const name = a.suburb || a.neighbourhood || a.village || a.town || a.city_district || a.amenity || a.road || r.display_name.split(',')[0];
+    const sub  = r.display_name.split(',').slice(1, 3).join(',').trim();
+    return `<li class="loc-sug-item" onclick="selectSearchResult(${i})" data-idx="${i}" data-result='${JSON.stringify({lat:+r.lat,lng:+r.lon,shortName:name,fullAddress:r.display_name}).replace(/'/g,"&#39;")}'>
+      <span class="loc-sug-icon">📍</span>
+      <span class="loc-sug-text"><strong>${name}</strong><small>${sub}</small></span>
+    </li>`;
+  }).join('');
+  ul.style.display = 'block';
+
+  // Store results for later lookup
+  ul._results = results;
+}
+
+function hideSuggestions() {
+  const ul = document.getElementById('locSuggestions');
+  ul.style.display = 'none';
+  ul.innerHTML = '';
+}
+
+function selectSearchResult(idx) {
+  const items = document.querySelectorAll('#locSuggestions .loc-sug-item');
+  const item  = items[idx];
+  if (!item) return;
+  try {
+    const data = JSON.parse(item.dataset.result.replace(/&#39;/g, "'"));
+    hideSuggestions();
+    document.getElementById('locSearchInput').value = data.shortName;
+    document.getElementById('locSearchClear').style.display = 'flex';
+    promptSaveLabel(data);
+  } catch(e) { console.warn(e); }
+}
+
+// ── GPS button ────────────────────────────────────────────────────────────────
+function useCurrentLocation() {
+  const btn = document.querySelector('.loc-gps-btn strong');
+  if (btn) btn.textContent = 'Detecting…';
 
   if (!navigator.geolocation) {
-    result.innerHTML = '<div class="alert alert-warn" style="margin-top:10px;">⚠️ Geolocation not supported. Please enter pincode manually.</div>';
+    showToast('⚠️ Geolocation not supported on this browser.');
+    if (btn) btn.textContent = 'Use current location';
     return;
   }
 
-  result.innerHTML = '<div class="alert alert-info" style="margin-top:10px;">📍 Detecting your location…</div>';
-
   navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const { latitude, longitude } = pos.coords;
-      // Use OpenStreetMap Nominatim — free, no API key needed
-      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`, {
-        headers: { 'Accept-Language': 'en' }
-      })
-      .then(r => r.json())
-      .then(data => {
-        const addr    = data.address || {};
-        const pincode = addr.postcode ? addr.postcode.replace(/\s/g, '').slice(0, 6) : null;
-        const area    = addr.suburb || addr.neighbourhood || addr.county || addr.city || 'your area';
-
-        if (!pincode) {
-          result.innerHTML = '<div class="alert alert-warn" style="margin-top:10px;">⚠️ Could not determine pincode. Please enter it manually.</div>';
-          return;
-        }
-
-        input.value = pincode;
-
-        if (DELIVERY_ZONES[pincode]) {
-          result.innerHTML = `<div class="zone-result zone-available">✅ Detected: <strong>${area}</strong> (${pincode}) — We deliver here! <a href="/#menu" style="color:var(--rust);margin-left:6px;font-weight:700;">Order Now →</a></div>`;
-        } else {
-          result.innerHTML = `<div class="zone-result zone-unavailable">📍 Detected: <strong>${area}</strong> (${pincode}) — Sorry, we don't deliver here yet. <button onclick="notifyMe()" style="background:none;border:none;color:var(--rust);font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">Notify me</button></div>`;
-        }
-      })
-      .catch(() => {
-        result.innerHTML = '<div class="alert alert-warn" style="margin-top:10px;">⚠️ Could not fetch address. Please enter pincode manually.</div>';
+    pos => {
+      reverseGeocode(pos.coords.latitude, pos.coords.longitude, result => {
+        if (btn) btn.textContent = 'Use current location';
+        if (!result) { showToast('Could not determine address. Please search manually.'); return; }
+        promptSaveLabel(result);
       });
     },
-    (err) => {
-      const msgs = {
-        1: 'Location access denied. Please allow location access or enter your pincode.',
-        2: 'Location unavailable. Please enter pincode manually.',
-        3: 'Location request timed out. Please enter pincode manually.'
-      };
-      result.innerHTML = `<div class="alert alert-warn" style="margin-top:10px;">⚠️ ${msgs[err.code] || 'Could not get location.'}</div>`;
+    err => {
+      if (btn) btn.textContent = 'Use current location';
+      const msgs = { 1: 'Location permission denied.', 2: 'Location unavailable.', 3: 'Request timed out.' };
+      showToast('⚠️ ' + (msgs[err.code] || 'Could not get location.'));
     },
     { timeout: 10000, enableHighAccuracy: true }
   );
+}
+
+// ── Save label flow ───────────────────────────────────────────────────────────
+function promptSaveLabel(locData) {
+  _pendingLocation = locData;
+  const el = document.getElementById('saveLabelAddr');
+  if (el) el.textContent = locData.fullAddress || locData.shortName;
+
+  // Reset chip selection
+  document.querySelectorAll('.loc-label-chip').forEach((c, i) => {
+    c.classList.toggle('active', i === 0);
+  });
+
+  document.getElementById('saveLabelSheet').classList.add('open');
+}
+
+function closeSaveLabelSheet() {
+  document.getElementById('saveLabelSheet').classList.remove('open');
+  // Confirm without saving label
+  if (_pendingLocation) {
+    confirmLocation(_pendingLocation, null);
+    _pendingLocation = null;
+  }
+}
+
+function confirmSaveLabel() {
+  const activeChip = document.querySelector('.loc-label-chip.active');
+  const label = activeChip ? activeChip.dataset.label : null;
+  document.getElementById('saveLabelSheet').classList.remove('open');
+  if (_pendingLocation) {
+    confirmLocation(_pendingLocation, label);
+    _pendingLocation = null;
+  }
+}
+
+document.addEventListener('click', e => {
+  const chip = e.target.closest('.loc-label-chip');
+  if (chip) {
+    document.querySelectorAll('.loc-label-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  }
+});
+
+function confirmLocation(loc, label) {
+  const finalLoc = { ...loc, label: label || null, id: 'addr_' + Date.now() };
+  setCurrentLocation(finalLoc);
+  if (label) saveAddressToStore(finalLoc);
+  closeLocationSheet();
+  showToast('📍 Delivery location set: ' + (label ? label + ' — ' : '') + loc.shortName);
+}
+
+// ── Render saved addresses ────────────────────────────────────────────────────
+function renderSavedAddresses() {
+  const list   = document.getElementById('locSavedList');
+  const noSaved = document.getElementById('locNoSaved');
+  const saved  = getSavedAddresses();
+
+  if (!saved.length) {
+    list.innerHTML = '';
+    if (noSaved) noSaved.style.display = 'block';
+    return;
+  }
+  if (noSaved) noSaved.style.display = 'none';
+
+  const icons = { Home: '🏠', Work: '💼', Other: '📌' };
+  list.innerHTML = saved.map(a => `
+    <li class="loc-saved-item" onclick="selectSavedAddress('${a.id}')">
+      <span class="loc-saved-icon">${icons[a.label] || '📍'}</span>
+      <span class="loc-saved-text">
+        <strong>${a.label || 'Address'}</strong>
+        <small>${a.shortName || a.fullAddress}</small>
+      </span>
+      <button class="loc-saved-del" onclick="deleteSavedAddress(event,'${a.id}')">✕</button>
+    </li>`).join('');
+}
+
+function selectSavedAddress(id) {
+  const saved = getSavedAddresses().find(a => a.id === id);
+  if (!saved) return;
+  setCurrentLocation(saved);
+  closeLocationSheet();
+  showToast('📍 ' + (saved.label || saved.shortName) + ' selected');
+}
+
+function deleteSavedAddress(e, id) {
+  e.stopPropagation();
+  const list = getSavedAddresses().filter(a => a.id !== id);
+  localStorage.setItem(SAVED_ADDR_KEY, JSON.stringify(list));
+  renderSavedAddresses();
 }
 
 function notifyMe() {
@@ -529,11 +811,11 @@ function startOfferAutoScroll() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('pincodeInput')?.addEventListener('keypress', e => {
-    if (e.key === 'Enter') checkPincode();
-  });
+  // Auto-detect delivery location on load
+  autoDetectLocation();
+
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeAuthSheet();
+    if (e.key === 'Escape') { closeAuthSheet(); closeLocationSheet(); closeSaveLabelSheet(); }
   });
 
   // Sync dots on manual scroll
@@ -748,15 +1030,7 @@ function applyCoupon() {
   else showToast('❌ Invalid coupon code');
 }
 
-// ─── Location sheet ───────────────────────────────────────────────────────────
-function openLocationSheet() {
-  document.getElementById('locationSheet').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-function closeLocationSheet() {
-  document.getElementById('locationSheet').classList.remove('open');
-  document.body.style.overflow = '';
-}
+// ─── (location sheet open/close defined above in DELIVERY LOCATION SYSTEM) ───
 </script>
 
 <!-- ── Floating Bottom Nav (mobile only) ────────────────────────────────── -->
