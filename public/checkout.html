@@ -13,7 +13,7 @@
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <header class="header">
   <div class="header-inner">
-    <a href="/menu" class="header-logo" style="gap:8px;">
+    <a href="/#menu" class="header-logo" style="gap:8px;">
       <span style="font-size:22px;color:var(--cream);">←</span>
       <div class="header-logo-text">
         <span class="brand-name">Checkout</span>
@@ -21,7 +21,7 @@
       </div>
     </a>
     <nav class="header-nav">
-      <a href="/">Home</a><a href="/menu">Menu</a>
+      <a href="/">Home</a><a href="/#menu">Menu</a>
       <a href="/why-us">Why Us</a><a href="/rider">Ride With Us</a>
     </nav>
     <div style="font-size:13px;color:rgba(255,255,255,.6);">Step 1 of 2</div>
@@ -212,7 +212,7 @@ let discount = 0;
 function renderSummary() {
   const container = document.getElementById('orderSummary');
   if (!cart || cart.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-light);font-size:14px;">Cart is empty. <a href="/menu" style="color:var(--rust);font-weight:700;">Browse Menu →</a></p>';
+    container.innerHTML = '<p style="color:var(--text-light);font-size:14px;">Cart is empty. <a href="/#menu" style="color:var(--rust);font-weight:700;">Browse Menu →</a></p>';
     return;
   }
   container.innerHTML = cart.map(item => `

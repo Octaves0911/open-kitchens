@@ -28,7 +28,7 @@ app.use(express.json());
 
 // Routes — serve HTML pages
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
-app.get('/menu', (req, res) => res.sendFile(path.join(__dirname, 'public', 'menu.html')));
+app.get('/menu', (req, res) => res.redirect(301, '/#menu')); // menu now lives on the landing page
 app.get('/checkout', (req, res) => res.sendFile(path.join(__dirname, 'public', 'checkout.html')));
 app.get('/tracking', (req, res) => res.sendFile(path.join(__dirname, 'public', 'tracking.html')));
 app.get('/restaurant', (req, res) => res.sendFile(path.join(__dirname, 'public', 'restaurant.html')));

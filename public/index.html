@@ -24,7 +24,7 @@
     <!-- Desktop nav -->
     <nav class="header-nav">
       <a href="/" class="active">Home</a>
-      <a href="/menu">Menu</a>
+      <a href="/#menu">Menu</a>
       <a href="/why-us">Why Us</a>
       <a href="/rider">Ride With Us</a>
     </nav>
@@ -113,7 +113,7 @@
     <div class="offers-track" id="offersTrack">
 
       <!-- Card 1: First Order Special -->
-      <div class="offer-card" onclick="window.location.href='/menu'">
+      <div class="offer-card" onclick="window.location.href='/#menu'">
         <div class="offer-badge">NEW USER</div>
         <div class="offer-card-bg" style="background:linear-gradient(135deg,#FFF8E1,#FFD54F30);">🎉</div>
         <div class="offer-card-body">
@@ -129,7 +129,7 @@
       </div>
 
       <!-- Card 2: Rise & Shine Breakfast Combo -->
-      <div class="offer-card" onclick="window.location.href='/menu'">
+      <div class="offer-card" onclick="window.location.href='/#menu'">
         <div class="offer-badge">SAVE ₹40</div>
         <div class="offer-card-bg" style="background:linear-gradient(135deg,#FFF3E0,#FFCC80);">☀️</div>
         <div class="offer-card-body">
@@ -146,7 +146,7 @@
       </div>
 
       <!-- Card 3: Royal Thali Feast -->
-      <div class="offer-card" onclick="window.location.href='/menu'">
+      <div class="offer-card" onclick="window.location.href='/#menu'">
         <div class="offer-badge">BEST VALUE</div>
         <div class="offer-card-bg" style="background:linear-gradient(135deg,#FFFDE7,#FFE57F);">👑</div>
         <div class="offer-card-body">
@@ -163,7 +163,7 @@
       </div>
 
       <!-- Card 4: Family Dinner Pack -->
-      <div class="offer-card" onclick="window.location.href='/menu'">
+      <div class="offer-card" onclick="window.location.href='/#menu'">
         <div class="offer-badge">FAMILY PACK</div>
         <div class="offer-card-bg" style="background:linear-gradient(135deg,#FBE9E7,#FFAB91);">🏠</div>
         <div class="offer-card-body">
@@ -180,7 +180,7 @@
       </div>
 
       <!-- Card 5: Snack Binge Box -->
-      <div class="offer-card" onclick="window.location.href='/menu'">
+      <div class="offer-card" onclick="window.location.href='/#menu'">
         <div class="offer-badge">SAVE ₹35</div>
         <div class="offer-card-bg" style="background:linear-gradient(135deg,#E8F5E9,#A5D6A7);">⚡</div>
         <div class="offer-card-body">
@@ -262,7 +262,7 @@
 </section>
 
 <!-- ── Inline Menu ─────────────────────────────────────────────────────────── -->
-<section class="section" style="background:var(--surface);padding-top:24px;">
+<section id="menu" class="section" style="background:var(--surface);padding-top:24px;">
   <div class="section-inner" style="padding:0;">
 
     <div style="padding:0 16px 12px;">
@@ -336,7 +336,7 @@
     <div style="font-size:32px;margin-bottom:10px;">🍽️</div>
     <h2 style="color:#fff;font-size:24px;font-weight:800;margin-bottom:8px;">Hungry? Let's fix that.</h2>
     <p style="color:rgba(255,255,255,.8);font-size:14px;margin-bottom:24px;">Order now and watch your meal being prepared live</p>
-    <a href="/menu" class="btn btn-amber" style="font-size:16px;padding:14px 36px;">Order Now →</a>
+    <a href="/#menu" class="btn btn-amber" style="font-size:16px;padding:14px 36px;">Order Now →</a>
   </div>
 </section>
 
@@ -364,7 +364,7 @@
         <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:12px;">Quick Links</div>
         <div style="display:flex;flex-direction:column;gap:8px;">
           <a href="/" style="font-size:13px;color:rgba(255,255,255,.65);">Home</a>
-          <a href="/menu" style="font-size:13px;color:rgba(255,255,255,.65);">Menu</a>
+          <a href="/#menu" style="font-size:13px;color:rgba(255,255,255,.65);">Menu</a>
           <a href="/why-us" style="font-size:13px;color:rgba(255,255,255,.65);">Why Us</a>
           <a href="/rider" style="font-size:13px;color:rgba(255,255,255,.65);">Ride With Us</a>
         </div>
@@ -433,7 +433,7 @@ function checkPincode() {
     return;
   }
   if (DELIVERY_ZONES[val]) {
-    result.innerHTML = `<div class="zone-result zone-available">✅ We deliver to <strong>${DELIVERY_ZONES[val]}</strong>! <a href="/menu" style="color:var(--rust);margin-left:6px;font-weight:700;">Order Now →</a></div>`;
+    result.innerHTML = `<div class="zone-result zone-available">✅ We deliver to <strong>${DELIVERY_ZONES[val]}</strong>! <a href="/#menu" style="color:var(--rust);margin-left:6px;font-weight:700;">Order Now →</a></div>`;
   } else {
     result.innerHTML = `<div class="zone-result zone-unavailable">😔 Sorry, we don't deliver to <strong>${val}</strong> yet. <button onclick="notifyMe()" style="background:none;border:none;color:var(--rust);font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">Notify me</button></div>`;
   }
@@ -472,7 +472,7 @@ function useMyLocation() {
         input.value = pincode;
 
         if (DELIVERY_ZONES[pincode]) {
-          result.innerHTML = `<div class="zone-result zone-available">✅ Detected: <strong>${area}</strong> (${pincode}) — We deliver here! <a href="/menu" style="color:var(--rust);margin-left:6px;font-weight:700;">Order Now →</a></div>`;
+          result.innerHTML = `<div class="zone-result zone-available">✅ Detected: <strong>${area}</strong> (${pincode}) — We deliver here! <a href="/#menu" style="color:var(--rust);margin-left:6px;font-weight:700;">Order Now →</a></div>`;
         } else {
           result.innerHTML = `<div class="zone-result zone-unavailable">📍 Detected: <strong>${area}</strong> (${pincode}) — Sorry, we don't deliver here yet. <button onclick="notifyMe()" style="background:none;border:none;color:var(--rust);font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">Notify me</button></div>`;
         }
