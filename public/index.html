@@ -14,21 +14,31 @@
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <header class="header">
   <div class="header-inner">
-    <a href="/" class="header-logo">
+    <!-- Logo: desktop only -->
+    <a href="/" class="header-logo desktop-only">
       <img src="/images/logo.png" alt="Open Kitchens"/>
       <div class="header-logo-text">
         <span class="brand-name">Open Kitchens</span>
         <span class="brand-tagline">See What You Eat</span>
       </div>
     </a>
+
+    <!-- Mobile location pill -->
+    <button class="mobile-location-btn mobile-only" onclick="openLocationSheet()">
+      <span id="locationLabel">📍 Check Delivery Location</span>
+      <span class="mobile-location-chevron">›</span>
+    </button>
+
     <!-- Desktop nav -->
-    <nav class="header-nav">
+    <nav class="header-nav desktop-only">
       <a href="/" class="active">Home</a>
       <a href="/#menu">Menu</a>
       <a href="/why-us">Why Us</a>
       <a href="/rider">Ride With Us</a>
     </nav>
-    <div class="header-actions">
+
+    <!-- Desktop actions only -->
+    <div class="header-actions desktop-only">
       <button class="header-btn" onclick="openAuthSheet()">Login</button>
       <button class="cart-btn" onclick="openCart()">
         🛒 Cart <span class="cart-count" style="display:none;">0</span>
@@ -41,7 +51,6 @@
 <section class="hero">
   <div class="hero-bg"></div>
   <div class="hero-content">
-    <!-- Left: branding -->
     <div class="hero-text-col">
       <h1>Open <span>Kitchens</span></h1>
       <p class="hero-tagline">See What You Eat</p>
@@ -49,22 +58,36 @@
         <span class="dot"></span>
         Watch your food being prepared live
       </div>
+      <a href="/#menu" class="btn btn-amber" style="margin-top:20px;font-size:15px;padding:12px 32px;">Order Now →</a>
     </div>
-    <!-- Right: pincode card -->
-    <div class="pincode-card">
-      <h3>🚚 Check delivery to your area</h3>
-      <div class="pincode-input-row">
-        <input type="number" class="pincode-input" id="pincodeInput"
-          placeholder="Enter 6-digit pincode" maxlength="6"/>
-        <button class="btn btn-primary" onclick="checkPincode()">Check</button>
+  </div>
+</section>
+
+<!-- ── Location Sheet (mobile) ───────────────────────────────────────────── -->
+<div class="auth-modal" id="locationSheet" role="dialog" aria-modal="true">
+  <div class="auth-modal-backdrop" onclick="closeLocationSheet()"></div>
+  <div class="auth-modal-dialog">
+    <div class="auth-modal-header">
+      <div>
+        <h3>📍 Check Delivery</h3>
+        <p>Enter your pincode or use GPS</p>
       </div>
-      <button class="btn btn-location btn-full" onclick="useMyLocation()">
+      <button class="auth-modal-close" onclick="closeLocationSheet()">✕</button>
+    </div>
+    <div class="auth-modal-body">
+      <div class="pincode-input-row" style="margin-bottom:10px;">
+        <input type="number" class="pincode-input form-input" id="pincodeInput"
+          placeholder="Enter 6-digit pincode" maxlength="6"
+          style="flex:1;padding:11px 14px;font-size:15px;"/>
+        <button class="btn btn-primary" onclick="checkPincode()" style="padding:11px 18px;">Check</button>
+      </div>
+      <button class="btn btn-location btn-full" onclick="useMyLocation()" style="margin-bottom:10px;">
         📍 Use My Location
       </button>
       <div id="pincodeResult"></div>
     </div>
   </div>
-</section>
+</div>
 
 <!-- ── USP Strip ──────────────────────────────────────────────────────────── -->
 <div class="marquee-strip">
@@ -749,6 +772,38 @@ function applyCoupon() {
   else if (code === 'OPENKITCHENS') showToast('🎉 10% off applied!');
   else showToast('❌ Invalid coupon code');
 }
+
+// ─── Location sheet ───────────────────────────────────────────────────────────
+function openLocationSheet() {
+  document.getElementById('locationSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeLocationSheet() {
+  document.getElementById('locationSheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
 </script>
+
+<!-- ── Floating Bottom Nav (mobile only) ────────────────────────────────── -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+  <a href="/" class="mbn-item active">
+    <span class="mbn-icon">🏠</span>
+    <span class="mbn-label">Home</span>
+  </a>
+  <a href="/#menu" class="mbn-item" onclick="closeMobileMenuHighlight()">
+    <span class="mbn-icon">🍽️</span>
+    <span class="mbn-label">Menu</span>
+  </a>
+  <a href="#" class="mbn-item" onclick="openCart();return false;">
+    <span class="mbn-icon" style="position:relative;">
+      🛒<span class="mbn-cart-badge cart-count" style="display:none;">0</span>
+    </span>
+    <span class="mbn-label">Cart</span>
+  </a>
+  <a href="#" class="mbn-item" onclick="openAuthSheet();return false;">
+    <span class="mbn-icon">👤</span>
+    <span class="mbn-label">Profile</span>
+  </a>
+</nav>
 </body>
 </html>
