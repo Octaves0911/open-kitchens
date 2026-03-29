@@ -73,24 +73,23 @@ input, select, textarea { font-family: inherit; outline: none; }
   max-width: var(--max-w);
   margin: 0 auto;
   padding: 10px 20px;
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: center;
 }
 
-/* Mobile location pill in header */
+/* Location pill in header — all screen sizes */
 .mobile-location-btn {
-  flex: 1;
   display: flex; align-items: center; justify-content: space-between;
   background: rgba(255,255,255,.12);
   border: 1px solid rgba(255,255,255,.25);
   border-radius: 10px;
-  padding: 9px 14px;
+  padding: 9px 16px;
   color: #fff; font-size: 13px; font-weight: 600;
-  cursor: pointer; gap: 8px;
+  cursor: pointer; gap: 10px;
   transition: background .2s;
-  max-width: 100%;
+  width: 100%;
 }
 .mobile-location-btn:hover { background: rgba(255,255,255,.2); }
-.mobile-location-chevron { font-size: 18px; opacity: .7; }
+.mobile-location-chevron { font-size: 18px; opacity: .7; flex-shrink: 0; }
 .header-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
 .header-logo img { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--amber); }
 .header-logo-text { display: flex; flex-direction: column; }

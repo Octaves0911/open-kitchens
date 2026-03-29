@@ -14,36 +14,11 @@
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <header class="header">
   <div class="header-inner">
-    <!-- Logo: desktop only -->
-    <a href="/" class="header-logo desktop-only">
-      <img src="/images/logo.png" alt="Open Kitchens"/>
-      <div class="header-logo-text">
-        <span class="brand-name">Open Kitchens</span>
-        <span class="brand-tagline">See What You Eat</span>
-      </div>
-    </a>
-
-    <!-- Mobile location pill -->
-    <button class="mobile-location-btn mobile-only" onclick="openLocationSheet()">
+    <!-- Location check pill — all screen sizes -->
+    <button class="mobile-location-btn" onclick="openLocationSheet()" style="max-width:480px;">
       <span id="locationLabel">📍 Check Delivery Location</span>
       <span class="mobile-location-chevron">›</span>
     </button>
-
-    <!-- Desktop nav -->
-    <nav class="header-nav desktop-only">
-      <a href="/" class="active">Home</a>
-      <a href="/#menu">Menu</a>
-      <a href="/why-us">Why Us</a>
-      <a href="/rider">Ride With Us</a>
-    </nav>
-
-    <!-- Desktop actions only -->
-    <div class="header-actions desktop-only">
-      <button class="header-btn" onclick="openAuthSheet()">Login</button>
-      <button class="cart-btn" onclick="openCart()">
-        🛒 Cart <span class="cart-count" style="display:none;">0</span>
-      </button>
-    </div>
   </div>
 </header>
 
