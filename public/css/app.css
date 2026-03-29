@@ -107,17 +107,13 @@ input, select, textarea { font-family: inherit; outline: none; }
   text-align: center;
   background: var(--brown-dark);
 }
-/* Real kitchen photo background — visible with dark overlay */
+/* Kitchen photo — blurred with dark shade */
 .hero-bg {
-  position: absolute; inset: 0;
+  position: absolute; inset: -20px;
   background: url('/images/hero-background.jpg') center/cover no-repeat;
+  filter: blur(6px) brightness(0.45);
+  transform: scale(1.05);
   z-index: 0;
-}
-/* Overlay at 40% so image is 60% visible */
-.hero-bg::after {
-  content: '';
-  position: absolute; inset: 0;
-  background: rgba(20,8,2,.40);
 }
 .hero-content {
   position: relative; z-index: 1;
