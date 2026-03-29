@@ -113,15 +113,15 @@ input, select, textarea { font-family: inherit; outline: none; }
   background: url('/images/hero-background.jpg') center/cover no-repeat;
   z-index: 0;
 }
-/* Dark gradient overlay so text stays readable */
+/* Light overlay — image stays clearly visible, left side darker for text readability */
 .hero-bg::after {
   content: '';
   position: absolute; inset: 0;
   background: linear-gradient(
-    160deg,
-    rgba(42,14,4,.82) 0%,
-    rgba(62,20,6,.70) 45%,
-    rgba(90,30,8,.60) 100%
+    110deg,
+    rgba(30,10,2,.62) 0%,
+    rgba(40,14,4,.38) 40%,
+    rgba(20,8,2,.22) 100%
   );
 }
 .hero-content {
@@ -142,14 +142,19 @@ input, select, textarea { font-family: inherit; outline: none; }
 .hero-usp .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--amber); animation: pulse 2s infinite; flex-shrink: 0; }
 @keyframes pulse { 0%,100% { transform:scale(1); opacity:1; } 50% { transform:scale(1.4); opacity:.7; } }
 
-/* ─── Pincode Card — compact ─────────────────────────────────────────────── */
+/* ─── Pincode Card — glassmorphic so background image shows through ────────── */
 .pincode-card {
-  background: rgba(255,255,255,.97);
+  background: rgba(255,255,255,.18);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  border: 1.5px solid rgba(255,255,255,.35);
   border-radius: var(--radius-lg);
-  padding: 18px 18px 16px;
-  box-shadow: var(--shadow-lg);
+  padding: 20px 20px 18px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.28);
   width: 100%; max-width: 400px;
 }
+.pincode-card h3 { color: #fff; }
+.pincode-card .form-label { color: rgba(255,255,255,.85); }
 .pincode-card h3 { font-size: 14px; color: var(--brown-dark); font-weight: 700; margin-bottom: 12px; }
 .pincode-input-row { display: flex; gap: 8px; margin-bottom: 8px; }
 .pincode-input {
