@@ -81,7 +81,7 @@ input, select, textarea { font-family: inherit; outline: none; }
 
 /* Brand (desktop left col) */
 .hdr-brand {
-  display: flex; align-items: center; gap: 8px;
+  align-items: center; gap: 8px;
   text-decoration: none;
 }
 .hdr-brand-logo {
@@ -130,7 +130,7 @@ input, select, textarea { font-family: inherit; outline: none; }
 
 /* Desktop right nav */
 .hdr-nav {
-  display: flex; align-items: center; gap: 4px;
+  align-items: center; gap: 4px;
   justify-self: end;
 }
 .hdr-nav-link {
