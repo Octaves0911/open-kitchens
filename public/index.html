@@ -8,6 +8,10 @@
   <title>Open Kitchens — See What You Eat</title>
   <link rel="icon" href="/images/logo.png" type="image/png"/>
   <link rel="stylesheet" href="/css/app.css"/>
+  <!-- Mapbox GL JS -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js"></script>
+  <meta name="mapbox-token" content="__MAPBOX_TOKEN__"/>
 </head>
 <body>
 
@@ -70,48 +74,76 @@
     <!-- Drag handle -->
     <div class="loc-sheet-handle"></div>
 
-    <!-- Search bar (always at top, auto-focused) -->
+    <!-- Header row -->
+    <div class="loc-sheet-header">
+      <span class="loc-sheet-title">Set Delivery Location</span>
+      <button class="loc-sheet-close" onclick="closeLocationSheet()">✕</button>
+    </div>
+
+    <!-- Search bar -->
     <div class="loc-sheet-search-wrap">
       <div class="loc-sheet-search-inner">
         <svg class="loc-sheet-search-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input
-          type="text"
-          id="locSearchInput"
-          class="loc-sheet-search-input"
+        <input type="text" id="locSearchInput" class="loc-sheet-search-input"
           placeholder="Search area, street or landmark…"
-          autocomplete="off"
-          oninput="onLocSearch(this.value)"
-          onfocus="onLocSearchFocus()"
-        />
+          autocomplete="off" oninput="onLocSearch(this.value)" onfocus="onLocSearchFocus()"/>
         <button class="loc-sheet-clear" id="locSearchClear" onclick="clearLocSearch()" style="display:none;">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
         </button>
       </div>
-      <!-- Live suggestions appear inline below the bar -->
       <ul class="loc-suggestions" id="locSuggestions" style="display:none;"></ul>
     </div>
 
-    <!-- Scrollable body -->
-    <div class="loc-sheet-body">
+    <!-- ── Map view (shown after search/GPS) ── -->
+    <div class="loc-map-section" id="locMapSection" style="display:none;">
+      <!-- Mapbox map container -->
+      <div class="loc-map-container" id="locMapContainer">
+        <!-- Fixed center pin overlay -->
+        <div class="loc-map-pin-wrap" id="locMapPinWrap">
+          <div class="loc-map-pin">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 0C8.059 0 0 8.059 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.059 27.941 0 18 0z" fill="#C1440E"/>
+              <circle cx="18" cy="18" r="7" fill="white"/>
+            </svg>
+          </div>
+          <div class="loc-map-pin-shadow"></div>
+        </div>
+      </div>
 
-      <!-- GPS button with pulse ring -->
+      <!-- Address bar below map -->
+      <div class="loc-addr-bar">
+        <div class="loc-addr-bar-inner">
+          <div class="loc-addr-icon">📍</div>
+          <div class="loc-addr-text">
+            <p class="loc-addr-name" id="locAddrName">Locating…</p>
+            <p class="loc-addr-full" id="locAddrFull"></p>
+          </div>
+          <!-- GPS recenter button -->
+          <button class="loc-gps-recenter" onclick="useCurrentLocation()" title="Use my location">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/></svg>
+          </button>
+        </div>
+        <button class="btn btn-primary btn-full loc-confirm-btn" id="locConfirmBtn" onclick="confirmMapLocation()">
+          Confirm this location
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Default state: GPS + saved addresses ── -->
+    <div class="loc-sheet-body" id="locSheetBody">
       <button class="loc-gps-row" onclick="useCurrentLocation()" id="locGpsBtn">
         <span class="loc-gps-pulse">
           <span class="loc-gps-ring"></span>
           <span class="loc-gps-core">📍</span>
         </span>
-        <span class="loc-gps-label">
-          <strong>Use current location</strong>
-        </span>
+        <span class="loc-gps-label"><strong>Use current location</strong></span>
       </button>
 
-      <div class="loc-divider"><span>or choose a saved address</span></div>
-
-      <!-- Saved addresses -->
+      <div class="loc-divider"><span>Saved addresses</span></div>
       <ul class="loc-saved-list" id="locSavedList"></ul>
-      <p class="loc-no-saved" id="locNoSaved" style="display:none;">No saved addresses yet — search and save one!</p>
-
+      <p class="loc-no-saved" id="locNoSaved" style="display:none;">No saved addresses yet.</p>
     </div>
+
   </div>
 </div>
 
@@ -549,17 +581,21 @@
 <script src="/js/menu-data.js"></script>
 <script>
 // ═══════════════════════════════════════════════════════════════════════════
-// ─── DELIVERY LOCATION SYSTEM ──────────────────────────────────────────────
+// ─── DELIVERY LOCATION SYSTEM (Mapbox) ─────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════════
 
-const LOC_KEY        = 'ok_delivery_location';   // current selected location
-const SAVED_ADDR_KEY = 'ok_saved_addresses';      // array of saved addresses
-const NOMINATIM      = 'https://nominatim.openstreetmap.org';
+const LOC_KEY        = 'ok_delivery_location';
+const SAVED_ADDR_KEY = 'ok_saved_addresses';
+const MB_TOKEN       = document.querySelector('meta[name="mapbox-token"]')?.content || '';
+const MB_GEOCODE     = 'https://api.mapbox.com/geocoding/v5/mapbox.places';
 
-let _locSearchTimer  = null;
-let _pendingLocation = null; // location awaiting label save
+let _locSearchTimer = null;
+let _mbMap          = null;   // Mapbox GL map instance
+let _mapReady       = false;
+let _mapMoveTimer   = null;
+let _currentMapLoc  = null;   // {lat, lng, shortName, fullAddress}
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── localStorage helpers ──────────────────────────────────────────────────────
 function getSavedAddresses() {
   try { return JSON.parse(localStorage.getItem(SAVED_ADDR_KEY)) || []; }
   catch { return []; }
@@ -578,7 +614,7 @@ function setCurrentLocation(loc) {
   updateHeaderPill(loc);
 }
 
-// ── Header pill ──────────────────────────────────────────────────────────────
+// ── Header pill ───────────────────────────────────────────────────────────────
 function updateHeaderPill(loc) {
   const el  = document.getElementById('locationLabel');
   const dot = document.getElementById('hdrLocDot');
@@ -592,31 +628,21 @@ function updateHeaderPill(loc) {
   }
 }
 
-// ── Auto-detect on page load (silent) ────────────────────────────────────────
+// ── Auto-detect on page load (silent) ─────────────────────────────────────────
 function autoDetectLocation() {
-  // Start with unknown state
   const dot = document.getElementById('hdrLocDot');
   if (dot) dot.classList.add('unknown');
-
-  // If a location is already saved, show it immediately
   const cur = getCurrentLocation();
   if (cur) { updateHeaderPill(cur); return; }
-
-  // Ask browser silently — no UI prompt
   if (!navigator.geolocation) return;
   navigator.geolocation.getCurrentPosition(
-    pos => reverseGeocode(pos.coords.latitude, pos.coords.longitude, result => {
+    pos => mbReverseGeocode(pos.coords.latitude, pos.coords.longitude, result => {
       if (!result) return;
-      // Check if matches any saved address (within ~1 km)
       const saved = getSavedAddresses();
-      const match = saved.find(a => a.lat && a.lng &&
-        haversineKm(a.lat, a.lng, result.lat, result.lng) < 1);
-      const loc = match
-        ? { ...result, label: match.label, shortName: match.shortName }
-        : result;
-      setCurrentLocation(loc);
+      const match = saved.find(a => a.lat && a.lng && haversineKm(a.lat, a.lng, result.lat, result.lng) < 1);
+      setCurrentLocation(match ? { ...result, label: match.label, shortName: match.shortName } : result);
     }),
-    () => {}, // silent on deny
+    () => {},
     { timeout: 8000, enableHighAccuracy: false }
   );
 }
@@ -627,134 +653,202 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 
-// ── Reverse geocode (coords → address) ───────────────────────────────────────
-function reverseGeocode(lat, lng, cb) {
-  fetch(`${NOMINATIM}/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
-    headers: { 'Accept-Language': 'en' }
-  })
-  .then(r => r.json())
-  .then(data => {
-    const a = data.address || {};
-    const shortName = a.suburb || a.neighbourhood || a.village ||
-                      a.town   || a.city_district  || a.city || 'Detected Location';
-    cb({ lat, lng, shortName, fullAddress: data.display_name || shortName });
-  })
-  .catch(() => cb(null));
+// ── Mapbox reverse geocode ─────────────────────────────────────────────────────
+function mbReverseGeocode(lat, lng, cb) {
+  fetch(`${MB_GEOCODE}/${lng},${lat}.json?access_token=${MB_TOKEN}&language=en&types=neighborhood,locality,place`)
+    .then(r => r.json())
+    .then(data => {
+      const feat = data.features?.[0];
+      if (!feat) { cb(null); return; }
+      const parts     = feat.place_name.split(',');
+      const shortName = parts[0].trim();
+      const fullAddress = feat.place_name;
+      cb({ lat, lng, shortName, fullAddress });
+    })
+    .catch(() => cb(null));
 }
 
-// ── Location sheet open/close ─────────────────────────────────────────────────
+// ── Mapbox forward geocode (search suggestions) ────────────────────────────────
+function mbForwardGeocode(q, cb) {
+  const url = `${MB_GEOCODE}/${encodeURIComponent(q)}.json?access_token=${MB_TOKEN}&country=in&language=en&limit=6&types=address,neighborhood,locality,place,poi`;
+  fetch(url)
+    .then(r => r.json())
+    .then(data => cb(data.features || []))
+    .catch(() => cb([]));
+}
+
+// ── Map initialisation ─────────────────────────────────────────────────────────
+function initMap(centerLng, centerLat) {
+  if (_mbMap) {
+    _mbMap.flyTo({ center: [centerLng, centerLat], zoom: 15, speed: 1.4 });
+    return;
+  }
+  mapboxgl.accessToken = MB_TOKEN;
+  _mbMap = new mapboxgl.Map({
+    container: 'locMapContainer',
+    style: 'mapbox://styles/mapbox/streets-v12',
+    center: [centerLng, centerLat],
+    zoom: 15,
+    attributionControl: false
+  });
+  _mbMap.addControl(new mapboxgl.AttributionControl({ compact: true }));
+
+  // Trigger reverse geocode on every map move-end
+  _mbMap.on('moveend', () => {
+    clearTimeout(_mapMoveTimer);
+    _mapMoveTimer = setTimeout(() => {
+      const { lng, lat } = _mbMap.getCenter();
+      updateAddrBar('Locating…', '');
+      mbReverseGeocode(lat, lng, result => {
+        _currentMapLoc = result || { lat, lng, shortName: 'Selected location', fullAddress: '' };
+        updateAddrBar(_currentMapLoc.shortName, _currentMapLoc.fullAddress);
+      });
+    }, 400);
+  });
+
+  _mbMap.on('load', () => {
+    _mapReady = true;
+    // Trigger initial reverse geocode
+    const { lng, lat } = _mbMap.getCenter();
+    mbReverseGeocode(lat, lng, result => {
+      _currentMapLoc = result || { lat, lng, shortName: 'Selected location', fullAddress: '' };
+      updateAddrBar(_currentMapLoc.shortName, _currentMapLoc.fullAddress);
+    });
+  });
+}
+
+function updateAddrBar(name, full) {
+  const n = document.getElementById('locAddrName');
+  const f = document.getElementById('locAddrFull');
+  if (n) n.textContent = name;
+  if (f) f.textContent = full ? full.split(',').slice(1, 3).join(',').trim() : '';
+}
+
+function showMapSection(lng, lat) {
+  document.getElementById('locSheetBody').style.display    = 'none';
+  document.getElementById('locMapSection').style.display   = 'block';
+  setTimeout(() => {
+    initMap(lng, lat);
+    if (_mbMap) _mbMap.resize();
+  }, 80);
+}
+
+function hideMapSection() {
+  document.getElementById('locSheetBody').style.display    = '';
+  document.getElementById('locMapSection').style.display   = 'none';
+}
+
+// ── Confirm the pinned location ────────────────────────────────────────────────
+function confirmMapLocation() {
+  if (!_mbMap) return;
+  const { lng, lat } = _mbMap.getCenter();
+  const loc = _currentMapLoc || { lat, lng, shortName: 'Selected location', fullAddress: '' };
+  // Ask label → save
+  _pendingLocation = loc;
+  const el = document.getElementById('saveLabelAddr');
+  if (el) el.textContent = loc.fullAddress || loc.shortName;
+  document.querySelectorAll('.loc-label-chip').forEach((c, i) => c.classList.toggle('active', i === 0));
+  document.getElementById('saveLabelSheet').classList.add('open');
+}
+
+// ── Location sheet open/close ──────────────────────────────────────────────────
 function openLocationSheet() {
   document.getElementById('locationSheet').classList.add('open');
   document.body.style.overflow = 'hidden';
+  hideMapSection();
   renderSavedAddresses();
-  setTimeout(() => {
-    const inp = document.getElementById('locSearchInput');
-    if (inp) inp.focus();
-  }, 220);
+  setTimeout(() => document.getElementById('locSearchInput')?.focus(), 220);
 }
 function closeLocationSheet() {
   document.getElementById('locationSheet').classList.remove('open');
   document.body.style.overflow = '';
   clearLocSearch();
+  hideMapSection();
 }
 
-// ── Search input ──────────────────────────────────────────────────────────────
+// ── Search bar logic ───────────────────────────────────────────────────────────
 function onLocSearch(q) {
   const clear = document.getElementById('locSearchClear');
   if (clear) clear.style.display = q.length ? 'flex' : 'none';
   clearTimeout(_locSearchTimer);
   if (q.trim().length < 2) { hideSuggestions(); return; }
-  _locSearchTimer = setTimeout(() => fetchSuggestions(q.trim()), 380);
+  _locSearchTimer = setTimeout(() => {
+    showSuggestionsLoading();
+    mbForwardGeocode(q.trim(), renderSuggestions);
+  }, 320);
 }
 
 function onLocSearchFocus() {
-  const q = (document.getElementById('locSearchInput') || {}).value || '';
-  if (q.trim().length >= 2) fetchSuggestions(q.trim());
+  const q = document.getElementById('locSearchInput')?.value || '';
+  if (q.trim().length >= 2) { showSuggestionsLoading(); mbForwardGeocode(q.trim(), renderSuggestions); }
 }
 
 function clearLocSearch() {
   const inp = document.getElementById('locSearchInput');
-  if (inp) { inp.value = ''; inp.focus(); }
-  const clear = document.getElementById('locSearchClear');
-  if (clear) clear.style.display = 'none';
+  if (inp) { inp.value = ''; }
+  document.getElementById('locSearchClear').style.display = 'none';
   hideSuggestions();
-}
-
-// ── Nominatim forward geocode ─────────────────────────────────────────────────
-function fetchSuggestions(q) {
-  const url = `${NOMINATIM}/search?q=${encodeURIComponent(q)}&format=json&limit=6&addressdetails=1&countrycodes=in`;
-  showSuggestionsLoading();
-  fetch(url, { headers: { 'Accept-Language': 'en' } })
-  .then(r => r.json())
-  .then(results => renderSuggestions(results))
-  .catch(() => hideSuggestions());
 }
 
 function showSuggestionsLoading() {
   const ul = document.getElementById('locSuggestions');
-  ul.style.display = 'block';
   ul.innerHTML = '<li class="loc-sug-loading">🔍 Searching…</li>';
+  ul.style.display = 'block';
 }
 
-function renderSuggestions(results) {
+function renderSuggestions(features) {
   const ul = document.getElementById('locSuggestions');
-  if (!results || !results.length) {
+  if (!features.length) {
     ul.innerHTML = '<li class="loc-sug-empty">No results found. Try a different search.</li>';
     ul.style.display = 'block';
     return;
   }
-  ul.innerHTML = results.map((r, i) => {
-    const a    = r.address || {};
-    const name = a.suburb || a.neighbourhood || a.village || a.town || a.city_district || a.amenity || a.road || r.display_name.split(',')[0];
-    const sub  = r.display_name.split(',').slice(1, 3).join(',').trim();
-    return `<li class="loc-sug-item" onclick="selectSearchResult(${i})" data-idx="${i}" data-result='${JSON.stringify({lat:+r.lat,lng:+r.lon,shortName:name,fullAddress:r.display_name}).replace(/'/g,"&#39;")}'>
+  ul.innerHTML = features.map((f, i) => {
+    const name = f.text || f.place_name.split(',')[0];
+    const sub  = f.place_name.split(',').slice(1, 3).join(',').trim();
+    const [lng, lat] = f.center;
+    const payload = JSON.stringify({ lat, lng, shortName: name, fullAddress: f.place_name }).replace(/'/g, "&#39;");
+    return `<li class="loc-sug-item" onclick="selectSuggestion(this)" data-result='${payload}'>
       <span class="loc-sug-icon">📍</span>
       <span class="loc-sug-text"><strong>${name}</strong><small>${sub}</small></span>
     </li>`;
   }).join('');
   ul.style.display = 'block';
-
-  // Store results for later lookup
-  ul._results = results;
 }
 
 function hideSuggestions() {
   const ul = document.getElementById('locSuggestions');
-  ul.style.display = 'none';
-  ul.innerHTML = '';
+  ul.style.display = 'none'; ul.innerHTML = '';
 }
 
-function selectSearchResult(idx) {
-  const items = document.querySelectorAll('#locSuggestions .loc-sug-item');
-  const item  = items[idx];
-  if (!item) return;
+function selectSuggestion(el) {
   try {
-    const data = JSON.parse(item.dataset.result.replace(/&#39;/g, "'"));
+    const data = JSON.parse(el.dataset.result.replace(/&#39;/g, "'"));
     hideSuggestions();
     document.getElementById('locSearchInput').value = data.shortName;
     document.getElementById('locSearchClear').style.display = 'flex';
-    promptSaveLabel(data);
+    // Show map centered on the selected result
+    _currentMapLoc = data;
+    updateAddrBar(data.shortName, data.fullAddress);
+    showMapSection(data.lng, data.lat);
   } catch(e) { console.warn(e); }
 }
 
-// ── GPS button ────────────────────────────────────────────────────────────────
+// ── GPS button ─────────────────────────────────────────────────────────────────
 function useCurrentLocation() {
   const lbl = document.querySelector('.loc-gps-label strong');
   if (lbl) lbl.textContent = 'Detecting…';
-
   if (!navigator.geolocation) {
-    showToast('⚠️ Geolocation not supported on this browser.');
-    if (lbl) lbl.textContent = 'Use current location';
-    return;
+    showToast('⚠️ Geolocation not supported.'); if (lbl) lbl.textContent = 'Use current location'; return;
   }
-
   navigator.geolocation.getCurrentPosition(
     pos => {
-      reverseGeocode(pos.coords.latitude, pos.coords.longitude, result => {
-        if (lbl) lbl.textContent = 'Use current location';
-        if (!result) { showToast('Could not determine address. Please search manually.'); return; }
-        // Directly confirm — no save-label prompt
-        confirmLocation(result, null);
+      const { latitude: lat, longitude: lng } = pos.coords;
+      if (lbl) lbl.textContent = 'Use current location';
+      mbReverseGeocode(lat, lng, result => {
+        _currentMapLoc = result || { lat, lng, shortName: 'Your location', fullAddress: '' };
+        updateAddrBar(_currentMapLoc.shortName, _currentMapLoc.fullAddress);
+        showMapSection(lng, lat);
       });
     },
     err => {
@@ -766,37 +860,19 @@ function useCurrentLocation() {
   );
 }
 
-// ── Save label flow ───────────────────────────────────────────────────────────
-function promptSaveLabel(locData) {
-  _pendingLocation = locData;
-  const el = document.getElementById('saveLabelAddr');
-  if (el) el.textContent = locData.fullAddress || locData.shortName;
-
-  // Reset chip selection
-  document.querySelectorAll('.loc-label-chip').forEach((c, i) => {
-    c.classList.toggle('active', i === 0);
-  });
-
-  document.getElementById('saveLabelSheet').classList.add('open');
-}
+// ── Save label flow ────────────────────────────────────────────────────────────
+let _pendingLocation = null;
 
 function closeSaveLabelSheet() {
   document.getElementById('saveLabelSheet').classList.remove('open');
-  // Confirm without saving label
-  if (_pendingLocation) {
-    confirmLocation(_pendingLocation, null);
-    _pendingLocation = null;
-  }
+  if (_pendingLocation) { confirmLocation(_pendingLocation, null); _pendingLocation = null; }
 }
 
 function confirmSaveLabel() {
   const activeChip = document.querySelector('.loc-label-chip.active');
   const label = activeChip ? activeChip.dataset.label : null;
   document.getElementById('saveLabelSheet').classList.remove('open');
-  if (_pendingLocation) {
-    confirmLocation(_pendingLocation, label);
-    _pendingLocation = null;
-  }
+  if (_pendingLocation) { confirmLocation(_pendingLocation, label); _pendingLocation = null; }
 }
 
 document.addEventListener('click', e => {
@@ -811,47 +887,65 @@ function confirmLocation(loc, label) {
   const finalLoc = { ...loc, label: label || null, id: 'addr_' + Date.now() };
   setCurrentLocation(finalLoc);
   if (label) saveAddressToStore(finalLoc);
+  // Persist to DB if logged in
+  if (label && isLoggedIn()) {
+    apiFetch('/api/addresses', 'POST', {
+      id: finalLoc.id, label: finalLoc.label,
+      short_name: finalLoc.shortName, full_address: finalLoc.fullAddress,
+      lat: finalLoc.lat, lng: finalLoc.lng
+    }).catch(() => {});
+  }
   closeLocationSheet();
-  showToast('📍 Delivery location set: ' + (label ? label + ' — ' : '') + loc.shortName);
+  showToast('📍 Delivery location set' + (label ? ': ' + label : ''));
 }
 
-// ── Render saved addresses ────────────────────────────────────────────────────
+// ── Saved addresses ────────────────────────────────────────────────────────────
 function renderSavedAddresses() {
-  const list   = document.getElementById('locSavedList');
+  const list    = document.getElementById('locSavedList');
   const noSaved = document.getElementById('locNoSaved');
-  const saved  = getSavedAddresses();
+  // Load from DB if logged in, else localStorage
+  if (isLoggedIn()) {
+    apiFetch('/api/addresses').then(data => {
+      const addresses = data.addresses || [];
+      _renderSavedList(list, noSaved, addresses.map(a => ({
+        id: a.id, label: a.label, shortName: a.short_name, fullAddress: a.full_address, lat: a.lat, lng: a.lng
+      })));
+    }).catch(() => _renderSavedList(list, noSaved, getSavedAddresses()));
+  } else {
+    _renderSavedList(list, noSaved, getSavedAddresses());
+  }
+}
 
+function _renderSavedList(list, noSaved, saved) {
   if (!saved.length) {
-    list.innerHTML = '';
-    if (noSaved) noSaved.style.display = 'block';
-    return;
+    list.innerHTML = ''; if (noSaved) noSaved.style.display = 'block'; return;
   }
   if (noSaved) noSaved.style.display = 'none';
-
   const icons = { Home: '🏠', Work: '💼', Other: '📌' };
   list.innerHTML = saved.map(a => `
-    <li class="loc-saved-item" onclick="selectSavedAddress('${a.id}')">
+    <li class="loc-saved-item" onclick="selectSavedAddress('${a.id}','${(a.shortName||'').replace(/'/g,'&#39;')}','${(a.fullAddress||'').replace(/'/g,'&#39;')}',${a.lat||0},${a.lng||0})">
       <span class="loc-saved-icon">${icons[a.label] || '📍'}</span>
       <span class="loc-saved-text">
         <strong>${a.label || 'Address'}</strong>
-        <small>${a.shortName || a.fullAddress}</small>
+        <small>${a.shortName || a.fullAddress || ''}</small>
       </span>
       <button class="loc-saved-del" onclick="deleteSavedAddress(event,'${a.id}')">✕</button>
     </li>`).join('');
 }
 
-function selectSavedAddress(id) {
-  const saved = getSavedAddresses().find(a => a.id === id);
-  if (!saved) return;
-  setCurrentLocation(saved);
-  closeLocationSheet();
-  showToast('📍 ' + (saved.label || saved.shortName) + ' selected');
+function selectSavedAddress(id, shortName, fullAddress, lat, lng) {
+  const loc = { id, shortName, fullAddress, lat, lng };
+  // Show on map for confirmation
+  _currentMapLoc = loc;
+  updateAddrBar(shortName, fullAddress);
+  showMapSection(lng || 77.5946, lat || 12.9716);
 }
 
 function deleteSavedAddress(e, id) {
   e.stopPropagation();
   const list = getSavedAddresses().filter(a => a.id !== id);
   localStorage.setItem(SAVED_ADDR_KEY, JSON.stringify(list));
+  if (isLoggedIn()) apiFetch('/api/addresses/' + id, 'DELETE').catch(() => {});
   renderSavedAddresses();
 }
 
