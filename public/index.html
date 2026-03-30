@@ -462,33 +462,86 @@
     <div class="auth-modal-header">
       <div>
         <h3 id="authModalTitle">Sign In / Sign Up</h3>
-        <p>Access your account to place orders</p>
+        <p id="authModalSubtitle">Access your account to place orders</p>
       </div>
       <button class="auth-modal-close" onclick="closeAuthSheet()" aria-label="Close">✕</button>
     </div>
     <div class="auth-modal-body">
-      <button class="btn btn-full" style="background:#fff;border:2px solid var(--border);color:var(--text-dark);margin-bottom:4px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="showToast('Google Sign-In — coming soon!')">
-        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-        Continue with Google
-      </button>
-      <div class="auth-divider">or use phone / email</div>
-      <div class="form-group">
-        <label class="form-label">Phone Number</label>
-        <div style="display:flex;gap:8px;">
-          <span style="padding:11px 10px;background:var(--cream);border:2px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;color:var(--text-mid);white-space:nowrap;">🇮🇳 +91</span>
-          <input type="tel" class="form-input" placeholder="10-digit mobile number" maxlength="10" style="flex:1;"/>
+
+      <!-- Tab switcher -->
+      <div class="auth-tabs" id="authTabs">
+        <button class="auth-tab active" data-tab="phone" onclick="switchAuthTab('phone')">📱 Phone</button>
+        <button class="auth-tab" data-tab="email" onclick="switchAuthTab('email')">✉️ Email</button>
+      </div>
+      <div id="authError" class="alert alert-warn" style="display:none;margin-bottom:10px;"></div>
+
+      <!-- Phone / OTP panel -->
+      <div id="authPanelPhone" class="auth-panel">
+        <!-- Step 1: Enter phone -->
+        <div id="authStepPhone">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <div style="display:flex;gap:8px;">
+              <span style="padding:11px 10px;background:var(--cream);border:2px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;color:var(--text-mid);white-space:nowrap;">🇮🇳 +91</span>
+              <input type="tel" id="authPhone" class="form-input" placeholder="10-digit mobile number" maxlength="10" style="flex:1;" onkeydown="if(event.key==='Enter')sendOtp()"/>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" id="authSendOtpBtn" onclick="sendOtp()">Send OTP</button>
+        </div>
+        <!-- Step 2: Enter OTP -->
+        <div id="authStepOtp" style="display:none;">
+          <p style="font-size:13px;color:var(--text-mid);margin-bottom:12px;">OTP sent to <strong id="authPhoneDisplay"></strong></p>
+          <div class="form-group">
+            <label class="form-label">Enter OTP</label>
+            <input type="number" id="authOtp" class="form-input" placeholder="6-digit OTP" maxlength="6" onkeydown="if(event.key==='Enter')verifyOtp()"/>
+          </div>
+          <button class="btn btn-primary btn-full" id="authVerifyBtn" onclick="verifyOtp()">Verify OTP</button>
+          <button class="btn btn-text btn-full" style="margin-top:6px;font-size:12px;" onclick="resetAuthToPhone()">← Change number</button>
         </div>
       </div>
-      <button class="btn btn-primary btn-full" onclick="showToast('OTP sent! — demo mode');closeAuthSheet()">Send OTP</button>
-      <div class="auth-divider">or</div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" placeholder="your@email.com" style="margin-bottom:8px;"/>
-        <label class="form-label">Password</label>
-        <input type="password" class="form-input" placeholder="Password"/>
+
+      <!-- Email panel -->
+      <div id="authPanelEmail" class="auth-panel" style="display:none;">
+        <div class="auth-subtabs">
+          <button class="auth-subtab active" data-mode="login" onclick="switchEmailMode('login')">Login</button>
+          <button class="auth-subtab" data-mode="register" onclick="switchEmailMode('register')">Register</button>
+        </div>
+        <div id="authEmailRegisterName" class="form-group" style="display:none;">
+          <label class="form-label">Your Name</label>
+          <input type="text" id="authName" class="form-input" placeholder="Full name"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="authEmail" class="form-input" placeholder="your@email.com"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="authPassword" class="form-input" placeholder="Password (min 6 chars)" onkeydown="if(event.key==='Enter')submitEmailAuth()"/>
+        </div>
+        <button class="btn btn-primary btn-full" id="authEmailBtn" onclick="submitEmailAuth()">Login</button>
       </div>
-      <button class="btn btn-outline btn-full" onclick="showToast('Logged in! — demo mode');closeAuthSheet()">Login with Email</button>
+
       <p style="text-align:center;font-size:11px;color:var(--text-light);margin-top:14px;">By continuing, you agree to our Terms & Privacy Policy</p>
+    </div>
+  </div>
+</div>
+
+<!-- Logged-in profile sheet -->
+<div class="auth-modal" id="profileSheet" role="dialog" aria-modal="true">
+  <div class="auth-modal-backdrop" onclick="closeProfileSheet()"></div>
+  <div class="auth-modal-dialog" style="max-width:360px;">
+    <div class="auth-modal-header">
+      <div><h3>👤 My Profile</h3></div>
+      <button class="auth-modal-close" onclick="closeProfileSheet()">✕</button>
+    </div>
+    <div class="auth-modal-body">
+      <div style="text-align:center;padding:10px 0 20px;">
+        <div style="width:60px;height:60px;border-radius:50%;background:var(--rust);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">👤</div>
+        <p id="profileName" style="font-size:16px;font-weight:700;color:var(--text-dark);"></p>
+        <p id="profileEmail" style="font-size:13px;color:var(--text-light);"></p>
+        <p id="profilePhone" style="font-size:13px;color:var(--text-light);"></p>
+      </div>
+      <button class="btn btn-outline btn-full" style="border-color:var(--rust);color:var(--rust);" onclick="logoutUser()">Sign Out</button>
     </div>
   </div>
 </div>
@@ -807,13 +860,211 @@ function notifyMe() {
   if (contact) showToast('✅ You\'ll be notified when we expand to your area!');
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── AUTH SYSTEM ───────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+const AUTH_TOKEN_KEY = 'ok_auth_token';
+const AUTH_USER_KEY  = 'ok_auth_user';
+
+function getToken()   { return localStorage.getItem(AUTH_TOKEN_KEY); }
+function getAuthUser(){ try { return JSON.parse(localStorage.getItem(AUTH_USER_KEY)); } catch { return null; } }
+function isLoggedIn() { return !!getToken(); }
+
+function storeSession(token, user) {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  updateAuthUI(user);
+  // Sync local saved addresses to DB
+  const localAddresses = getSavedAddresses();
+  if (localAddresses.length) {
+    apiFetch('/api/addresses/sync', 'POST', { addresses: localAddresses }).catch(() => {});
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_USER_KEY);
+  updateAuthUI(null);
+}
+
+// Authenticated fetch helper
+function apiFetch(url, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' }
+  };
+  const token = getToken();
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body)  opts.body = JSON.stringify(body);
+  return fetch(url, opts).then(async r => {
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  });
+}
+
+// Update header profile button + bottom nav icon
+function updateAuthUI(user) {
+  const profileBtn = document.querySelector('.hdr-profile-btn span');
+  const mbnProfile = document.querySelector('.mbn-item:last-child .mbn-label');
+  if (user) {
+    const first = (user.name || user.email || user.phone || 'Me').split(' ')[0];
+    if (profileBtn) profileBtn.textContent = first;
+    if (mbnProfile) mbnProfile.textContent = first;
+  } else {
+    if (profileBtn) profileBtn.textContent = 'Profile';
+    if (mbnProfile) mbnProfile.textContent = 'Profile';
+  }
+}
+
+// Open: if logged in → show profile sheet, else → auth sheet
 function openAuthSheet() {
+  if (isLoggedIn()) {
+    openProfileSheet(); return;
+  }
+  resetAuthForms();
   document.getElementById('authSheet').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 function closeAuthSheet() {
   document.getElementById('authSheet').classList.remove('open');
   document.body.style.overflow = '';
+}
+
+// ── Tab / mode switching ──────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('authPanelPhone').style.display = tab === 'phone' ? 'block' : 'none';
+  document.getElementById('authPanelEmail').style.display = tab === 'email' ? 'block' : 'none';
+  clearAuthError();
+}
+
+function switchEmailMode(mode) {
+  document.querySelectorAll('.auth-subtab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  document.getElementById('authEmailRegisterName').style.display = mode === 'register' ? 'block' : 'none';
+  document.getElementById('authEmailBtn').textContent = mode === 'register' ? 'Create Account' : 'Login';
+  clearAuthError();
+}
+
+function resetAuthForms() {
+  switchAuthTab('phone');
+  resetAuthToPhone();
+  clearAuthError();
+  ['authPhone','authOtp','authName','authEmail','authPassword'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+}
+
+function resetAuthToPhone() {
+  document.getElementById('authStepPhone').style.display = 'block';
+  document.getElementById('authStepOtp').style.display   = 'none';
+  clearAuthError();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.style.display = 'block';
+}
+function clearAuthError() {
+  const el = document.getElementById('authError');
+  if (el) el.style.display = 'none';
+}
+
+// ── Phone OTP flow ────────────────────────────────────────────────────────────
+function sendOtp() {
+  const phone = document.getElementById('authPhone').value.trim();
+  if (!/^\d{10}$/.test(phone)) { showAuthError('Enter a valid 10-digit phone number'); return; }
+
+  const btn = document.getElementById('authSendOtpBtn');
+  btn.textContent = 'Sending…'; btn.disabled = true;
+
+  apiFetch('/api/auth/send-otp', 'POST', { phone })
+    .then(data => {
+      btn.textContent = 'Send OTP'; btn.disabled = false;
+      document.getElementById('authPhoneDisplay').textContent = '+91 ' + phone;
+      document.getElementById('authStepPhone').style.display = 'none';
+      document.getElementById('authStepOtp').style.display   = 'block';
+      // In dev mode show OTP as toast so it's easy to test
+      if (data.dev_otp) showToast('🔑 Dev OTP: ' + data.dev_otp, 8000);
+    })
+    .catch(err => {
+      btn.textContent = 'Send OTP'; btn.disabled = false;
+      showAuthError(err.message);
+    });
+}
+
+function verifyOtp() {
+  const phone = document.getElementById('authPhone').value.trim();
+  const otp   = document.getElementById('authOtp').value.trim();
+  if (!otp) { showAuthError('Enter the OTP'); return; }
+
+  const btn = document.getElementById('authVerifyBtn');
+  btn.textContent = 'Verifying…'; btn.disabled = true;
+
+  apiFetch('/api/auth/verify-otp', 'POST', { phone, otp })
+    .then(data => {
+      btn.textContent = 'Verify OTP'; btn.disabled = false;
+      storeSession(data.token, data.user);
+      closeAuthSheet();
+      showToast('✅ Welcome to Open Kitchens!');
+    })
+    .catch(err => {
+      btn.textContent = 'Verify OTP'; btn.disabled = false;
+      showAuthError(err.message);
+    });
+}
+
+// ── Email auth ────────────────────────────────────────────────────────────────
+function submitEmailAuth() {
+  const activeMode = document.querySelector('.auth-subtab.active')?.dataset.mode || 'login';
+  const email      = document.getElementById('authEmail').value.trim();
+  const password   = document.getElementById('authPassword').value;
+  const name       = document.getElementById('authName').value.trim();
+
+  if (!email || !password) { showAuthError('Email and password required'); return; }
+
+  const btn = document.getElementById('authEmailBtn');
+  btn.disabled = true;
+  btn.textContent = activeMode === 'register' ? 'Creating…' : 'Logging in…';
+
+  const endpoint = activeMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+  const payload  = activeMode === 'register' ? { name, email, password } : { email, password };
+
+  apiFetch(endpoint, 'POST', payload)
+    .then(data => {
+      btn.disabled = false;
+      btn.textContent = activeMode === 'register' ? 'Create Account' : 'Login';
+      storeSession(data.token, data.user);
+      closeAuthSheet();
+      showToast(activeMode === 'register' ? '🎉 Account created!' : '✅ Welcome back!');
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.textContent = activeMode === 'register' ? 'Create Account' : 'Login';
+      showAuthError(err.message);
+    });
+}
+
+// ── Profile sheet ─────────────────────────────────────────────────────────────
+function openProfileSheet() {
+  const user = getAuthUser();
+  if (!user) { openAuthSheet(); return; }
+  document.getElementById('profileName').textContent  = user.name  || '—';
+  document.getElementById('profileEmail').textContent = user.email || '';
+  document.getElementById('profilePhone').textContent = user.phone ? '+91 ' + user.phone : '';
+  document.getElementById('profileSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeProfileSheet() {
+  document.getElementById('profileSheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function logoutUser() {
+  apiFetch('/api/auth/logout', 'POST').catch(() => {});
+  clearSession();
+  closeProfileSheet();
+  showToast('👋 Signed out');
 }
 
 // ─── Offer cards auto-scroll ──────────────────────────────────────────────────
@@ -841,11 +1092,14 @@ function startOfferAutoScroll() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Restore auth session
+  updateAuthUI(getAuthUser());
+
   // Auto-detect delivery location on load
   autoDetectLocation();
 
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') { closeAuthSheet(); closeLocationSheet(); closeSaveLabelSheet(); }
+    if (e.key === 'Escape') { closeAuthSheet(); closeLocationSheet(); closeSaveLabelSheet(); closeProfileSheet(); }
   });
 
   // Sync dots on manual scroll
