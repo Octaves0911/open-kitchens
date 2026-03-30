@@ -21,7 +21,8 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve static assets but NOT index.html (it's served via route with token injection)
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
 // ── Database (init on startup) ────────────────────────────────────────────────
 require('./db/database');  // runs CREATE TABLE IF NOT EXISTS on first boot
@@ -46,7 +47,14 @@ app.post('/api/order', (req, res) => {
 });
 
 // ── Page Routes ───────────────────────────────────────────────────────────────
-app.get('/',           (req, res) => res.sendFile(path.join(__dirname, 'public', 'index.html')));
+// index.html — inject Mapbox token from env at serve time (keeps token out of source)
+const INDEX_TEMPLATE = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
+const MAPBOX_TOKEN   = process.env.MAPBOX_TOKEN || '';
+app.get('/', (req, res) => {
+  const html = INDEX_TEMPLATE.replace('__MAPBOX_TOKEN__', MAPBOX_TOKEN);
+  res.setHeader('Content-Type', 'text/html');
+  res.send(html);
+});
 app.get('/menu',       (req, res) => res.redirect(301, '/#menu'));
 app.get('/checkout',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'checkout.html')));
 app.get('/tracking',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'tracking.html')));
