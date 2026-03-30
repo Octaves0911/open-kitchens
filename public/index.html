@@ -14,11 +14,35 @@
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <header class="header">
   <div class="header-inner">
-    <!-- Location check pill — all screen sizes -->
-    <button class="mobile-location-btn" onclick="openLocationSheet()">
-      <span id="locationLabel">📍 Check Delivery Location</span>
-      <span class="mobile-location-chevron">∨</span>
+
+    <!-- Brand — desktop only -->
+    <a href="/" class="hdr-brand desktop-only">
+      <img src="/images/logo.png" alt="Open Kitchens" class="hdr-brand-logo"/>
+      <span class="hdr-brand-name">Open Kitchens</span>
+    </a>
+
+    <!-- Location chip — always visible -->
+    <button class="hdr-loc-chip" onclick="openLocationSheet()" id="hdrLocBtn">
+      <span class="hdr-loc-dot" id="hdrLocDot"></span>
+      <span class="hdr-loc-text" id="locationLabel">Detecting location…</span>
+      <svg class="hdr-loc-chevron" width="12" height="12" viewBox="0 0 12 12" fill="none">
+        <path d="M2 4l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
     </button>
+
+    <!-- Desktop right nav -->
+    <nav class="hdr-nav desktop-only">
+      <a href="/#menu" class="hdr-nav-link">Menu</a>
+      <button class="hdr-cart-btn" onclick="openCart()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        <span class="hdr-cart-count cart-count" style="display:none;">0</span>
+      </button>
+      <button class="hdr-profile-btn" onclick="openAuthSheet()">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        <span>Profile</span>
+      </button>
+    </nav>
+
   </div>
 </header>
 
@@ -38,50 +62,54 @@
   </div>
 </section>
 
-<!-- ── Location Sheet (mobile) ───────────────────────────────────────────── -->
-<div class="auth-modal" id="locationSheet" role="dialog" aria-modal="true">
-  <div class="auth-modal-backdrop" onclick="closeLocationSheet()"></div>
-  <div class="auth-modal-dialog loc-dialog">
-    <div class="auth-modal-header">
-      <div>
-        <h3>📍 Delivery Location</h3>
-        <p>Search or choose a saved address</p>
-      </div>
-      <button class="auth-modal-close" onclick="closeLocationSheet()">✕</button>
-    </div>
-    <div class="auth-modal-body loc-body">
+<!-- ── Location Bottom Sheet ──────────────────────────────────────────────── -->
+<div class="loc-sheet-overlay" id="locationSheet" role="dialog" aria-modal="true">
+  <div class="loc-sheet-backdrop" onclick="closeLocationSheet()"></div>
+  <div class="loc-sheet-card">
 
-      <!-- Search input + autocomplete -->
-      <div class="loc-search-wrap">
-        <span class="loc-search-icon">🔍</span>
+    <!-- Drag handle -->
+    <div class="loc-sheet-handle"></div>
+
+    <!-- Search bar (always at top, auto-focused) -->
+    <div class="loc-sheet-search-wrap">
+      <div class="loc-sheet-search-inner">
+        <svg class="loc-sheet-search-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input
           type="text"
           id="locSearchInput"
-          class="loc-search-input"
+          class="loc-sheet-search-input"
           placeholder="Search area, street or landmark…"
           autocomplete="off"
           oninput="onLocSearch(this.value)"
           onfocus="onLocSearchFocus()"
         />
-        <button class="loc-search-clear" id="locSearchClear" onclick="clearLocSearch()" style="display:none;">✕</button>
+        <button class="loc-sheet-clear" id="locSearchClear" onclick="clearLocSearch()" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
+        </button>
       </div>
-      <!-- Suggestions dropdown -->
+      <!-- Live suggestions appear inline below the bar -->
       <ul class="loc-suggestions" id="locSuggestions" style="display:none;"></ul>
+    </div>
 
-      <!-- GPS button -->
-      <button class="loc-gps-btn" onclick="useCurrentLocation()">
-        <span class="loc-gps-icon">📍</span>
-        <strong>Use current location</strong>
+    <!-- Scrollable body -->
+    <div class="loc-sheet-body">
+
+      <!-- GPS button with pulse ring -->
+      <button class="loc-gps-row" onclick="useCurrentLocation()" id="locGpsBtn">
+        <span class="loc-gps-pulse">
+          <span class="loc-gps-ring"></span>
+          <span class="loc-gps-core">📍</span>
+        </span>
+        <span class="loc-gps-label">
+          <strong>Use current location</strong>
+        </span>
       </button>
 
+      <div class="loc-divider"><span>or choose a saved address</span></div>
+
       <!-- Saved addresses -->
-      <div class="loc-saved-section" id="locSavedSection">
-        <div class="loc-section-label">Saved Addresses</div>
-        <ul class="loc-saved-list" id="locSavedList">
-          <!-- populated by JS -->
-        </ul>
-        <p class="loc-no-saved" id="locNoSaved" style="display:none;">No saved addresses yet.</p>
-      </div>
+      <ul class="loc-saved-list" id="locSavedList"></ul>
+      <p class="loc-no-saved" id="locNoSaved" style="display:none;">No saved addresses yet — search and save one!</p>
 
     </div>
   </div>
@@ -499,19 +527,24 @@ function setCurrentLocation(loc) {
 
 // ── Header pill ──────────────────────────────────────────────────────────────
 function updateHeaderPill(loc) {
-  const el = document.getElementById('locationLabel');
+  const el  = document.getElementById('locationLabel');
+  const dot = document.getElementById('hdrLocDot');
   if (!el) return;
-  if (loc && loc.label) {
-    el.textContent = '📍 ' + loc.label + ' — ' + loc.shortName;
-  } else if (loc && loc.shortName) {
-    el.textContent = '📍 ' + loc.shortName;
+  if (loc && loc.shortName) {
+    el.textContent = (loc.label ? loc.label + ' · ' : '') + loc.shortName;
+    if (dot) dot.classList.remove('unknown');
   } else {
-    el.textContent = '📍 Check Delivery Location';
+    el.textContent = 'Set delivery location';
+    if (dot) dot.classList.add('unknown');
   }
 }
 
 // ── Auto-detect on page load (silent) ────────────────────────────────────────
 function autoDetectLocation() {
+  // Start with unknown state
+  const dot = document.getElementById('hdrLocDot');
+  if (dot) dot.classList.add('unknown');
+
   // If a location is already saved, show it immediately
   const cur = getCurrentLocation();
   if (cur) { updateHeaderPill(cur); return; }
@@ -653,26 +686,26 @@ function selectSearchResult(idx) {
 
 // ── GPS button ────────────────────────────────────────────────────────────────
 function useCurrentLocation() {
-  const btn = document.querySelector('.loc-gps-btn strong');
-  if (btn) btn.textContent = 'Detecting…';
+  const lbl = document.querySelector('.loc-gps-label strong');
+  if (lbl) lbl.textContent = 'Detecting…';
 
   if (!navigator.geolocation) {
     showToast('⚠️ Geolocation not supported on this browser.');
-    if (btn) btn.textContent = 'Use current location';
+    if (lbl) lbl.textContent = 'Use current location';
     return;
   }
 
   navigator.geolocation.getCurrentPosition(
     pos => {
       reverseGeocode(pos.coords.latitude, pos.coords.longitude, result => {
-        if (btn) btn.textContent = 'Use current location';
+        if (lbl) lbl.textContent = 'Use current location';
         if (!result) { showToast('Could not determine address. Please search manually.'); return; }
         // Directly confirm — no save-label prompt
         confirmLocation(result, null);
       });
     },
     err => {
-      if (btn) btn.textContent = 'Use current location';
+      if (lbl) lbl.textContent = 'Use current location';
       const msgs = { 1: 'Location permission denied.', 2: 'Location unavailable.', 3: 'Request timed out.' };
       showToast('⚠️ ' + (msgs[err.code] || 'Could not get location.'));
     },
