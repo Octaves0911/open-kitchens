@@ -1,9 +1,12 @@
 const express = require('express');
 const path    = require('path');
 const fs      = require('fs');
+const http    = require('http');
+const { WebSocketServer } = require('ws');
 
-const app  = express();
-const PORT = process.env.PORT || 3000;
+const app    = express();
+const server = http.createServer(app);
+const PORT   = process.env.PORT || 3000;
 
 // ── Logs ──────────────────────────────────────────────────────────────────────
 const logsDir = path.join(__dirname, '..', 'logs');
@@ -21,25 +24,116 @@ app.use((req, res, next) => {
   next();
 });
 app.use(express.json());
-// Serve static assets but NOT index.html (it's served via route with token injection)
+// Serve static assets but NOT index.html (served via route with token injection)
 app.use(express.static(path.join(__dirname, 'public'), { index: false }));
 
-// ── Database (init on startup) ────────────────────────────────────────────────
-require('./db/database');  // runs CREATE TABLE IF NOT EXISTS on first boot
+// ── Database ──────────────────────────────────────────────────────────────────
+require('./db/database');
+
+// ── WebSocket Server ──────────────────────────────────────────────────────────
+const wss = new WebSocketServer({ server });
+
+// Map userId (string) → Set of live WebSocket connections
+const userSockets = new Map();
+
+wss.on('connection', (ws) => {
+  let userId = null;
+  ws.isAlive = true;
+
+  ws.on('pong', () => { ws.isAlive = true; });
+
+  ws.on('message', (raw) => {
+    try {
+      const msg = JSON.parse(raw);
+      // Client registers: { type:'register', userId }
+      if (msg.type === 'register' && msg.userId) {
+        userId = String(msg.userId);
+        if (!userSockets.has(userId)) userSockets.set(userId, new Set());
+        userSockets.get(userId).add(ws);
+        ws.send(JSON.stringify({ type: 'registered', userId }));
+      }
+    } catch {}
+  });
+
+  ws.on('close', () => {
+    if (userId && userSockets.has(userId)) {
+      userSockets.get(userId).delete(ws);
+      if (userSockets.get(userId).size === 0) userSockets.delete(userId);
+    }
+  });
+});
+
+// Heartbeat — drop stale connections every 30 s
+setInterval(() => {
+  wss.clients.forEach(ws => {
+    if (!ws.isAlive) return ws.terminate();
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+
+// Globals used by restaurant route handlers
+global.notifyUser = (userId, payload) => {
+  const sockets = userSockets.get(String(userId));
+  if (!sockets) return;
+  const data = JSON.stringify(payload);
+  sockets.forEach(ws => { if (ws.readyState === 1) ws.send(data); });
+};
+
+global.broadcastOrderUpdate = (orderId, status) => {
+  const data = JSON.stringify({ type: 'order_update', orderId, status });
+  wss.clients.forEach(ws => { if (ws.readyState === 1) ws.send(data); });
+};
 
 // ── API Routes ────────────────────────────────────────────────────────────────
-app.use('/api/auth',      require('./routes/auth'));
-app.use('/api/addresses', require('./routes/addresses'));
-app.use('/api/cart',      require('./routes/cart'));
+app.use('/api/auth',       require('./routes/auth'));
+app.use('/api/addresses',  require('./routes/addresses'));
+app.use('/api/cart',       require('./routes/cart'));
+app.use('/api/restaurant', require('./routes/restaurant'));
 
-// Legacy pincode endpoint (kept for backwards compat)
+// ── Public Menu & Offers API (restaurant_id=1) ───────────────────────────────
+const db = require('./db/database');
+const RESTAURANT_ID = 1;
+
+app.get('/api/menu', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  const items = db.prepare(
+    `SELECT * FROM menu_items WHERE restaurant_id=? AND is_available=1 ORDER BY sort_order, id`
+  ).all(RESTAURANT_ID);
+  res.json({ items: items.map(i => ({
+    ...i,
+    addons:   JSON.parse(i.addons_json  || '[]'),
+    metadata: JSON.parse(i.metadata_json || '{}'),
+    emoji:    JSON.parse(i.metadata_json || '{}').emoji || '🍽️'
+  }))});
+});
+
+app.get('/api/offers', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
+  res.set('Pragma', 'no-cache');
+  const now = new Date().toISOString();
+  const offers = db.prepare(
+    `SELECT id, code, title, description, discount_type, discount_value,
+            min_order, max_discount, badge, emoji, old_price, image_url,
+            valid_until, usage_count, usage_limit
+     FROM offers
+     WHERE restaurant_id=? AND is_active=1
+       AND (valid_until IS NULL OR valid_until >= ?)
+       AND (usage_limit IS NULL OR usage_count < usage_limit)
+     ORDER BY created_at ASC`
+  ).all(RESTAURANT_ID, now);
+  res.json({ offers });
+});
+
+// Legacy pincode endpoint
 app.post('/api/check-pincode', (req, res) => {
   const zones = ['560024','560064','560080','560032','560054','560013','560022','560003','560010','560045'];
   const { pincode } = req.body;
   res.json({ available: zones.includes(String(pincode)), pincode });
 });
 
-// Order endpoint
+// Order placement
 app.post('/api/order', (req, res) => {
   const orderId = 'OK' + Date.now().toString().slice(-6);
   log('info', 'order_placed', { orderId, items: req.body.items });
@@ -47,25 +141,30 @@ app.post('/api/order', (req, res) => {
 });
 
 // ── Page Routes ───────────────────────────────────────────────────────────────
-// index.html — inject Mapbox token from env at serve time (keeps token out of source)
-const INDEX_TEMPLATE = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8');
 const MAPBOX_TOKEN   = process.env.MAPBOX_TOKEN || '';
+
 app.get('/', (req, res) => {
-  const html = INDEX_TEMPLATE.replace('__MAPBOX_TOKEN__', MAPBOX_TOKEN);
+  // Read fresh each request so file edits are reflected without restart
+  const html = fs.readFileSync(path.join(__dirname, 'public', 'index.html'), 'utf8')
+                 .replace('__MAPBOX_TOKEN__', MAPBOX_TOKEN);
   res.setHeader('Content-Type', 'text/html');
+  res.setHeader('Cache-Control', 'no-store');
   res.send(html);
 });
+
 app.get('/menu',       (req, res) => res.redirect(301, '/#menu'));
 app.get('/checkout',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'checkout.html')));
 app.get('/tracking',   (req, res) => res.sendFile(path.join(__dirname, 'public', 'tracking.html')));
 app.get('/restaurant', (req, res) => res.sendFile(path.join(__dirname, 'public', 'restaurant.html')));
+app.get('/stream',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'stream.html')));
 app.get('/rider',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'rider.html')));
 app.get('/why-us',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'why-us.html')));
 
 // ── Health ────────────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Open Kitchens', version: '1.1.0' }));
+app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Open Kitchens', version: '1.2.0' }));
 
-app.listen(PORT, '0.0.0.0', () => {
+// ── Start ─────────────────────────────────────────────────────────────────────
+server.listen(PORT, '0.0.0.0', () => {
   log('info', 'server_started', { port: PORT });
   console.log(`Open Kitchens running on port ${PORT}`);
 });

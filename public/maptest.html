@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8"/>
+  <title>Mapbox Test</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
+  <style>
+    body { margin: 0; font-family: sans-serif; }
+    #map { width: 100vw; height: 80vh; }
+    #log { padding: 10px; font-size: 13px; background: #f5f5f5; }
+  </style>
+</head>
+<body>
+  <div id="log">Loading...</div>
+  <div id="map"></div>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <script>
+    const TOKEN = '__MAPBOX_TOKEN__';
+    const log = document.getElementById('log');
+
+    log.textContent = 'mapboxgl loaded: ' + (typeof mapboxgl !== 'undefined') + ' | supported: ' + mapboxgl.supported();
+
+    if (!mapboxgl.supported()) {
+      log.textContent += ' ⚠️ WebGL NOT supported';
+    } else {
+      mapboxgl.accessToken = TOKEN;
+      const map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/mapbox/streets-v12',
+        center: [77.2090, 28.6139],
+        zoom: 12,
+        failIfMajorPerformanceCaveat: false
+      });
+      map.on('load', () => { log.textContent += ' ✅ Map loaded successfully!'; });
+      map.on('error', e => { log.textContent += ' ❌ Map error: ' + e.error?.message; });
+    }
+
+    // Test geocoding
+    fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/delhi.json?access_token=${TOKEN}&country=in&limit=2`)
+      .then(r => r.json())
+      .then(d => { log.textContent += ' | Geocoding ✅ ' + d.features?.[0]?.place_name; })
+      .catch(e => { log.textContent += ' | Geocoding ❌ ' + e.message; });
+  </script>
+</body>
+</html>

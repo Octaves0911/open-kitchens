@@ -6,425 +6,616 @@
   <meta name="theme-color" content="#5C2D0E"/>
   <title>Restaurant Portal — Open Kitchens</title>
   <link rel="icon" href="/images/logo.png" type="image/png"/>
-  <link rel="stylesheet" href="/css/app.css"/>
+<style>
+/* ── Reset & Variables ─────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --rust:#C0392B;--amber:#E67E22;--brown-dark:#3E1F00;--cream:#FFF8F0;
+  --cream-dark:#F5E6D0;--surface:#FFFFFF;--border:#E8DDD0;
+  --text-dark:#2C1A00;--text-mid:#6B4226;--text-light:#9B7B5A;
+  --green-veg:#2E7D32;--shadow-sm:0 1px 4px rgba(0,0,0,.08);
+  --shadow:0 2px 12px rgba(0,0,0,.12);--radius:12px;
+}
+body{background:#F5EDE0;font-family:'Segoe UI',system-ui,sans-serif;color:var(--text-dark);min-height:100vh;}
+button,input,select,textarea{font-family:inherit;}
+
+/* ── Auth Overlay ─────────────────────────────────────────────────────────── */
+#authOverlay{
+  position:fixed;inset:0;background:rgba(30,10,0,.72);
+  display:flex;align-items:center;justify-content:center;
+  z-index:9999;backdrop-filter:blur(4px);
+}
+.auth-card{
+  background:#fff;border-radius:18px;padding:36px 32px;
+  width:min(92vw,380px);box-shadow:0 8px 40px rgba(0,0,0,.22);text-align:center;
+}
+.auth-logo{width:60px;height:60px;border-radius:14px;margin:0 auto 14px;display:block;}
+.auth-title{font-size:20px;font-weight:800;color:var(--brown-dark);margin-bottom:4px;}
+.auth-sub{font-size:13px;color:var(--text-light);margin-bottom:22px;}
+.auth-err{font-size:12.5px;color:var(--rust);margin-bottom:10px;display:none;}
+.auth-input{
+  width:100%;padding:11px 14px;border:1.5px solid var(--border);border-radius:10px;
+  font-size:14px;color:var(--text-dark);outline:none;margin-bottom:12px;
+  transition:border-color .2s;
+}
+.auth-input:focus{border-color:var(--rust);}
+.auth-btn{
+  width:100%;padding:12px;background:var(--rust);color:#fff;border:none;
+  border-radius:10px;font-size:15px;font-weight:700;transition:background .18s;cursor:pointer;
+}
+.auth-btn:hover{background:#a93226;}
+
+/* ── Portal Header ────────────────────────────────────────────────────────── */
+.rp-header{
+  background:var(--brown-dark);color:#fff;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;height:60px;position:sticky;top:0;z-index:100;
+  box-shadow:0 2px 12px rgba(0,0,0,.2);
+}
+.rp-brand{display:flex;align-items:center;gap:10px;}
+.rp-brand img{width:36px;height:36px;border-radius:8px;}
+.rp-brand-text .name{font-size:15px;font-weight:800;line-height:1.2;}
+.rp-brand-text .sub{font-size:11px;opacity:.65;}
+.rp-hdr-right{display:flex;align-items:center;gap:10px;}
+.rp-ws-dot{width:8px;height:8px;border-radius:50%;background:#EF5350;flex-shrink:0;}
+.rp-ws-dot.connected{background:#66BB6A;}
+.rp-logout-btn{
+  background:rgba(255,255,255,.12);border:none;color:#fff;
+  padding:6px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;
+}
+.rp-logout-btn:hover{background:rgba(255,255,255,.22);}
+
+/* ── Stats Row ────────────────────────────────────────────────────────────── */
+.rp-stats{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:12px;
+  padding:16px 20px;background:var(--cream);border-bottom:1px solid var(--border);
+}
+.rp-stat-card{
+  background:#fff;border-radius:10px;padding:12px 14px;
+  box-shadow:var(--shadow-sm);text-align:center;
+}
+.rp-stat-num{font-size:22px;font-weight:800;line-height:1.1;}
+.rp-stat-lbl{font-size:11px;color:var(--text-light);margin-top:2px;font-weight:500;}
+@media(max-width:600px){
+  .rp-stats{grid-template-columns:repeat(2,1fr);padding:12px 14px;}
+  .rp-stat-num{font-size:18px;}
+}
+
+/* ── Tab Bar ──────────────────────────────────────────────────────────────── */
+.rp-tab-bar{
+  display:flex;background:#fff;border-bottom:2px solid var(--border);
+  position:sticky;top:60px;z-index:90;overflow-x:auto;
+}
+.rp-tab{
+  flex:1;min-width:90px;padding:14px 8px;text-align:center;
+  font-size:13px;font-weight:600;color:var(--text-light);
+  cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;
+  position:relative;white-space:nowrap;user-select:none;
+}
+.rp-tab:hover{color:var(--rust);background:var(--cream);}
+.rp-tab.active{color:var(--rust);border-bottom-color:var(--rust);}
+#orderBadge{
+  position:absolute;top:8px;right:50%;transform:translateX(14px);
+  background:var(--rust);color:#fff;font-size:10px;font-weight:800;
+  min-width:17px;height:17px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+}
+
+/* ── Tab Panels ───────────────────────────────────────────────────────────── */
+.rp-tab-panel{display:none;padding:16px 20px;}
+.rp-tab-panel.active{display:block;}
+@media(max-width:600px){.rp-tab-panel{padding:12px 12px;}}
+
+/* ── Toast Container ──────────────────────────────────────────────────────── */
+#toastContainer{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  z-index:9998;display:flex;flex-direction:column;gap:8px;align-items:center;
+  pointer-events:none;
+}
+.rp-toast{
+  background:#2c1a00;color:#fff;padding:10px 20px;border-radius:50px;
+  font-size:13.5px;font-weight:600;max-width:90vw;text-align:center;
+  opacity:0;transform:translateY(16px);transition:all .28s ease;
+}
+.rp-toast.show{opacity:1;transform:translateY(0);}
+.rp-toast.rp-toast-error{background:var(--rust);}
+.rp-toast.rp-toast-info{background:#1565C0;}
+
+/* ── Shared Utilities ─────────────────────────────────────────────────────── */
+.rp-card{background:#fff;border-radius:12px;padding:16px;margin-bottom:14px;box-shadow:var(--shadow-sm);}
+.rp-section-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.rp-section-title{font-size:15px;font-weight:700;color:var(--brown-dark);}
+.rp-empty{text-align:center;padding:32px 16px;color:var(--text-light);font-size:14px;}
+.rp-loading{text-align:center;padding:24px;color:var(--text-light);font-size:13px;}
+.rp-divider{border:none;border-top:1px solid var(--border);margin:14px 0;}
+
+/* ── Buttons ──────────────────────────────────────────────────────────────── */
+.rp-btn{
+  display:inline-flex;align-items:center;gap:5px;padding:8px 16px;
+  border-radius:8px;font-size:13px;font-weight:600;border:none;transition:all .18s;cursor:pointer;
+}
+.rp-btn-primary{background:var(--rust);color:#fff;}
+.rp-btn-primary:hover{background:#a93226;}
+.rp-btn-amber{background:var(--amber);color:#fff;}
+.rp-btn-amber:hover{background:#ca6f1e;}
+.rp-btn-danger{background:#EF5350;color:#fff;}
+.rp-btn-danger:hover{background:#c62828;}
+.rp-btn-outline{background:transparent;color:var(--text-mid);border:1.5px solid var(--border);}
+.rp-btn-outline:hover{background:var(--cream);border-color:var(--rust);color:var(--rust);}
+.rp-btn-ghost{background:transparent;color:var(--text-light);border:none;padding:6px 10px;}
+.rp-btn-ghost:hover{color:var(--rust);}
+.rp-btn-sm{padding:6px 11px;font-size:12px;}
+.rp-btn:disabled{opacity:.45;cursor:not-allowed;}
+
+/* ── Form ─────────────────────────────────────────────────────────────────── */
+.rp-form-row{display:grid;gap:10px;margin-bottom:10px;}
+.rp-form-row.cols2{grid-template-columns:1fr 1fr;}
+.rp-form-row.cols3{grid-template-columns:1fr 1fr 1fr;}
+@media(max-width:500px){.rp-form-row.cols2,.rp-form-row.cols3{grid-template-columns:1fr;}}
+.rp-label{font-size:12px;font-weight:600;color:var(--text-mid);display:block;margin-bottom:4px;}
+.rp-input{
+  width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:8px;
+  font-size:13.5px;color:var(--text-dark);outline:none;transition:border .2s;background:#fff;
+}
+.rp-input:focus{border-color:var(--rust);}
+.rp-check-row{display:flex;flex-wrap:wrap;gap:14px;margin-bottom:10px;}
+.rp-check-lbl{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:500;cursor:pointer;}
+.rp-check-lbl input{width:15px;height:15px;accent-color:var(--rust);}
+.rp-form-actions{display:flex;gap:8px;margin-top:12px;}
+
+/* ── Orders ───────────────────────────────────────────────────────────────── */
+.rp-filter-bar{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+.rp-filter-chip{
+  padding:5px 12px;border-radius:50px;font-size:12px;font-weight:600;
+  border:1.5px solid var(--border);background:#fff;color:var(--text-mid);cursor:pointer;
+}
+.rp-filter-chip.active{background:var(--rust);color:#fff;border-color:var(--rust);}
+.rp-order-card{
+  background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:12px;
+  box-shadow:var(--shadow-sm);border-left:4px solid var(--border);
+}
+.rp-order-card.card-new{border-left-color:var(--amber);}
+.rp-order-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.rp-order-id{font-size:14px;font-weight:800;color:var(--brown-dark);margin-right:8px;}
+.rp-order-time{font-size:12px;color:var(--text-light);}
+.rp-order-items{font-size:13px;color:var(--text-dark);margin-bottom:6px;line-height:1.6;}
+.rp-order-meta{font-size:12px;color:var(--text-light);margin-bottom:8px;}
+.rp-order-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.rp-status-badge{
+  display:inline-block;padding:3px 9px;border-radius:50px;
+  font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+}
+.badge-new{background:#FFF3E0;color:#E65100;}
+.badge-accepted,.badge-preparing{background:#E3F2FD;color:#1565C0;}
+.badge-ready{background:#E8F5E9;color:#2E7D32;}
+.badge-dispatched,.badge-delivered{background:#F3E5F5;color:#6A1B9A;}
+.badge-declined{background:#FFEBEE;color:#C62828;}
+.rp-group-label{
+  font-size:12px;font-weight:700;color:var(--text-mid);
+  padding:4px 0 6px;border-bottom:1px solid var(--border);margin-bottom:10px;
+}
+
+/* ── Menu ─────────────────────────────────────────────────────────────────── */
+.rp-menu-category{margin-bottom:6px;}
+.rp-category-title{
+  font-size:13px;font-weight:700;color:var(--text-mid);padding:8px 0 4px;
+  border-bottom:1px solid var(--border);margin-bottom:6px;
+}
+.rp-menu-item{
+  display:flex;align-items:center;gap:12px;padding:10px 0;
+  border-bottom:1px solid var(--border);
+}
+.rp-menu-item:last-child{border-bottom:none;}
+.rp-menu-item.item-unavailable{opacity:.5;}
+.rp-item-thumb{width:52px;height:52px;border-radius:8px;object-fit:cover;flex-shrink:0;}
+.rp-item-thumb-placeholder{
+  width:52px;height:52px;border-radius:8px;background:var(--cream-dark);
+  display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;
+}
+.rp-item-info{flex:1;min-width:0;}
+.rp-item-name{font-size:13.5px;font-weight:700;color:var(--text-dark);}
+.rp-item-desc{font-size:12px;color:var(--text-light);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rp-item-tags{font-size:11px;color:var(--amber);margin-top:2px;}
+.rp-item-price{font-size:13px;font-weight:700;color:var(--rust);margin-top:2px;}
+.rp-item-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.veg-dot{color:#2E7D32;font-size:10px;}
+.nonveg-dot{color:#C62828;font-size:10px;}
+/* Toggle switch */
+.rp-toggle{position:relative;width:36px;height:20px;cursor:pointer;flex-shrink:0;}
+.rp-toggle input{opacity:0;width:0;height:0;position:absolute;}
+.rp-toggle-slider{
+  position:absolute;inset:0;border-radius:50px;background:#ddd;transition:.25s;cursor:pointer;
+}
+.rp-toggle input:checked + .rp-toggle-slider{background:var(--green-veg);}
+.rp-toggle-slider::before{
+  content:'';position:absolute;width:14px;height:14px;left:3px;top:3px;
+  background:#fff;border-radius:50%;transition:.25s;
+}
+.rp-toggle input:checked + .rp-toggle-slider::before{transform:translateX(16px);}
+/* Image preview */
+.rp-img-preview{
+  width:80px;height:80px;border-radius:8px;object-fit:cover;
+  border:1.5px dashed var(--border);
+}
+/* Addon row */
+.rp-addon-row{display:flex;gap:8px;align-items:center;margin-bottom:6px;}
+.rp-addon-row .rp-input{flex:1;}
+/* Menu toolbar */
+#menuToolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+
+/* ── Offers ───────────────────────────────────────────────────────────────── */
+.rp-offer-card{
+  background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:12px;
+  box-shadow:var(--shadow-sm);
+}
+.rp-offer-card.offer-inactive{opacity:.6;}
+.rp-offer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.rp-offer-code{
+  font-size:13px;font-weight:800;color:var(--brown-dark);
+  background:var(--cream-dark);padding:3px 10px;border-radius:6px;letter-spacing:.5px;
+}
+.rp-offer-disc{margin-left:8px;font-size:13px;font-weight:600;color:var(--rust);}
+.rp-offer-title{font-size:14px;font-weight:700;color:var(--text-dark);}
+.rp-offer-desc{font-size:12px;color:var(--text-light);margin-top:2px;}
+.rp-offer-meta{font-size:11.5px;color:var(--text-mid);margin-top:6px;}
+.rp-offer-actions{display:flex;gap:6px;margin-top:10px;}
+
+/* ── Live Prep ────────────────────────────────────────────────────────────── */
+.rp-live-order{
+  background:#fff;border-radius:12px;padding:14px 16px;margin-bottom:10px;
+  box-shadow:var(--shadow-sm);display:flex;align-items:center;justify-content:space-between;
+  gap:12px;flex-wrap:wrap;
+}
+.rp-live-order-info{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0;}
+.rp-live-items{font-size:12px;color:var(--text-light);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rp-live-user{font-size:12px;color:var(--text-mid);}
+.rp-live-controls{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+.live-badge-sm{
+  display:inline-flex;align-items:center;gap:4px;padding:3px 9px;
+  background:#FFEBEE;color:var(--rust);border-radius:50px;
+  font-size:11px;font-weight:800;letter-spacing:.3px;
+}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--rust);animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+.rp-rtsp-section{
+  background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;
+  box-shadow:var(--shadow-sm);
+}
+</style>
 </head>
 <body>
 
-<!-- ── Portal Header ──────────────────────────────────────────────────────── -->
-<header class="header">
-  <div class="header-inner">
-    <a href="/" class="header-logo">
-      <img src="/images/logo.png" alt="Open Kitchens"/>
-      <div class="header-logo-text">
-        <span class="brand-name">Open Kitchens</span>
-        <span class="brand-tagline">Restaurant Portal</span>
-      </div>
-    </a>
-    <nav class="header-nav">
-      <a href="/">Customer App</a><a href="/#menu">Menu</a><a href="/rider">Rider Portal</a>
-    </nav>
+<!-- ── Auth Overlay ──────────────────────────────────────────────────────── -->
+<div id="authOverlay" style="display:none;">
+  <div class="auth-card">
+    <img src="/images/logo.png" alt="Logo" class="auth-logo"/>
+    <div class="auth-title">Restaurant Portal</div>
+    <div class="auth-sub">Enter your restaurant access key to continue</div>
+    <div class="auth-err" id="authErr">Incorrect access key. Please try again.</div>
+    <input type="password" id="secretInput" class="auth-input" placeholder="Enter access key…"
+           autocomplete="off" onkeydown="if(event.key==='Enter') submitSecret()"/>
+    <button class="auth-btn" onclick="submitSecret()">Unlock Portal</button>
+  </div>
+</div>
+
+<!-- ── Portal Header ────────────────────────────────────────────────────── -->
+<header class="rp-header">
+  <div class="rp-brand">
+    <img src="/images/logo.png" alt="Open Kitchens"/>
+    <div class="rp-brand-text">
+      <div class="name">Open Kitchens</div>
+      <div class="sub">Restaurant Portal</div>
+    </div>
+  </div>
+  <div class="rp-hdr-right">
+    <div class="rp-ws-dot" id="rpWsDot" title="WebSocket status"></div>
+    <button class="rp-logout-btn" onclick="localStorage.removeItem('ok_restaurant_secret'); location.reload();">Logout</button>
   </div>
 </header>
-<div class="portal-header">
-  <div>
-    <div class="portal-title">🍳 Kitchen Portal</div>
-    <div class="portal-sub">195, 3rd Cross, Kempapura, Hebbal · Bengaluru</div>
-  </div>
-  <div class="toggle-kitchen" onclick="toggleKitchen()">
-    <span id="kitchenLabel" style="font-size:12px;">Open</span>
-    <div class="toggle-switch on" id="kitchenSwitch">
-      <div class="toggle-knob"></div>
-    </div>
-  </div>
-</div>
 
-<!-- ── Stats Row ──────────────────────────────────────────────────────────── -->
-<div class="stats-grid">
-  <div class="stat-card">
-    <div class="stat-number" style="color:var(--rust);" id="statToday">7</div>
-    <div class="stat-label">Today's Orders</div>
+<!-- ── Stats Row ────────────────────────────────────────────────────────── -->
+<div class="rp-stats">
+  <div class="rp-stat-card">
+    <div class="rp-stat-num" id="statToday" style="color:var(--rust);">—</div>
+    <div class="rp-stat-lbl">Today's Orders</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-number" style="color:#2E7D32;" id="statRevenue">₹1,243</div>
-    <div class="stat-label">Revenue Today</div>
+  <div class="rp-stat-card">
+    <div class="rp-stat-num" id="statPending" style="color:var(--amber);">—</div>
+    <div class="rp-stat-lbl">Pending</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-number" style="color:var(--amber);" id="statPending">2</div>
-    <div class="stat-label">Pending Orders</div>
+  <div class="rp-stat-card">
+    <div class="rp-stat-num" id="statRevenue" style="color:#2E7D32;">—</div>
+    <div class="rp-stat-lbl">Revenue Today</div>
   </div>
-  <div class="stat-card">
-    <div class="stat-number" style="color:#1565C0;" id="statAvgTime">29m</div>
-    <div class="stat-label">Avg Delivery Time</div>
+  <div class="rp-stat-card">
+    <div class="rp-stat-num" id="statAccepted" style="color:#1565C0;">—</div>
+    <div class="rp-stat-lbl">Accepted</div>
   </div>
 </div>
 
-<!-- ── Tab Bar ────────────────────────────────────────────────────────────── -->
-<div class="tab-bar">
-  <div class="tab active" onclick="switchTab('orders')">📋 Orders</div>
-  <div class="tab" onclick="switchTab('menu')">🍽️ Menu</div>
-  <div class="tab" onclick="switchTab('camera')">🎥 Camera</div>
-  <div class="tab" onclick="switchTab('riders')">🛵 Riders</div>
+<!-- ── Tab Bar ──────────────────────────────────────────────────────────── -->
+<div class="rp-tab-bar">
+  <div class="rp-tab active" id="tab-btn-orders" onclick="switchTab('orders')">
+    📋 Orders
+    <span id="orderBadge" style="display:none;">0</span>
+  </div>
+  <div class="rp-tab" id="tab-btn-menu" onclick="switchTab('menu')">🍽️ Menu</div>
+  <div class="rp-tab" id="tab-btn-offers" onclick="switchTab('offers')">🏷️ Offers</div>
+  <div class="rp-tab" id="tab-btn-liveprep" onclick="switchTab('liveprep')">🎥 Live Prep</div>
 </div>
 
-<!-- ── ORDERS Tab ──────────────────────────────────────────────────────────── -->
-<div class="tab-panel active" id="tab-orders">
-  <div style="padding:12px 16px 0;">
-    <div style="font-size:13px;font-weight:600;color:var(--text-mid);margin-bottom:10px;">Live Orders</div>
-    <!-- New order notification alert -->
-    <div class="alert alert-warn" id="newOrderAlert">
-      🔔 New order received! <strong>OK287461</strong> — tap to view ↓
-    </div>
+<!-- ══════════════════════════════════════════════════════════════════════
+     ORDERS TAB
+══════════════════════════════════════════════════════════════════════ -->
+<div class="rp-tab-panel active" id="tab-orders">
+  <div class="rp-filter-bar">
+    <div class="rp-filter-chip active" onclick="filterOrders('all',this)">All</div>
+    <div class="rp-filter-chip" onclick="filterOrders('placed',this)">New</div>
+    <div class="rp-filter-chip" onclick="filterOrders('accepted',this)">Accepted</div>
+    <div class="rp-filter-chip" onclick="filterOrders('preparing',this)">Preparing</div>
+    <div class="rp-filter-chip" onclick="filterOrders('ready',this)">Ready</div>
   </div>
-
-  <div style="padding:0 16px;" id="ordersList">
-    <!-- New order -->
-    <div class="order-card new">
-      <div class="order-card-header">
-        <div class="order-id">#OK287461</div>
-        <span class="order-status-badge status-new">🆕 New</span>
-      </div>
-      <div class="order-items-list">
-        🍛 Indori Poha × 1<br>
-        🫓 Aloo Paratha × 2 + curd<br>
-        🥛 Lassi × 1
-      </div>
-      <div style="font-size:12px;color:var(--text-light);margin-bottom:10px;">📍 Flat 302, Sunrise Apts, Hebbal · ₹357 · COD</div>
-      <div style="font-size:11px;color:var(--text-light);margin-bottom:8px;">⏰ Received 2 mins ago</div>
-      <div class="order-actions">
-        <button class="btn btn-primary btn-sm" onclick="acceptOrder(this,'OK287461')">✅ Accept</button>
-        <button class="btn btn-secondary btn-sm" onclick="rejectOrder(this,'OK287461')">❌ Reject</button>
-        <button class="btn btn-outline btn-sm" onclick="goLive('OK287461')">🔴 Go Live</button>
-      </div>
-    </div>
-
-    <!-- Preparing order -->
-    <div class="order-card">
-      <div class="order-card-header">
-        <div class="order-id">#OK287460</div>
-        <span class="order-status-badge status-preparing">👩‍🍳 Preparing</span>
-      </div>
-      <div class="order-items-list">
-        🧀 Paneer Butter Masala × 1<br>
-        🍚 Jeera Rice × 1<br>
-        🫓 Butter Roti × 3
-      </div>
-      <div style="font-size:12px;color:var(--text-light);margin-bottom:10px;">📍 #12, MG Road, RT Nagar · ₹299 · UPI</div>
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-        <div style="flex:1;background:var(--border);border-radius:10px;height:6px;overflow:hidden;">
-          <div id="prog-OK287460" style="width:60%;height:100%;background:var(--rust);border-radius:10px;transition:width .5s;"></div>
-        </div>
-        <span style="font-size:11px;color:var(--text-light);">~12 min left</span>
-      </div>
-      <div class="order-actions">
-        <button class="btn btn-amber btn-sm" onclick="markReady(this,'OK287460')">✅ Mark Ready</button>
-        <button class="btn btn-outline btn-sm" onclick="goLive('OK287460')">🎥 Live Stream</button>
-      </div>
-    </div>
-
-    <!-- Ready order -->
-    <div class="order-card">
-      <div class="order-card-header">
-        <div class="order-id">#OK287459</div>
-        <span class="order-status-badge status-ready">✅ Ready</span>
-      </div>
-      <div class="order-items-list">
-        🍱 Veg Thali × 2
-      </div>
-      <div style="font-size:12px;color:var(--text-light);margin-bottom:10px;">📍 Malleshwaram · ₹458 · Card</div>
-      <div class="order-actions">
-        <button class="btn btn-primary btn-sm" onclick="dispatch('OK287459')">🛵 Assign Rider</button>
-      </div>
-    </div>
+  <div id="ordersList">
+    <div class="rp-empty">Loading orders…</div>
   </div>
 </div>
 
-<!-- ── MENU Tab ────────────────────────────────────────────────────────────── -->
-<div class="tab-panel" id="tab-menu">
-  <div style="padding:16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div style="font-size:15px;font-weight:700;color:var(--brown-dark);">Menu Items (64)</div>
-      <button class="btn btn-primary btn-sm" onclick="openAddItem()">+ Add Item</button>
-    </div>
+<!-- ══════════════════════════════════════════════════════════════════════
+     MENU TAB
+══════════════════════════════════════════════════════════════════════ -->
+<div class="rp-tab-panel" id="tab-menu">
 
-    <!-- Sample menu items for management -->
-    <div id="adminMenuList"></div>
+  <!-- Toolbar: search + add button -->
+  <div id="menuToolbar">
+    <div class="rp-section-title">Menu Items</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input id="menuSearch" class="rp-input" placeholder="Search…" style="width:160px;"
+             oninput="renderMenuList(menuItems)"/>
+      <button class="rp-btn rp-btn-primary rp-btn-sm" onclick="openItemForm(null)">+ Add Item</button>
+    </div>
   </div>
 
-  <!-- Add Item Form -->
-  <div id="addItemForm" style="display:none;padding:16px;">
-    <h3 style="font-size:15px;font-weight:700;color:var(--brown-dark);margin-bottom:14px;">Add New Menu Item</h3>
-    <div class="form-group">
-      <label class="form-label">Item Name</label>
-      <input type="text" class="form-input" placeholder="e.g. Paneer Tikka Masala"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Category</label>
-      <select class="form-input">
-        <option>Breakfast</option><option>Main Course</option><option>Rice & Breads</option>
-        <option>Parathas</option><option>Combos</option><option>Snacks</option>
-        <option>Sides</option><option>Maggi</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Base Price (₹)</label>
-      <input type="number" class="form-input" placeholder="e.g. 199"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Description</label>
-      <textarea class="form-input" rows="2" placeholder="Brief description (max 100 chars)" style="resize:none;"></textarea>
-    </div>
-    <div style="display:flex;gap:12px;margin-bottom:14px;">
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
-        <input type="checkbox" checked style="accent-color:var(--green-veg);width:16px;height:16px;"/> Vegetarian
-      </label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
-        <input type="checkbox" style="accent-color:var(--amber);width:16px;height:16px;"/> Best Seller
-      </label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer;">
-        <input type="checkbox" style="accent-color:var(--rust);width:16px;height:16px;"/> Spicy
-      </label>
-    </div>
-    <div style="display:flex;gap:8px;">
-      <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="saveItem()">Save Item</button>
-      <button class="btn btn-secondary btn-sm" onclick="document.getElementById('addItemForm').style.display='none';document.getElementById('adminMenuList').style.display='block';">Cancel</button>
-    </div>
+  <!-- Menu list rendered by JS -->
+  <div class="rp-card" style="padding:0 16px;">
+    <div id="menuList"><div class="rp-loading">Loading menu…</div></div>
   </div>
-</div>
 
-<!-- ── CAMERA Tab ──────────────────────────────────────────────────────────── -->
-<div class="tab-panel" id="tab-camera">
-  <div style="padding:16px;">
-    <div class="alert alert-info" style="margin-bottom:14px;">
-      🎥 Configure your RTSP camera to enable live kitchen streaming for customers
+  <!-- Item form panel (shown/hidden by JS) -->
+  <div id="itemFormPanel" style="display:none;">
+    <div class="rp-section-hdr">
+      <div class="rp-section-title" id="itemFormTitle">Add Menu Item</div>
+      <button class="rp-btn rp-btn-ghost rp-btn-sm" onclick="closeItemForm()">← Back</button>
     </div>
+    <div class="rp-card">
 
-    <div class="checkout-section" style="margin:0 0 14px;">
-      <h3>📷 RTSP Camera Configuration</h3>
-      <div class="form-group">
-        <label class="form-label">RTSP Stream URL</label>
-        <div style="position:relative;">
-          <input type="password" class="form-input" id="rtspUrl" placeholder="rtsp://username:password@ip:port/stream" value="rtsp://admin:****@192.168.1.100:554/stream"/>
-          <button onclick="toggleRtsp()" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:14px;cursor:pointer;">👁️</button>
-        </div>
-        <div style="font-size:11px;color:var(--text-light);margin-top:4px;">URL is encrypted and stored securely</div>
-      </div>
-      <div style="display:flex;gap:8px;">
-        <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="testRtsp()">🔌 Test Connection</button>
-        <button class="btn btn-amber" style="flex:1;justify-content:center;" onclick="saveRtsp()">💾 Save</button>
-      </div>
-      <div id="rtspStatus" style="margin-top:10px;"></div>
-    </div>
-
-    <div class="checkout-section" style="margin:0 0 14px;">
-      <h3>📡 Stream Preview</h3>
-      <div class="video-placeholder" style="margin:0;">
-        <div class="live-badge" id="previewBadge" style="display:none;"><span class="live-dot"></span> PREVIEW</div>
-        <div style="text-align:center;position:relative;z-index:1;padding:20px;">
-          <div style="font-size:48px;margin-bottom:8px;">📷</div>
-          <div style="color:rgba(255,255,255,.7);font-size:13px;">Camera preview will appear here</div>
-          <button class="btn btn-amber btn-sm" style="margin-top:12px;" onclick="previewCamera()">▶ Start Preview</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="checkout-section" style="margin:0;">
-      <h3>🎬 Active Streams</h3>
-      <div style="font-size:13px;color:var(--text-light);">No active streams right now.<br>Click "Go Live" on an order to start streaming.</div>
-    </div>
-  </div>
-</div>
-
-<!-- ── RIDERS Tab ──────────────────────────────────────────────────────────── -->
-<div class="tab-panel" id="tab-riders">
-  <div style="padding:16px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div style="font-size:15px;font-weight:700;color:var(--brown-dark);">Rider Fleet</div>
-      <span style="font-size:12px;color:#2E7D32;font-weight:700;background:#E8F5E9;padding:4px 10px;border-radius:50px;">3 Online</span>
-    </div>
-
-    <div id="ridersList"></div>
-
-    <div class="divider"></div>
-    <div style="font-size:14px;font-weight:700;color:var(--brown-dark);margin-bottom:10px;">📝 Pending Approvals</div>
-    <div style="background:var(--surface);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="rp-form-row cols2">
         <div>
-          <div style="font-size:14px;font-weight:700;">Suresh M.</div>
-          <div style="font-size:12px;color:var(--text-light);">📱 +91 98765 43210 · 🏍️ Hero Splendor</div>
-          <div style="font-size:11px;color:var(--amber);margin-top:2px;">⏳ Documents pending review</div>
+          <label class="rp-label">Item Name *</label>
+          <input id="iName" class="rp-input" placeholder="e.g. Paneer Tikka Masala"/>
         </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-primary btn-sm" onclick="showToast('✅ Rider approved!')">Approve</button>
-          <button class="btn btn-secondary btn-sm" onclick="showToast('❌ Rider rejected')">Reject</button>
+        <div>
+          <label class="rp-label">Category</label>
+          <input id="iCategory" class="rp-input" placeholder="e.g. Main Course"/>
         </div>
       </div>
-    </div>
+
+      <div class="rp-form-row cols2">
+        <div>
+          <label class="rp-label">Price (₹) *</label>
+          <input id="iPrice" type="number" class="rp-input" placeholder="199"/>
+        </div>
+        <div>
+          <label class="rp-label">Sort Order</label>
+          <input id="iSort" type="number" class="rp-input" placeholder="0"/>
+        </div>
+      </div>
+
+      <div class="rp-form-row">
+        <div>
+          <label class="rp-label">Description</label>
+          <textarea id="iDesc" class="rp-input" rows="2" placeholder="Brief description…" style="resize:none;"></textarea>
+        </div>
+      </div>
+
+      <div class="rp-check-row">
+        <label class="rp-check-lbl"><input type="checkbox" id="iVeg" checked/> Vegetarian</label>
+        <label class="rp-check-lbl"><input type="checkbox" id="iBestseller"/> Bestseller</label>
+        <label class="rp-check-lbl"><input type="checkbox" id="iSpicy"/> Spicy</label>
+        <label class="rp-check-lbl"><input type="checkbox" id="iAvail" checked/> Available</label>
+        <label class="rp-check-lbl"><input type="checkbox" id="iFanFav"/> 🌟 Fan Favourite</label>
+      </div>
+
+      <hr class="rp-divider"/>
+
+      <!-- Image upload -->
+      <label class="rp-label">Item Image</label>
+      <input type="file" id="iImgFile" accept="image/jpeg,image/png,image/webp"
+             onchange="onImageSelect(this)" style="margin-bottom:6px;font-size:13px;"/>
+      <div id="iImgPreviewWrap" style="display:none;margin-bottom:8px;">
+        <img id="iImgPreview" class="rp-img-preview" alt="Preview"/>
+      </div>
+
+      <hr class="rp-divider"/>
+
+      <!-- Add-ons editor -->
+      <div class="rp-section-hdr" style="margin-bottom:8px;">
+        <label class="rp-label" style="margin:0;">Add-ons</label>
+        <button type="button" class="rp-btn rp-btn-outline rp-btn-sm" onclick="addAddonRow()">+ Add-on</button>
+      </div>
+      <div id="addonsContainer"></div>
+
+      <div class="rp-form-actions">
+        <button class="rp-btn rp-btn-primary" style="flex:1;justify-content:center;" onclick="saveItem()">Save Item</button>
+        <button class="rp-btn rp-btn-outline" onclick="closeItemForm()">Cancel</button>
+      </div>
+
+    </div><!-- /.rp-card -->
+  </div><!-- /#itemFormPanel -->
+</div><!-- /#tab-menu -->
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     OFFERS TAB
+══════════════════════════════════════════════════════════════════════ -->
+<div class="rp-tab-panel" id="tab-offers">
+
+  <div class="rp-section-hdr">
+    <div class="rp-section-title">Offers & Coupons</div>
+    <button class="rp-btn rp-btn-primary rp-btn-sm" onclick="openOfferForm(null)">+ Add Offer</button>
   </div>
-</div>
 
-<script src="/js/menu-data.js"></script>
-<script>
-let kitchenOpen = true;
-
-// ─── Tab switching ────────────────────────────────────────────────────────────
-function switchTab(name) {
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.remove('active'));
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  const tabs = ['orders','menu','camera','riders'];
-  const idx = tabs.indexOf(name);
-  document.querySelectorAll('.tab')[idx]?.classList.add('active');
-  document.getElementById('tab-' + name)?.classList.add('active');
-  if (name === 'menu') renderAdminMenu();
-  if (name === 'riders') renderRiders();
-}
-
-// ─── Kitchen toggle ───────────────────────────────────────────────────────────
-function toggleKitchen() {
-  kitchenOpen = !kitchenOpen;
-  const sw = document.getElementById('kitchenSwitch');
-  const label = document.getElementById('kitchenLabel');
-  sw.classList.toggle('on', kitchenOpen);
-  label.textContent = kitchenOpen ? 'Open' : 'Paused';
-  showToast(kitchenOpen ? '✅ Kitchen is now accepting orders' : '⏸️ Orders paused — kitchen closed');
-}
-
-// ─── Order actions ────────────────────────────────────────────────────────────
-function acceptOrder(btn, orderId) {
-  const card = btn.closest('.order-card');
-  card.querySelector('.order-status-badge').className = 'order-status-badge status-preparing';
-  card.querySelector('.order-status-badge').textContent = '👩‍🍳 Preparing';
-  card.querySelector('.order-actions').innerHTML = `
-    <button class="btn btn-amber btn-sm" onclick="markReady(this,'${orderId}')">✅ Mark Ready</button>
-    <button class="btn btn-outline btn-sm" onclick="goLive('${orderId}')">🎥 Go Live</button>`;
-  showToast(`✅ Order #${orderId} accepted`);
-  document.getElementById('newOrderAlert').style.display = 'none';
-}
-
-function rejectOrder(btn, orderId) {
-  btn.closest('.order-card').remove();
-  showToast(`❌ Order #${orderId} rejected`);
-}
-
-function markReady(btn, orderId) {
-  const card = btn.closest('.order-card');
-  card.querySelector('.order-status-badge').className = 'order-status-badge status-ready';
-  card.querySelector('.order-status-badge').textContent = '✅ Ready';
-  card.querySelector('.order-actions').innerHTML = `
-    <button class="btn btn-primary btn-sm" onclick="dispatch('${orderId}')">🛵 Assign Rider</button>`;
-  showToast(`📦 Order #${orderId} is ready for pickup!`);
-}
-
-function dispatch(orderId) {
-  showToast(`🛵 Rider assigned to order #${orderId}`);
-  const card = document.querySelector(`[onclick*="${orderId}"]`)?.closest('.order-card');
-  if (card) {
-    card.querySelector('.order-status-badge').className = 'order-status-badge status-dispatched';
-    card.querySelector('.order-status-badge').textContent = '🛵 Dispatched';
-    card.querySelector('.order-actions').innerHTML = `<span style="font-size:12px;color:var(--text-light);">Order picked up by rider</span>`;
-  }
-}
-
-function goLive(orderId) {
-  showToast(`🔴 Live stream started for order #${orderId}`);
-  switchTab('camera');
-  document.getElementById('previewBadge').style.display = 'flex';
-  previewCamera();
-}
-
-// ─── Admin menu render ────────────────────────────────────────────────────────
-function renderAdminMenu() {
-  const container = document.getElementById('adminMenuList');
-  if (!container) return;
-  const items = MENU_DATA.slice(0, 12); // Show first 12 for demo
-  container.innerHTML = items.map(item => `
-    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);">
-      <span style="font-size:24px;">${item.emoji}</span>
-      <div style="flex:1;">
-        <div style="font-size:14px;font-weight:600;color:var(--text-dark);">${item.name}</div>
-        <div style="font-size:12px;color:var(--text-light);">${item.category} · ₹${item.price}</div>
+  <!-- Offer form panel -->
+  <div id="offerFormPanel" style="display:none;margin-bottom:16px;">
+    <div class="rp-card">
+      <div class="rp-section-hdr" style="margin-bottom:12px;">
+        <div class="rp-section-title" id="offerFormTitle">New Offer</div>
+        <button class="rp-btn rp-btn-ghost rp-btn-sm" onclick="closeOfferForm()">✕</button>
       </div>
-      <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;">
-        <div class="toggle-switch on" style="width:30px;height:16px;" onclick="this.classList.toggle('on');showToast('Item availability updated')">
-          <div class="toggle-knob" style="width:12px;height:12px;top:2px;left:2px;"></div>
+
+      <div class="rp-form-row cols2">
+        <div>
+          <label class="rp-label">Coupon Code *</label>
+          <input id="oCode" class="rp-input" placeholder="e.g. SAVE20" style="text-transform:uppercase;"/>
         </div>
-      </label>
-      <button class="btn btn-secondary btn-sm" onclick="editItem(${item.id})">✏️</button>
-    </div>
-  `).join('') + `<div style="text-align:center;padding:12px;font-size:13px;color:var(--text-light);">+ 52 more items</div>`;
-}
+        <div>
+          <label class="rp-label">Title *</label>
+          <input id="oTitle" class="rp-input" placeholder="e.g. 20% Off on orders"/>
+        </div>
+      </div>
 
-function openAddItem() {
-  document.getElementById('adminMenuList').style.display = 'none';
-  document.getElementById('addItemForm').style.display = 'block';
-}
+      <div class="rp-form-row">
+        <div>
+          <label class="rp-label">Description</label>
+          <input id="oDesc" class="rp-input" placeholder="Optional description…"/>
+        </div>
+      </div>
 
-function saveItem() {
-  showToast('✅ New item added to menu!');
-  document.getElementById('addItemForm').style.display = 'none';
-  document.getElementById('adminMenuList').style.display = 'block';
-}
+      <div class="rp-form-row cols3">
+        <div>
+          <label class="rp-label">Discount Type</label>
+          <select id="oType" class="rp-input">
+            <option value="percent">Percent (%)</option>
+            <option value="flat">Flat (₹)</option>
+          </select>
+        </div>
+        <div>
+          <label class="rp-label">Value *</label>
+          <input id="oValue" type="number" class="rp-input" placeholder="20"/>
+        </div>
+        <div>
+          <label class="rp-label">Min Order (₹)</label>
+          <input id="oMinOrder" type="number" class="rp-input" placeholder="0"/>
+        </div>
+      </div>
 
-function editItem(id) {
-  const item = MENU_DATA.find(i => i.id === id);
-  showToast(`✏️ Editing: ${item?.name}`);
-}
+      <div class="rp-form-row cols2">
+        <div>
+          <label class="rp-label">Max Discount (₹)</label>
+          <input id="oMaxDisc" type="number" class="rp-input" placeholder="No cap"/>
+        </div>
+        <div>
+          <label class="rp-label">Usage Limit</label>
+          <input id="oUsageLimit" type="number" class="rp-input" placeholder="Unlimited"/>
+        </div>
+      </div>
 
-// ─── RTSP ─────────────────────────────────────────────────────────────────────
-function toggleRtsp() {
-  const input = document.getElementById('rtspUrl');
-  input.type = input.type === 'password' ? 'text' : 'password';
-}
+      <div class="rp-form-row cols2">
+        <div>
+          <label class="rp-label">Valid From</label>
+          <input id="oValidFrom" type="date" class="rp-input"/>
+        </div>
+        <div>
+          <label class="rp-label">Valid Until</label>
+          <input id="oValidUntil" type="date" class="rp-input"/>
+        </div>
+      </div>
 
-function testRtsp() {
-  const status = document.getElementById('rtspStatus');
-  status.innerHTML = '<div class="alert alert-info">⏳ Testing RTSP connection...</div>';
-  setTimeout(() => {
-    status.innerHTML = '<div class="alert alert-success">✅ RTSP stream connected! Resolution: 1280×720 @ 25fps</div>';
-  }, 2000);
-}
+      <hr class="rp-divider"/>
 
-function saveRtsp() {
-  showToast('💾 RTSP URL saved securely');
-}
+      <div class="rp-form-row cols3">
+        <div>
+          <label class="rp-label">Card Emoji 🎁</label>
+          <input id="oEmoji" class="rp-input" placeholder="e.g. 🎉 ☀️ 👑" maxlength="4"/>
+        </div>
+        <div>
+          <label class="rp-label">Badge Label</label>
+          <input id="oBadge" class="rp-input" placeholder="e.g. NEW USER"/>
+        </div>
+        <div>
+          <label class="rp-label">Original Price (₹)</label>
+          <input id="oOldPrice" type="number" class="rp-input" placeholder="For strikethrough"/>
+        </div>
+      </div>
 
-function previewCamera() {
-  showToast('📷 Camera preview started');
-}
-
-// ─── Riders ───────────────────────────────────────────────────────────────────
-function renderRiders() {
-  const riders = [
-    { name: 'Rajesh K.', phone: '+91 98765 12345', vehicle: 'Honda Activa', status: 'online', rating: 4.8, orders: 3 },
-    { name: 'Priya S.', phone: '+91 87654 23456', vehicle: 'TVS Jupiter', status: 'busy', rating: 4.6, orders: 1 },
-    { name: 'Mohan R.', phone: '+91 76543 34567', vehicle: 'Hero Splendor', status: 'online', rating: 4.9, orders: 5 },
-    { name: 'Anita V.', phone: '+91 65432 45678', vehicle: 'Honda Dio', status: 'offline', rating: 4.7, orders: 0 }
-  ];
-
-  const statusClasses = { online: '#E8F5E9 / #2E7D32', busy: '#FFF8E1 / #F57F17', offline: '#FAFAFA / #9E9E9E' };
-  document.getElementById('ridersList').innerHTML = riders.map(r => `
-    <div style="background:var(--surface);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm);">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <div style="width:40px;height:40px;border-radius:50%;background:var(--cream-dark);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;">🛵</div>
-        <div style="flex:1;">
-          <div style="font-size:14px;font-weight:700;color:var(--brown-dark);">${r.name}</div>
-          <div style="font-size:12px;color:var(--text-light);">${r.phone} · ${r.vehicle}</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:4px;">
-            <span style="font-size:11px;font-weight:700;padding:2px 7px;border-radius:50px;background:${r.status==='online'?'#E8F5E9':r.status==='busy'?'#FFF8E1':'#F5F5F5'};color:${r.status==='online'?'#2E7D32':r.status==='busy'?'#F57F17':'#9E9E9E'};">
-              ${r.status==='online'?'🟢 Online':r.status==='busy'?'🟡 On Delivery':'⚫ Offline'}
-            </span>
-            <span style="font-size:11px;color:var(--text-light);">⭐ ${r.rating} · ${r.orders} deliveries today</span>
+      <div class="rp-form-row">
+        <div>
+          <label class="rp-label">Offer Card Image</label>
+          <input type="file" id="oImgFile" accept="image/jpeg,image/png,image/webp" class="rp-input" style="padding:6px;" onchange="previewOfferImage(this)"/>
+          <div id="oImgPreviewWrap" style="display:none;margin-top:8px;">
+            <img id="oImgPreview" src="" alt="preview" style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;border:1px solid var(--border);"/>
+            <button type="button" onclick="clearOfferImage()" style="display:block;margin-top:4px;font-size:12px;color:var(--rust);background:none;border:none;cursor:pointer;">✕ Remove image</button>
           </div>
         </div>
-        <button class="btn btn-outline btn-sm" onclick="showToast('📞 Calling ${r.name}...')">📞</button>
+      </div>
+
+      <div class="rp-form-actions">
+        <button class="rp-btn rp-btn-primary" style="flex:1;justify-content:center;" onclick="saveOffer()">Save Offer</button>
+        <button class="rp-btn rp-btn-outline" onclick="closeOfferForm()">Cancel</button>
       </div>
     </div>
-  `).join('');
-}
+  </div>
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  renderAdminMenu();
-});
+  <!-- Offers list rendered by JS -->
+  <div id="offersList"><div class="rp-loading">Loading offers…</div></div>
+
+</div><!-- /#tab-offers -->
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     LIVE PREP TAB
+══════════════════════════════════════════════════════════════════════ -->
+<div class="rp-tab-panel" id="tab-liveprep">
+
+  <!-- RTSP Config -->
+  <div class="rp-rtsp-section">
+    <div class="rp-section-hdr" style="margin-bottom:10px;">
+      <div class="rp-section-title">📷 RTSP Camera Config</div>
+    </div>
+    <label class="rp-label">RTSP Stream URL</label>
+    <div style="display:flex;gap:8px;">
+      <input id="rtspInput" class="rp-input" type="password"
+             placeholder="rtsp://user:pass@ip:554/stream" style="flex:1;"/>
+      <button class="rp-btn rp-btn-outline rp-btn-sm" onclick="toggleRtspVisibility()" title="Show/Hide">👁</button>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="rp-btn rp-btn-primary" onclick="saveRtspUrl()">💾 Save URL</button>
+    </div>
+  </div>
+
+  <!-- Accepted orders list -->
+  <div class="rp-section-hdr">
+    <div class="rp-section-title">Accepted Orders — Live Prep</div>
+    <button class="rp-btn rp-btn-outline rp-btn-sm" onclick="loadAcceptedOrders()">↻ Refresh</button>
+  </div>
+  <div id="acceptedOrdersList">
+    <div class="rp-empty">Loading…</div>
+  </div>
+
+</div><!-- /#tab-liveprep -->
+
+<!-- Toast container -->
+<div id="toastContainer"></div>
+
+<script>
+// ── filterOrders helper (used by filter chips in Orders tab) ─────────────────
+let _activeFilter = 'all';
+function filterOrders(status, chip) {
+  _activeFilter = status;
+  document.querySelectorAll('.rp-filter-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  if (typeof ordersData !== 'undefined') {
+    const filtered = status === 'all' ? ordersData : ordersData.filter(o => o.status === status);
+    if (typeof renderOrders === 'function') renderOrders(filtered);
+  }
+}
 </script>
+<script src="/js/restaurant.js"></script>
 </body>
 </html>

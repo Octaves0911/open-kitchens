@@ -1,0 +1,353 @@
+/**
+ * Open Kitchens — Restaurant Portal API Routes
+ * Covers: orders, menu items, offers, restaurant config, live streams
+ */
+const express = require('express');
+const router  = express.Router();
+const path    = require('path');
+const fs      = require('fs');
+const { v4: uuidv4 } = require('uuid');
+const multer  = require('multer');
+const db      = require('../db/database');
+const { requireAuth, signToken } = require('../middleware/auth');
+
+// ── Image upload helpers ──────────────────────────────────────────────────────
+function makeUploader(subdir, prefix) {
+  const dir = path.join(__dirname, '..', 'public', 'images', subdir);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const storage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, dir),
+    filename:    (req, file, cb) => {
+      const ext = path.extname(file.originalname).toLowerCase();
+      cb(null, `${prefix}_${Date.now()}${ext}`);
+    }
+  });
+  return multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+      if (/^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)) cb(null, true);
+      else cb(new Error('Only JPEG/PNG/WebP images allowed'));
+    }
+  });
+}
+
+const upload       = makeUploader('menu',   'item');   // menu item images
+const uploadOffer  = makeUploader('offers', 'offer');  // offer images
+
+// ── Simple restaurant auth guard (password from env or config) ────────────────
+// For now accepts a shared secret header; replace with proper RBAC if needed
+function requireRestaurant(req, res, next) {
+  const raw    = req.headers['x-restaurant-secret'] || req.query.secret || '';
+  const secret = decodeURIComponent(raw);
+  const expected = process.env.RESTAURANT_SECRET || 'ok_restaurant_2025';
+  if (secret === expected) return next();
+  res.status(403).json({ error: 'Restaurant access denied' });
+}
+
+const RESTAURANT_ID = 1;
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ORDERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/restaurant/orders — list all orders for this restaurant (newest first)
+router.get('/orders', requireRestaurant, (req, res) => {
+  const { status } = req.query;
+  let rows;
+  if (status) {
+    rows = db.prepare(`SELECT o.*, u.name as user_name, u.phone as user_phone
+                       FROM orders o LEFT JOIN users u ON u.id = o.user_id
+                       WHERE o.restaurant_id=? AND o.status=?
+                       ORDER BY o.created_at DESC`).all(RESTAURANT_ID, status);
+  } else {
+    rows = db.prepare(`SELECT o.*, u.name as user_name, u.phone as user_phone
+                       FROM orders o LEFT JOIN users u ON u.id = o.user_id
+                       WHERE o.restaurant_id=?
+                       ORDER BY o.created_at DESC LIMIT 100`).all(RESTAURANT_ID);
+  }
+  const orders = rows.map(r => ({ ...r, items: JSON.parse(r.items_json || '[]') }));
+  res.json({ orders });
+});
+
+// PATCH /api/restaurant/orders/:id — accept or decline
+router.patch('/orders/:id', requireRestaurant, (req, res) => {
+  const { status } = req.body; // 'accepted' | 'declined' | 'preparing' | 'ready' | 'dispatched'
+  const allowed = ['accepted', 'declined', 'preparing', 'ready', 'dispatched', 'delivered'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  const info = db.prepare('UPDATE orders SET status=? WHERE id=?').run(status, req.params.id);
+  if (!info.changes) return res.status(404).json({ error: 'Order not found' });
+  // Notify connected WebSocket clients (via global wss attached by server.js)
+  if (global.broadcastOrderUpdate) global.broadcastOrderUpdate(req.params.id, status);
+  res.json({ success: true, orderId: req.params.id, status });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// MENU ITEMS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/restaurant/menu — all items for this restaurant
+router.get('/menu', requireRestaurant, (req, res) => {
+  const items = db.prepare(
+    'SELECT * FROM menu_items WHERE restaurant_id=? ORDER BY sort_order, id'
+  ).all(RESTAURANT_ID);
+  res.json({ items: items.map(i => ({
+    ...i,
+    addons:   JSON.parse(i.addons_json  || '[]'),
+    metadata: JSON.parse(i.metadata_json || '{}'),
+    emoji:    JSON.parse(i.metadata_json || '{}').emoji || '🍽️',
+  }))});
+});
+
+// POST /api/restaurant/menu — add item (with optional image upload)
+router.post('/menu', requireRestaurant, upload.single('image'), (req, res) => {
+  const {
+    name, category, description, price,
+    is_veg = 1, is_available = 1, is_bestseller = 0, is_spicy = 0, is_fan_favourite = 0,
+    addons = '[]', metadata = '{}'
+  } = req.body;
+  if (!name || !price) return res.status(400).json({ error: 'name and price required' });
+  const image_url = req.file ? `/images/menu/${req.file.filename}` : (req.body.image_url || null);
+  const info = db.prepare(`
+    INSERT INTO menu_items
+      (restaurant_id, name, category, description, price, image_url,
+       is_veg, is_available, is_bestseller, is_spicy, is_fan_favourite, addons_json, metadata_json)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    RESTAURANT_ID, name, category, description, parseFloat(price), image_url,
+    Number(is_veg), Number(is_available), Number(is_bestseller), Number(is_spicy), Number(is_fan_favourite),
+    addons, metadata);
+  res.json({ success: true, id: info.lastInsertRowid });
+});
+
+// PUT /api/restaurant/menu/:id — update item
+router.put('/menu/:id', requireRestaurant, upload.single('image'), (req, res) => {
+  const existing = db.prepare(
+    'SELECT * FROM menu_items WHERE id=? AND restaurant_id=?'
+  ).get(req.params.id, RESTAURANT_ID);
+  if (!existing) return res.status(404).json({ error: 'Item not found' });
+  const {
+    name, category, description, price,
+    is_veg, is_available, is_bestseller, is_spicy, is_fan_favourite, addons, metadata, sort_order
+  } = req.body;
+  const image_url = req.file
+    ? `/images/menu/${req.file.filename}`
+    : (req.body.image_url !== undefined ? req.body.image_url : existing.image_url);
+  db.prepare(`
+    UPDATE menu_items SET
+      name=?, category=?, description=?, price=?, image_url=?,
+      is_veg=?, is_available=?, is_bestseller=?, is_spicy=?, is_fan_favourite=?,
+      addons_json=?, metadata_json=?, sort_order=?, updated_at=CURRENT_TIMESTAMP
+    WHERE id=? AND restaurant_id=?`).run(
+    name        ?? existing.name,
+    category    ?? existing.category,
+    description ?? existing.description,
+    price       !== undefined ? parseFloat(price) : existing.price,
+    image_url,
+    is_veg           !== undefined ? Number(is_veg)           : existing.is_veg,
+    is_available     !== undefined ? Number(is_available)     : existing.is_available,
+    is_bestseller    !== undefined ? Number(is_bestseller)    : existing.is_bestseller,
+    is_spicy         !== undefined ? Number(is_spicy)         : existing.is_spicy,
+    is_fan_favourite !== undefined ? Number(is_fan_favourite) : (existing.is_fan_favourite || 0),
+    addons    ?? existing.addons_json,
+    metadata  ?? existing.metadata_json,
+    sort_order !== undefined ? Number(sort_order) : existing.sort_order,
+    req.params.id, RESTAURANT_ID
+  );
+  res.json({ success: true });
+});
+
+// DELETE /api/restaurant/menu/:id
+router.delete('/menu/:id', requireRestaurant, (req, res) => {
+  const info = db.prepare(
+    'DELETE FROM menu_items WHERE id=? AND restaurant_id=?'
+  ).run(req.params.id, RESTAURANT_ID);
+  if (!info.changes) return res.status(404).json({ error: 'Item not found' });
+  res.json({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// OFFERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/restaurant/offers — all offers for this restaurant
+router.get('/offers', requireRestaurant, (req, res) => {
+  const offers = db.prepare(
+    'SELECT * FROM offers WHERE restaurant_id=? ORDER BY created_at DESC'
+  ).all(RESTAURANT_ID);
+  res.json({ offers });
+});
+
+// POST /api/restaurant/offers
+router.post('/offers', requireRestaurant, uploadOffer.single('image'), (req, res) => {
+  const { code, title, description, discount_type, discount_value,
+          min_order, max_discount, is_active, valid_from, valid_until, usage_limit,
+          badge, emoji, old_price } = req.body;
+  if (!code || !title || discount_value === undefined)
+    return res.status(400).json({ error: 'code, title and discount_value required' });
+  const dup = db.prepare('SELECT id FROM offers WHERE restaurant_id=? AND code=?')
+                .get(RESTAURANT_ID, code.toUpperCase());
+  if (dup) return res.status(409).json({ error: 'Offer code already exists' });
+  const image_url = req.file ? `/images/offers/${req.file.filename}` : null;
+  const info = db.prepare(`
+    INSERT INTO offers
+      (restaurant_id, code, title, description, discount_type, discount_value,
+       min_order, max_discount, is_active, valid_from, valid_until, usage_limit,
+       badge, emoji, old_price, image_url)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    RESTAURANT_ID, code.toUpperCase(), title, description,
+    discount_type || 'percent', parseFloat(discount_value),
+    parseFloat(min_order || 0), max_discount ? parseFloat(max_discount) : null,
+    is_active !== undefined ? Number(is_active) : 1,
+    valid_from || null, valid_until || null,
+    usage_limit ? parseInt(usage_limit) : null,
+    badge || null, emoji || null,
+    old_price ? parseFloat(old_price) : null, image_url
+  );
+  res.json({ success: true, id: info.lastInsertRowid });
+});
+
+// PUT /api/restaurant/offers/:id
+router.put('/offers/:id', requireRestaurant, uploadOffer.single('image'), (req, res) => {
+  const existing = db.prepare(
+    'SELECT * FROM offers WHERE id=? AND restaurant_id=?'
+  ).get(req.params.id, RESTAURANT_ID);
+  if (!existing) return res.status(404).json({ error: 'Offer not found' });
+  const { code, title, description, discount_type, discount_value,
+          min_order, max_discount, is_active, valid_from, valid_until, usage_limit,
+          badge, emoji, old_price } = req.body;
+  const image_url = req.file
+    ? `/images/offers/${req.file.filename}`
+    : (req.body.image_url !== undefined ? (req.body.image_url || null) : existing.image_url);
+  db.prepare(`
+    UPDATE offers SET code=?,title=?,description=?,discount_type=?,discount_value=?,
+      min_order=?,max_discount=?,is_active=?,valid_from=?,valid_until=?,usage_limit=?,
+      badge=?,emoji=?,old_price=?,image_url=?
+    WHERE id=? AND restaurant_id=?`).run(
+    (code || existing.code).toUpperCase(),
+    title       ?? existing.title,
+    description ?? existing.description,
+    discount_type ?? existing.discount_type,
+    discount_value !== undefined ? parseFloat(discount_value) : existing.discount_value,
+    min_order    !== undefined ? parseFloat(min_order)    : existing.min_order,
+    max_discount !== undefined ? parseFloat(max_discount) : existing.max_discount,
+    is_active    !== undefined ? Number(is_active)        : existing.is_active,
+    (valid_from  || null) ?? existing.valid_from,
+    (valid_until || null) ?? existing.valid_until,
+    usage_limit !== undefined ? parseInt(usage_limit) : existing.usage_limit,
+    badge     !== undefined ? (badge     || null) : existing.badge,
+    emoji     !== undefined ? (emoji     || null) : existing.emoji,
+    old_price !== undefined ? (old_price ? parseFloat(old_price) : null) : existing.old_price,
+    image_url,
+    req.params.id, RESTAURANT_ID
+  );
+  res.json({ success: true });
+});
+
+// DELETE /api/restaurant/offers/:id
+router.delete('/offers/:id', requireRestaurant, (req, res) => {
+  const info = db.prepare(
+    'DELETE FROM offers WHERE id=? AND restaurant_id=?'
+  ).run(req.params.id, RESTAURANT_ID);
+  if (!info.changes) return res.status(404).json({ error: 'Offer not found' });
+  res.json({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RESTAURANT CONFIG (RTSP URL, etc.)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// GET /api/restaurant/config/:key
+router.get('/config/:key', requireRestaurant, (req, res) => {
+  const row = db.prepare('SELECT value FROM restaurant_config WHERE key=?').get(req.params.key);
+  res.json({ key: req.params.key, value: row ? row.value : null });
+});
+
+// PUT /api/restaurant/config/:key
+router.put('/config/:key', requireRestaurant, (req, res) => {
+  const { value } = req.body;
+  db.prepare(`INSERT INTO restaurant_config (key,value) VALUES (?,?)
+              ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP`)
+    .run(req.params.key, value);
+  res.json({ success: true });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// LIVE STREAMING
+// ═══════════════════════════════════════════════════════════════════════════════
+
+// POST /api/restaurant/stream/start/:orderId — start stream for an order
+router.post('/stream/start/:orderId', requireRestaurant, (req, res) => {
+  const order = db.prepare('SELECT * FROM orders WHERE id=?').get(req.params.orderId);
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (!['accepted', 'preparing'].includes(order.status))
+    return res.status(400).json({ error: 'Order must be accepted/preparing to stream' });
+
+  // Stop any existing active stream for this order
+  db.prepare(`UPDATE live_streams SET status='stopped', stopped_at=CURRENT_TIMESTAMP
+              WHERE order_id=? AND status='active'`).run(req.params.orderId);
+
+  // Create new stream token
+  const token = uuidv4();
+  const info  = db.prepare(`
+    INSERT INTO live_streams (order_id, user_id, token, status)
+    VALUES (?, ?, ?, 'active')`).run(req.params.orderId, order.user_id, token);
+
+  // Notify the customer via WebSocket
+  if (global.notifyUser) global.notifyUser(order.user_id, {
+    type: 'stream_started',
+    orderId: order.id,
+    streamToken: token,
+    streamUrl: `/stream?token=${token}`
+  });
+
+  res.json({ success: true, streamId: info.lastInsertRowid, token, streamUrl: `/stream?token=${token}` });
+});
+
+// POST /api/restaurant/stream/stop/:orderId — stop stream
+router.post('/stream/stop/:orderId', requireRestaurant, (req, res) => {
+  const stream = db.prepare(`SELECT * FROM live_streams WHERE order_id=? AND status='active'`)
+    .get(req.params.orderId);
+  if (!stream) return res.status(404).json({ error: 'No active stream for this order' });
+
+  db.prepare(`UPDATE live_streams SET status='stopped', stopped_at=CURRENT_TIMESTAMP
+              WHERE id=?`).run(stream.id);
+
+  // Notify customer that stream ended
+  if (global.notifyUser) global.notifyUser(stream.user_id, {
+    type: 'stream_stopped',
+    orderId: req.params.orderId
+  });
+
+  res.json({ success: true });
+});
+
+// GET /api/restaurant/stream/token/:token — validate stream token (customer side)
+router.get('/stream/token/:token', (req, res) => {
+  const stream = db.prepare(`
+    SELECT ls.*, rc.value as rtsp_url
+    FROM live_streams ls
+    LEFT JOIN restaurant_config rc ON rc.key='rtsp_url'
+    WHERE ls.token=? AND ls.status='active'`).get(req.params.token);
+  if (!stream) return res.status(404).json({ error: 'Stream not found or already stopped' });
+  // Return the HLS proxy URL (or direct RTSP info for debugging)
+  res.json({
+    valid: true,
+    orderId: stream.order_id,
+    rtspUrl: stream.rtsp_url || null,
+    hlsUrl: `/api/restaurant/stream/hls/${req.params.token}/index.m3u8`
+  });
+});
+
+// GET /api/restaurant/stream/active — list all active streams (restaurant view)
+router.get('/stream/active', requireRestaurant, (req, res) => {
+  const streams = db.prepare(`
+    SELECT ls.*, o.items_json, u.name as user_name, u.phone as user_phone
+    FROM live_streams ls
+    JOIN orders o ON o.id = ls.order_id
+    JOIN users  u ON u.id = ls.user_id
+    WHERE ls.status='active'
+    ORDER BY ls.started_at DESC`).all();
+  res.json({ streams });
+});
+
+module.exports = router;

@@ -1,7 +1,82 @@
 // ─── Open Kitchens Menu Data ──────────────────────────────────────────────
-// Source: cloud_kitchen_pricing.xlsx
+// Menu is loaded dynamically from /api/menu (backed by the DB).
+// MENU_DATA starts empty and is populated after the API call.
 
-const MENU_DATA = [
+let MENU_DATA = [];
+
+// Normalise a DB item → legacy shape used by renderMenu() / addToCart()
+function _normaliseItem(i) {
+  const meta = (typeof i.metadata === 'object' ? i.metadata : {});
+  return {
+    id:           i.id,
+    category:     i.category  || 'Other',
+    name:         i.name,
+    price:        i.price,
+    desc:         i.description || '',
+    emoji:        i.emoji || meta.emoji || '🍽️',
+    veg:          !!i.is_veg,
+    bestSeller:   !!i.is_bestseller,
+    spicy:        !!i.is_spicy,
+    available:    i.is_available !== 0,
+    fanFavourite: !!i.is_fan_favourite,
+    image_url:    i.image_url   || null,
+    addons:       i.addons      || [],
+  };
+}
+
+// Render the Fan Favourites section from MENU_DATA
+function loadFanFavourites() {
+  const grid    = document.getElementById('fanFavGrid');
+  const section = document.getElementById('fanFavSection');
+  if (!grid) return;
+  const favs = MENU_DATA.filter(i => i.fanFavourite && i.available);
+  if (!favs.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-light);font-size:13px;">No fan favourites selected yet.</div>';
+    return;
+  }
+  grid.innerHTML = favs.map(item => `
+    <div class="fav-card" onclick="openItemModal(${item.id})">
+      ${item.image_url
+        ? `<div style="height:100px;overflow:hidden;border-radius:12px 12px 0 0;">
+             <img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;display:block;"/>
+           </div>`
+        : `<div style="font-size:48px;text-align:center;padding:16px 8px 8px;">${item.emoji}</div>`}
+      <div style="padding:0 12px 14px;">
+        <div style="font-size:14px;font-weight:700;color:var(--brown-dark);">${item.name}</div>
+        <div style="font-size:12px;color:var(--text-light);margin-top:2px;">${item.desc.slice(0,40)}${item.desc.length>40?'…':''}</div>
+        <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:15px;font-weight:800;color:var(--rust);">&#8377;${item.price}</span>
+          <span style="background:var(--rust);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;">ADD</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function _loadMenuFromAPI() {
+  try {
+    const res  = await fetch('/api/menu?_=' + Date.now());
+    const data = await res.json();
+    MENU_DATA  = (data.items || []).map(_normaliseItem);
+    // Re-derive CATEGORIES after load
+    CATEGORIES.length = 0;
+    [...new Set(MENU_DATA.map(i => i.category))].forEach(c => CATEGORIES.push(c));
+    // Re-render category bar, menu grid, and fan favourites
+    if (typeof renderCategoryBar  === 'function') renderCategoryBar();
+    if (typeof renderMenu         === 'function') renderMenu();
+    loadFanFavourites();
+  } catch (e) {
+    console.warn('[menu-data] Could not load menu from API:', e.message);
+  }
+}
+
+// Auto-refresh: reload when tab refocused OR every 30 seconds
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) _loadMenuFromAPI();
+});
+setInterval(_loadMenuFromAPI, 30 * 1000);
+
+// ── Legacy static array kept for reference (now unused — DB is source of truth)
+const _STATIC_MENU_BACKUP = [
   // ── Breakfast ──────────────────────────────────────────────────────────
   {
     id: 1, category: 'Breakfast', name: 'Indori Poha', price: 119,
@@ -334,7 +409,7 @@ const MENU_DATA = [
   }
 ];
 
-const CATEGORIES = [...new Set(MENU_DATA.map(i => i.category))];
+const CATEGORIES = [];
 
 const DELIVERY_ZONES = {
   '560024': 'Hebbal',
@@ -460,4 +535,6 @@ function closeCart() {
 document.addEventListener('DOMContentLoaded', () => {
   updateCartUI();
   document.querySelector('.cart-overlay')?.addEventListener('click', closeCart);
+  // Load live menu from DB via API
+  _loadMenuFromAPI();
 });
