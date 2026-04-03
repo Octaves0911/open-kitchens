@@ -299,22 +299,98 @@
 </section>
 
 <!-- ── Cart Sheet ─────────────────────────────────────────────────────────── -->
-<div class="cart-overlay"></div>
-<div class="cart-sheet">
+<div class="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-sheet" id="cartSheet">
   <div class="cart-handle"></div>
-  <div class="cart-header"><h3>🛒 Your Cart</h3></div>
-  <div class="cart-items"></div>
-  <div class="cart-footer">
-    <div class="cart-total-row">
-      <span class="cart-total-label">Total</span>
-      <span class="cart-total-amount">₹0</span>
+
+  <!-- Top bar: location + delivery time -->
+  <div class="cart-topbar">
+    <div class="cart-topbar-loc">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span id="cartLocLabel">Set delivery location</span>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:8px;">
-      <input type="text" id="couponInput" class="form-input" placeholder="Coupon code" style="flex:1;padding:10px 12px;"/>
-      <button class="btn btn-secondary btn-sm" onclick="applyCoupon()">Apply</button>
+    <div class="cart-topbar-time">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      30–40 min
     </div>
-    <a href="/checkout" class="btn btn-primary btn-full" id="checkoutBtn">Proceed to Checkout →</a>
   </div>
+
+  <!-- Header -->
+  <div class="cart-header">
+    <div>
+      <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--brown-dark);">🍽️ Your Plate</h3>
+      <p style="margin:2px 0 0;font-size:12px;color:var(--text-light);">Review &amp; customise before ordering</p>
+    </div>
+    <button class="cart-close-btn" onclick="closeCart()">✕</button>
+  </div>
+
+  <!-- Section label -->
+  <div class="cart-section-label">What's cooking 🔥</div>
+
+  <!-- Items list -->
+  <div class="cart-items"></div>
+
+  <!-- Footer -->
+  <div class="cart-footer">
+
+    <!-- Coupon row -->
+    <div class="cart-coupon-wrap">
+      <div class="cart-coupon-row">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <input type="text" id="couponInput" class="cart-coupon-input" placeholder="Enter coupon code…" autocomplete="off" style="text-transform:uppercase;"/>
+        <button class="cart-coupon-apply" onclick="applyCoupon()">Apply</button>
+      </div>
+      <div id="couponMsg" style="font-size:12px;margin-top:5px;padding-left:4px;"></div>
+      <button class="cart-view-offers-btn" onclick="openOffersSheet()">🎁 View all available offers</button>
+    </div>
+
+    <!-- Price breakdown -->
+    <div class="cart-price-box">
+      <div class="cart-price-row">
+        <span>Item total</span>
+        <span id="cartSubtotal">₹0</span>
+      </div>
+      <div class="cart-price-row" id="cartDiscountRow" style="display:none;color:#2E7D32;">
+        <span id="cartDiscountLabel">Discount</span>
+        <span id="cartDiscountAmt" style="font-weight:700;">−₹0</span>
+      </div>
+      <div class="cart-price-row" style="font-weight:800;font-size:15px;color:var(--brown-dark);border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+        <span>Grand Total</span>
+        <span class="cart-total-amount">₹0</span>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <button class="btn btn-primary btn-full cart-checkout-btn" onclick="proceedToCheckout()">
+      Proceed to Order →
+    </button>
+  </div>
+</div>
+
+<!-- ── Add-ons Customize Modal ───────────────────────────────────────────── -->
+<div class="addon-modal-overlay" id="addonModalOverlay" onclick="closeAddonModal()"></div>
+<div class="addon-modal" id="addonModal">
+  <div class="addon-modal-handle"></div>
+  <div class="addon-modal-header">
+    <h4 id="addonModalTitle">Customize</h4>
+    <button class="cart-close-btn" onclick="closeAddonModal()">✕</button>
+  </div>
+  <div id="addonModalItems" class="addon-modal-items"></div>
+  <div class="addon-modal-footer">
+    <div style="font-size:13px;color:var(--text-mid);">Item total: <strong id="addonModalTotal">₹0</strong></div>
+    <button class="btn btn-primary" onclick="confirmAddonModal()">Done</button>
+  </div>
+</div>
+
+<!-- ── All Offers Sheet ───────────────────────────────────────────────────── -->
+<div class="offers-sheet-overlay" id="offersSheetOverlay" onclick="closeOffersSheet()"></div>
+<div class="offers-sheet-panel" id="offersSheetPanel">
+  <div class="addon-modal-handle"></div>
+  <div class="addon-modal-header">
+    <h4>🎁 Available Offers</h4>
+    <button class="cart-close-btn" onclick="closeOffersSheet()">✕</button>
+  </div>
+  <div id="offersSheetList" class="offers-sheet-list"></div>
 </div>
 
 <!-- ── Food Detail Modal ──────────────────────────────────────────────────── -->
@@ -1390,10 +1466,19 @@ function openItemModal(itemId) {
   const item = MENU_DATA.find(i => i.id === itemId);
   if (!item) return;
   selectedItem = item;
-  const addons = [
-    { name:'Extra Pickle', price:10 }, { name:'Extra Butter', price:15 },
-    { name:'Extra Roti',   price:15 }, { name:'Extra Gravy',  price:20 }
-  ];
+  // Use add-ons from the database (set via restaurant portal)
+  const addons = Array.isArray(item.addons) ? item.addons.filter(a => a.name) : [];
+  const addonsHTML = addons.length
+    ? addons.map((a, i) => `
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" id="addon-${i}" style="width:18px;height:18px;accent-color:var(--rust);" onchange="updateModalTotal()"/>
+            <span style="font-size:14px;">${a.name}</span>
+          </div>
+          <span style="font-size:14px;font-weight:600;color:var(--text-mid);">+₹${a.price || 0}</span>
+        </label>`).join('')
+    : '<p style="font-size:13px;color:var(--text-light);padding:8px 0;">No add-ons available for this item.</p>';
+
   document.getElementById('modalContent').innerHTML = `
     ${item.image_url
       ? `<div class="modal-img-placeholder" style="padding:0;overflow:hidden;"><img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>`
@@ -1405,17 +1490,10 @@ function openItemModal(itemId) {
       </div>
       <p style="font-size:14px;color:var(--text-light);line-height:1.5;margin-bottom:12px;">${item.desc}</p>
       <div style="font-size:22px;font-weight:800;color:var(--brown-dark);margin-bottom:16px;">₹${item.price}</div>
-      <div style="margin-bottom:20px;">
+      ${addons.length ? `<div style="margin-bottom:20px;">
         <div style="font-size:14px;font-weight:700;color:var(--brown-dark);margin-bottom:10px;">Add-ons (Optional)</div>
-        ${addons.map((a,i) => `
-          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <input type="checkbox" id="addon-${i}" style="width:18px;height:18px;accent-color:var(--rust);" onchange="updateModalTotal()"/>
-              <span style="font-size:14px;">${a.name}</span>
-            </div>
-            <span style="font-size:14px;font-weight:600;color:var(--text-mid);">+₹${a.price}</span>
-          </label>`).join('')}
-      </div>
+        ${addonsHTML}
+      </div>` : ''}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <span style="font-size:15px;font-weight:700;color:var(--text-mid);">Total</span>
         <span id="modalTotal" style="font-size:22px;font-weight:800;color:var(--rust);">₹${item.price}</span>
@@ -1430,22 +1508,16 @@ function closeModal() {
 }
 function updateModalTotal() {
   if (!selectedItem) return;
-  const prices = [10,15,15,20];
+  const addons = Array.isArray(selectedItem.addons) ? selectedItem.addons.filter(a => a.name) : [];
   let extra = 0;
-  prices.forEach((p,i) => { if (document.getElementById('addon-'+i)?.checked) extra += p; });
+  addons.forEach((a, i) => { if (document.getElementById('addon-'+i)?.checked) extra += (a.price || 0); });
   document.getElementById('modalTotal').textContent = `₹${selectedItem.price + extra}`;
 }
 function addToCartFromModal(itemId) {
   addToCart(itemId); closeModal(); renderMenu();
 }
 
-// ─── Coupon ───────────────────────────────────────────────────────────────────
-function applyCoupon() {
-  const code = document.getElementById('couponInput')?.value.trim().toUpperCase();
-  if (code === 'WELCOME50' || code === 'FIRST50') showToast('🎉 ₹50 off applied!');
-  else if (code === 'OPENKITCHENS') showToast('🎉 10% off applied!');
-  else showToast('❌ Invalid coupon code');
-}
+// ─── Coupon: handled in menu-data.js (applyCoupon, openOffersSheet) ──────────
 
 // ─── (location sheet open/close defined above in DELIVERY LOCATION SYSTEM) ───
 </script>
