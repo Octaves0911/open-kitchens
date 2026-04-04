@@ -595,15 +595,12 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// Cart sheet toggle
+// Cart: navigate directly to checkout page
 function openCart() {
-  document.querySelector('.cart-overlay')?.classList.add('open');
-  document.querySelector('#cartSheet')?.classList.add('open');
-  updateCartUI();
+  window.location.href = '/checkout';
 }
 function closeCart() {
-  document.querySelector('.cart-overlay')?.classList.remove('open');
-  document.querySelector('#cartSheet')?.classList.remove('open');
+  // no-op — kept for compatibility
 }
 
 // ── Add-ons customize modal ───────────────────────────────────────────────────
