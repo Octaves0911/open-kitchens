@@ -1422,11 +1422,13 @@ function renderMenu() {
             <span class="menu-card-price">₹${item.price}</span>
             ${qty > 0
               ? `<div class="qty-control" onclick="event.stopPropagation()">
-                  <button class="qty-btn" onclick="updateQty(${item.id},-1);renderMenu()">−</button>
+                  <button class="qty-btn" onclick="event.stopPropagation();updateQty(${item.id},-1)">−</button>
                   <span class="qty-num">${qty}</span>
-                  <button class="qty-btn" onclick="updateQty(${item.id},1);renderMenu()">+</button>
+                  <button class="qty-btn" onclick="event.stopPropagation();updateQty(${item.id},1)">+</button>
                  </div>`
-              : `<button class="add-btn" onclick="event.stopPropagation();openItemModal(${item.id})">ADD</button>`
+              : item.addons && item.addons.length > 0
+                ? `<button class="add-btn" onclick="event.stopPropagation();openItemModal(${item.id})">ADD</button>`
+                : `<button class="add-btn" onclick="event.stopPropagation();addToCart(${item.id})">ADD</button>`
             }
           </div>
         </div>

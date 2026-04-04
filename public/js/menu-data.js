@@ -434,6 +434,10 @@ let _appliedCoupon = null; // { code, discount_type, discount_value, min_order, 
 function saveCart() {
   localStorage.setItem('ok_cart', JSON.stringify(cart));
   updateCartUI();
+  // Re-render menu cards (ADD → qty controls) if on menu page
+  if (typeof renderMenu === 'function') renderMenu();
+  // Re-render checkout items list if on checkout page
+  if (typeof renderCheckoutItems === 'function') renderCheckoutItems();
 }
 
 function addToCart(itemId, qty = 1) {
@@ -522,7 +526,7 @@ function updateCartUI() {
   // Sync location label in cart top bar
   const locEl = document.getElementById('cartLocLabel');
   if (locEl) {
-    const loc = getCurrentLocation?.();
+    const loc = (typeof getCurrentLocation === 'function') ? getCurrentLocation() : null;
     locEl.textContent = loc?.shortName || 'Set delivery location';
   }
 
@@ -737,7 +741,7 @@ function proceedToCheckout() {
   if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
     closeCart();
     showToast('Please sign in to place your order');
-    setTimeout(() => openAuthSheet?.(), 300);
+    setTimeout(() => { if (typeof openAuthSheet === 'function') openAuthSheet(); }, 300);
     return;
   }
   window.location.href = '/checkout';

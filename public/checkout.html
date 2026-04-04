@@ -389,7 +389,8 @@ let _coSelectedAddr  = null;
 
 // ── Location label ────────────────────────────────────────────────────────
 function _refreshLocLabel() {
-  const loc = getCurrentLocation?.();
+  // getCurrentLocation is defined in index.html — use typeof guard to avoid ReferenceError
+  const loc = (typeof getCurrentLocation === 'function') ? getCurrentLocation() : null;
   const el  = document.getElementById('coLocLabel');
   if (el) el.textContent = loc?.shortName || 'Set delivery location';
 }
