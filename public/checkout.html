@@ -391,14 +391,16 @@ let selectedPayment  = 'upi';
 let _coAppliedCoupon = null;
 let _coSelectedAddr  = null;
 
-// ── Haversine distance (km) between two lat/lng points ───────────────────
+// ── Haversine distance (km) — clamp 'a' to [0,1] for floating-point safety ──
 function _haversineKm(lat1, lon1, lat2, lon2) {
   const R    = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a    = Math.sin(dLat / 2) ** 2
-             + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
-             * Math.sin(dLon / 2) ** 2;
+  const a    = Math.min(1, Math.max(0,
+                 Math.sin(dLat / 2) ** 2
+               + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+               * Math.sin(dLon / 2) ** 2
+               ));
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
@@ -406,16 +408,20 @@ function _haversineKm(lat1, lon1, lat2, lon2) {
 let _restaurantInfo = null; // cached from API
 
 async function _refreshLocLabel() {
-  // Read from the same localStorage key used by the menu page (ok_delivery_location)
+  // Read the selected delivery location (same localStorage key as menu page)
   let loc = null;
   try { loc = JSON.parse(localStorage.getItem('ok_delivery_location')); } catch {}
 
-  const locEl  = document.getElementById('coLocLabel');
+  const locEl   = document.getElementById('coLocLabel');
   const timeLbl = document.getElementById('coTimeLabel');
   const banner  = document.getElementById('coNotDeliverableBanner');
   const placeBtn = document.getElementById('placeOrderBtn');
 
   if (locEl) locEl.textContent = loc?.shortName || loc?.fullAddress || 'Set delivery location';
+
+  // Always ensure order button is enabled by default
+  if (placeBtn) { placeBtn.disabled = false; placeBtn.style.opacity = ''; }
+  if (banner)   banner.style.display = 'none';
 
   // Fetch restaurant info once and cache
   if (!_restaurantInfo) {
@@ -423,37 +429,41 @@ async function _refreshLocLabel() {
   }
 
   const info = _restaurantInfo;
-  if (!info || !loc?.lat || !loc?.lng) {
-    // No user location yet — show generic time
+
+  // If no restaurant coords or no user coords, show generic time — never block
+  const rLat = parseFloat(info?.lat);
+  const rLng = parseFloat(info?.lng);
+  const uLat = parseFloat(loc?.lat);
+  const uLng = parseFloat(loc?.lng);
+  const hasRestaurantCoords = info && !isNaN(rLat) && !isNaN(rLng);
+  const hasUserCoords       = loc  && !isNaN(uLat) && !isNaN(uLng);
+
+  if (!hasRestaurantCoords || !hasUserCoords) {
     if (timeLbl) timeLbl.textContent = '30–40 min';
-    if (banner)  banner.style.display = 'none';
     return;
   }
 
-  const distKm = _haversineKm(loc.lat, loc.lng, info.lat, info.lng);
-  const maxKm  = info.max_delivery_km ?? 10;
+  const distKm = _haversineKm(uLat, uLng, rLat, rLng);
+  const maxKm  = parseFloat(info.max_delivery_km) || 50;
+  const prepMin = parseInt(info.prep_minutes) || 20;
 
   if (distKm > maxKm) {
-    // Outside delivery zone
-    if (timeLbl) timeLbl.textContent = 'Not deliverable';
+    // Outside delivery zone — show warning banner but DON'T block the order
+    if (timeLbl) timeLbl.textContent = 'Far from us';
     if (banner)  banner.style.display = 'block';
-    if (placeBtn) {
-      placeBtn.disabled = true;
-      placeBtn.style.opacity = '0.45';
-      placeBtn.title = 'This location is outside our delivery area';
-    }
+    // Still show approximate time (capped at a reasonable max for display)
+    const transitMin = Math.min(Math.ceil(distKm * 3), 120);
+    const eta        = prepMin + transitMin;
+    if (timeLbl) timeLbl.textContent = `~${eta} min (far)`;
     return;
   }
 
-  // Within zone — compute ETA: 20 min prep + 3 min/km transit, shown as range ±5 min
-  if (banner)  banner.style.display = 'none';
-  if (placeBtn) { placeBtn.disabled = false; placeBtn.style.opacity = ''; }
-
-  const prepMin    = info.prep_minutes ?? 20;
-  const transitMin = Math.ceil(distKm * 3);
-  const eta        = prepMin + transitMin;
-  const etaHigh    = eta + 10;
-  if (timeLbl) timeLbl.textContent = `${eta}–${etaHigh} min`;
+  // Within delivery zone — compute ETA: prep + 3 min/km, shown as range
+  if (timeLbl) {
+    const transitMin = Math.ceil(distKm * 3);
+    const eta        = prepMin + transitMin;
+    timeLbl.textContent = `${eta}–${eta + 10} min`;
+  }
 }
 
 // ── Render cart items ─────────────────────────────────────────────────────
@@ -664,9 +674,9 @@ function selectPayment(el, type) {
 // ── Place order ───────────────────────────────────────────────────────────
 function placeOrder() {
   if (!cart || cart.length === 0) { showToast('❌ Your cart is empty!'); return; }
-  // Block order if location is outside delivery zone
+  // Warn if location is outside delivery zone but still allow order
   if (document.getElementById('coNotDeliverableBanner')?.style.display === 'block') {
-    showToast('📍 This location is outside our delivery area'); return;
+    showToast('⚠️ Your location may be outside our usual delivery area');
   }
   const btn = document.getElementById('placeOrderBtn');
   btn.disabled = true;

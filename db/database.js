@@ -181,9 +181,9 @@ if (!existingCols('offers').includes('image_url')) {
 if (!existingCols('restaurants').includes('lat')) {
   db.exec(`ALTER TABLE restaurants ADD COLUMN lat  REAL DEFAULT NULL`);
   db.exec(`ALTER TABLE restaurants ADD COLUMN lng  REAL DEFAULT NULL`);
-  db.exec(`ALTER TABLE restaurants ADD COLUMN max_delivery_km REAL DEFAULT 10`);
+  db.exec(`ALTER TABLE restaurants ADD COLUMN max_delivery_km REAL DEFAULT 50`);
   // Seed default: Koramangala, Bengaluru (12.9279, 77.6271) — update via restaurant portal
-  db.prepare(`UPDATE restaurants SET lat=12.9279, lng=77.6271, max_delivery_km=10 WHERE id=1`).run();
+  db.prepare(`UPDATE restaurants SET lat=12.9279, lng=77.6271, max_delivery_km=50 WHERE id=1`).run();
 }
 
 // Drop unique constraint on offers.code if it was a standalone UNIQUE (can't alter, recreate not needed — just enforce at app level)
