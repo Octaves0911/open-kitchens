@@ -283,6 +283,21 @@ router.delete('/offers/:id', requireRestaurant, (req, res) => {
 // RESTAURANT CONFIG (RTSP URL, etc.)
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// GET /api/restaurant/location — get current restaurant GPS + delivery radius
+router.get('/location', requireRestaurant, (req, res) => {
+  const r = db.prepare(`SELECT lat, lng, max_delivery_km FROM restaurants WHERE id=1`).get();
+  res.json({ lat: r?.lat ?? null, lng: r?.lng ?? null, max_delivery_km: r?.max_delivery_km ?? 10 });
+});
+
+// PUT /api/restaurant/location — update restaurant GPS + delivery radius
+router.put('/location', requireRestaurant, (req, res) => {
+  const { lat, lng, max_delivery_km } = req.body;
+  if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
+  db.prepare(`UPDATE restaurants SET lat=?, lng=?, max_delivery_km=? WHERE id=1`)
+    .run(parseFloat(lat), parseFloat(lng), parseFloat(max_delivery_km) || 10);
+  res.json({ success: true });
+});
+
 // GET /api/restaurant/config/:key
 router.get('/config/:key', requireRestaurant, (req, res) => {
   const row = db.prepare('SELECT value FROM restaurant_config WHERE key=?').get(req.params.key);

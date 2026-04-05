@@ -111,6 +111,19 @@ app.use('/api/restaurant', require('./routes/restaurant'));
 const db = require('./db/database');
 const RESTAURANT_ID = 1;
 
+// Public restaurant info: location, name, max delivery radius
+app.get('/api/restaurant-info', (req, res) => {
+  const r = db.prepare(`SELECT name, address, lat, lng, max_delivery_km FROM restaurants WHERE id=?`).get(RESTAURANT_ID);
+  res.json({
+    name:            r?.name             || 'Open Kitchens',
+    address:         r?.address          || 'Bengaluru, Karnataka',
+    lat:             r?.lat              ?? 12.9279,
+    lng:             r?.lng              ?? 77.6271,
+    max_delivery_km: r?.max_delivery_km  ?? 10,
+    prep_minutes:    20,  // fixed preparation time for all orders
+  });
+});
+
 app.get('/api/menu', (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
   res.set('Pragma', 'no-cache');

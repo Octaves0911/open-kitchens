@@ -193,10 +193,14 @@
     <span class="co-topbar-loc-label">Delivering to</span>
     <span class="co-topbar-loc-val" id="coLocLabel">Set delivery location</span>
   </div>
-  <div class="co-topbar-time">
+  <div class="co-topbar-time" id="coTimePill">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-    30–40 min
+    <span id="coTimeLabel">…</span>
   </div>
+</div>
+<!-- Not-deliverable warning banner (hidden by default) -->
+<div id="coNotDeliverableBanner" style="display:none;background:#C62828;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;">
+  📍 Sorry, we don't deliver to this location yet. Please choose a closer address.
 </div>
 
 <div class="co-page">
@@ -387,13 +391,69 @@ let selectedPayment  = 'upi';
 let _coAppliedCoupon = null;
 let _coSelectedAddr  = null;
 
-// ── Location label ────────────────────────────────────────────────────────
-function _refreshLocLabel() {
+// ── Haversine distance (km) between two lat/lng points ───────────────────
+function _haversineKm(lat1, lon1, lat2, lon2) {
+  const R    = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a    = Math.sin(dLat / 2) ** 2
+             + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+             * Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Location label + delivery time ───────────────────────────────────────
+let _restaurantInfo = null; // cached from API
+
+async function _refreshLocLabel() {
   // Read from the same localStorage key used by the menu page (ok_delivery_location)
   let loc = null;
   try { loc = JSON.parse(localStorage.getItem('ok_delivery_location')); } catch {}
-  const el = document.getElementById('coLocLabel');
-  if (el) el.textContent = loc?.shortName || loc?.fullAddress || 'Set delivery location';
+
+  const locEl  = document.getElementById('coLocLabel');
+  const timeLbl = document.getElementById('coTimeLabel');
+  const banner  = document.getElementById('coNotDeliverableBanner');
+  const placeBtn = document.getElementById('placeOrderBtn');
+
+  if (locEl) locEl.textContent = loc?.shortName || loc?.fullAddress || 'Set delivery location';
+
+  // Fetch restaurant info once and cache
+  if (!_restaurantInfo) {
+    try { _restaurantInfo = await fetch('/api/restaurant-info').then(r => r.json()); } catch {}
+  }
+
+  const info = _restaurantInfo;
+  if (!info || !loc?.lat || !loc?.lng) {
+    // No user location yet — show generic time
+    if (timeLbl) timeLbl.textContent = '30–40 min';
+    if (banner)  banner.style.display = 'none';
+    return;
+  }
+
+  const distKm = _haversineKm(loc.lat, loc.lng, info.lat, info.lng);
+  const maxKm  = info.max_delivery_km ?? 10;
+
+  if (distKm > maxKm) {
+    // Outside delivery zone
+    if (timeLbl) timeLbl.textContent = 'Not deliverable';
+    if (banner)  banner.style.display = 'block';
+    if (placeBtn) {
+      placeBtn.disabled = true;
+      placeBtn.style.opacity = '0.45';
+      placeBtn.title = 'This location is outside our delivery area';
+    }
+    return;
+  }
+
+  // Within zone — compute ETA: 20 min prep + 3 min/km transit, shown as range ±5 min
+  if (banner)  banner.style.display = 'none';
+  if (placeBtn) { placeBtn.disabled = false; placeBtn.style.opacity = ''; }
+
+  const prepMin    = info.prep_minutes ?? 20;
+  const transitMin = Math.ceil(distKm * 3);
+  const eta        = prepMin + transitMin;
+  const etaHigh    = eta + 10;
+  if (timeLbl) timeLbl.textContent = `${eta}–${etaHigh} min`;
 }
 
 // ── Render cart items ─────────────────────────────────────────────────────
@@ -604,6 +664,10 @@ function selectPayment(el, type) {
 // ── Place order ───────────────────────────────────────────────────────────
 function placeOrder() {
   if (!cart || cart.length === 0) { showToast('❌ Your cart is empty!'); return; }
+  // Block order if location is outside delivery zone
+  if (document.getElementById('coNotDeliverableBanner')?.style.display === 'block') {
+    showToast('📍 This location is outside our delivery area'); return;
+  }
   const btn = document.getElementById('placeOrderBtn');
   btn.disabled = true;
   btn.innerHTML = '<span>⏳ Processing…</span>';
