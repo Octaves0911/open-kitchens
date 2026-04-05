@@ -1202,7 +1202,7 @@ function _buildOfferCard(o, idx) {
   // Card visual: image if available, otherwise gradient + emoji
   const cardBg = o.image_url
     ? `<div class="offer-card-bg" style="padding:0;overflow:hidden;">
-         <img src="${o.image_url}" alt="${o.title}" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:14px 14px 0 0;"/>
+         <img src="${o.image_url}" alt="${o.title}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:14px 14px 0 0;"/>
        </div>`
     : `<div class="offer-card-bg" style="background:${grad};">${emoji}</div>`;
   // Price display
@@ -1409,7 +1409,7 @@ function renderMenu() {
       <div class="menu-card" onclick="openItemModal(${item.id})">
         <div class="menu-card-img" style="background:${grad};">
           ${item.image_url
-            ? `<img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:12px 12px 0 0;display:block;"/>`
+            ? `<img src="${item.image_url}" alt="${item.name}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:12px 12px 0 0;display:block;"/>`
             : `<span>${item.emoji || '🍽️'}</span>`}
           <span class="menu-card-veg" style="${item.image_url ? 'position:absolute;top:6px;right:6px;' : ''}">${item.veg ? '🟢' : '🔴'}</span>
           ${item.bestSeller ? '<span class="menu-card-badge">⭐ Best Seller</span>' : ''}
@@ -1483,7 +1483,7 @@ function openItemModal(itemId) {
 
   document.getElementById('modalContent').innerHTML = `
     ${item.image_url
-      ? `<div class="modal-img-placeholder" style="padding:0;overflow:hidden;"><img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>`
+      ? `<div class="modal-img-placeholder" style="padding:0;overflow:hidden;"><img src="${item.image_url}" alt="${item.name}" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>`
       : `<div class="modal-img-placeholder">${item.emoji}</div>`}
     <div class="modal-body">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">

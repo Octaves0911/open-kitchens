@@ -429,7 +429,7 @@ function renderCheckoutItems() {
     <div class="co-item" id="co-item-${item.id}">
       <div class="co-item-img">
         ${item.image_url
-          ? `<img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;"/>`
+          ? `<img src="${item.image_url}" alt="${item.name}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:10px;"/>`
           : `<span style="font-size:26px;">${item.emoji}</span>`}
       </div>
       <div class="co-item-body">

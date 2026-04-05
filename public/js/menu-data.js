@@ -38,7 +38,7 @@ function loadFanFavourites() {
     <div class="fav-card" onclick="openItemModal(${item.id})">
       ${item.image_url
         ? `<div style="height:100px;overflow:hidden;border-radius:12px 12px 0 0;">
-             <img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;display:block;"/>
+             <img src="${item.image_url}" alt="${item.name}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>
            </div>`
         : `<div style="font-size:48px;text-align:center;padding:16px 8px 8px;">${item.emoji}</div>`}
       <div style="padding:0 12px 14px;">
@@ -562,7 +562,7 @@ function renderCartItems() {
     <div class="cart-item" id="cart-item-${item.id}">
       <div class="cart-item-img">
         ${item.image_url
-          ? `<img src="${item.image_url}" alt="${item.name}" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"/>`
+          ? `<img src="${item.image_url}" alt="${item.name}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"/>`
           : `<span style="font-size:26px;">${item.emoji}</span>`}
       </div>
       <div class="cart-item-body">

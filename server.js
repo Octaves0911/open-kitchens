@@ -1,7 +1,8 @@
-const express = require('express');
-const path    = require('path');
-const fs      = require('fs');
-const http    = require('http');
+const express     = require('express');
+const path        = require('path');
+const fs          = require('fs');
+const http        = require('http');
+const compression = require('compression');
 const { WebSocketServer } = require('ws');
 
 const app    = express();
@@ -23,9 +24,24 @@ app.use((req, res, next) => {
   log('info', 'request', { method: req.method, url: req.url, ip: req.ip });
   next();
 });
+// Gzip compression for all text responses (HTML, JS, CSS, JSON)
+app.use(compression({ level: 6 }));
 app.use(express.json());
-// Serve static assets but NOT index.html (served via route with token injection)
-app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+
+// Long-term cache for images (filenames are timestamped so safe to cache 1 year)
+app.use('/images', express.static(path.join(__dirname, 'public', 'images'), {
+  maxAge: '1y',
+  immutable: true,
+  index: false,
+}));
+
+// Serve other static assets (CSS, JS, fonts) with 1-day cache
+app.use(express.static(path.join(__dirname, 'public'), {
+  index: false,
+  maxAge: '1d',
+  etag: true,
+  lastModified: true,
+}));
 
 // ── Database ──────────────────────────────────────────────────────────────────
 require('./db/database');

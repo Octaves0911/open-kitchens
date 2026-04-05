@@ -8,32 +8,59 @@ const path    = require('path');
 const fs      = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const multer  = require('multer');
+const sharp   = require('sharp');
 const db      = require('../db/database');
 const { requireAuth, signToken } = require('../middleware/auth');
 
-// ── Image upload helpers ──────────────────────────────────────────────────────
+// ── Image upload helpers — memory storage + WebP conversion via sharp ─────────
+// All uploads are converted to WebP (much smaller) before being saved to disk.
+const RESIZE = {
+  menu:   { width: 400, height: 300 },  // shown as card thumbnails
+  offers: { width: 800, height: 400 },  // shown as banner images
+};
+
 function makeUploader(subdir, prefix) {
   const dir = path.join(__dirname, '..', 'public', 'images', subdir);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  const storage = multer.diskStorage({
-    destination: (req, file, cb) => cb(null, dir),
-    filename:    (req, file, cb) => {
-      const ext = path.extname(file.originalname).toLowerCase();
-      cb(null, `${prefix}_${Date.now()}${ext}`);
-    }
-  });
-  return multer({
-    storage,
-    limits: { fileSize: 5 * 1024 * 1024 },
+
+  // Use memory storage — we'll write the file ourselves after WebP conversion
+  const uploader = multer({
+    storage: multer.memoryStorage(),
+    limits: { fileSize: 10 * 1024 * 1024 }, // allow up to 10 MB raw upload
     fileFilter: (req, file, cb) => {
-      if (/^image\/(jpeg|jpg|png|webp)$/.test(file.mimetype)) cb(null, true);
-      else cb(new Error('Only JPEG/PNG/WebP images allowed'));
-    }
+      if (/^image\/(jpeg|jpg|png|webp|gif)$/.test(file.mimetype)) cb(null, true);
+      else cb(new Error('Only image files are allowed'));
+    },
   });
+
+  // Express middleware that runs after multer: converts buffer → WebP and saves
+  async function processImage(req, res, next) {
+    if (!req.file) return next();
+    try {
+      const filename = `${prefix}_${Date.now()}.webp`;
+      const destPath = path.join(dir, filename);
+      const dims     = RESIZE[subdir];
+      let pipeline   = sharp(req.file.buffer);
+      if (dims) pipeline = pipeline.resize(dims.width, dims.height, { fit: 'cover' });
+      await pipeline.webp({ quality: 78, effort: 4 }).toFile(destPath);
+      // Patch req.file so downstream handlers can read filename / path
+      req.file.filename = filename;
+      req.file.path     = destPath;
+      req.file.mimetype = 'image/webp';
+      next();
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  // Return a combined middleware array [multer.single, processImage]
+  return {
+    single: (field) => [uploader.single(field), processImage],
+  };
 }
 
-const upload       = makeUploader('menu',   'item');   // menu item images
-const uploadOffer  = makeUploader('offers', 'offer');  // offer images
+const upload      = makeUploader('menu',   'item');   // menu item images
+const uploadOffer = makeUploader('offers', 'offer');  // offer images
 
 // ── Simple restaurant auth guard (password from env or config) ────────────────
 // For now accepts a shared secret header; replace with proper RBAC if needed
@@ -100,7 +127,7 @@ router.get('/menu', requireRestaurant, (req, res) => {
 });
 
 // POST /api/restaurant/menu — add item (with optional image upload)
-router.post('/menu', requireRestaurant, upload.single('image'), (req, res) => {
+router.post('/menu', requireRestaurant, ...upload.single('image'), (req, res) => {
   const {
     name, category, description, price,
     is_veg = 1, is_available = 1, is_bestseller = 0, is_spicy = 0, is_fan_favourite = 0,
@@ -120,7 +147,7 @@ router.post('/menu', requireRestaurant, upload.single('image'), (req, res) => {
 });
 
 // PUT /api/restaurant/menu/:id — update item
-router.put('/menu/:id', requireRestaurant, upload.single('image'), (req, res) => {
+router.put('/menu/:id', requireRestaurant, ...upload.single('image'), (req, res) => {
   const existing = db.prepare(
     'SELECT * FROM menu_items WHERE id=? AND restaurant_id=?'
   ).get(req.params.id, RESTAURANT_ID);
@@ -178,7 +205,7 @@ router.get('/offers', requireRestaurant, (req, res) => {
 });
 
 // POST /api/restaurant/offers
-router.post('/offers', requireRestaurant, uploadOffer.single('image'), (req, res) => {
+router.post('/offers', requireRestaurant, ...uploadOffer.single('image'), (req, res) => {
   const { code, title, description, discount_type, discount_value,
           min_order, max_discount, is_active, valid_from, valid_until, usage_limit,
           badge, emoji, old_price } = req.body;
@@ -207,7 +234,7 @@ router.post('/offers', requireRestaurant, uploadOffer.single('image'), (req, res
 });
 
 // PUT /api/restaurant/offers/:id
-router.put('/offers/:id', requireRestaurant, uploadOffer.single('image'), (req, res) => {
+router.put('/offers/:id', requireRestaurant, ...uploadOffer.single('image'), (req, res) => {
   const existing = db.prepare(
     'SELECT * FROM offers WHERE id=? AND restaurant_id=?'
   ).get(req.params.id, RESTAURANT_ID);

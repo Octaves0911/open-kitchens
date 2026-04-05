@@ -259,7 +259,7 @@ input, select, textarea { font-family: inherit; outline: none; }
 /* Kitchen photo — blurred with dark shade */
 .hero-bg {
   position: absolute; inset: -20px;
-  background: url('/images/hero-background.jpg') center/cover no-repeat;
+  background: url('/images/hero-background.webp') center/cover no-repeat;
   filter: blur(6px) brightness(0.45);
   transform: scale(1.05);
   z-index: 0;
@@ -719,7 +719,7 @@ body.has-bottom-nav { padding-bottom: 64px; }
 
 /* ─── Why Us page ────────────────────────────────────────────────────────── */
 .why-hero { background: linear-gradient(135deg, var(--brown-dark), var(--rust)); padding: 56px 20px 40px; text-align: center; position: relative; overflow: hidden; }
-.why-hero-bg { position: absolute; inset: -20px; background: url('/images/hero-background.jpg') center/cover no-repeat; filter: blur(32px) brightness(0.2); transform: scale(1.1); z-index: 0; }
+.why-hero-bg { position: absolute; inset: -20px; background: url('/images/hero-background.webp') center/cover no-repeat; filter: blur(32px) brightness(0.2); transform: scale(1.1); z-index: 0; }
 .why-hero-content { position: relative; z-index: 1; }
 .why-card { background: var(--surface); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm); display: flex; gap: 16px; align-items: flex-start; }
 .why-icon { font-size: 40px; flex-shrink: 0; }
