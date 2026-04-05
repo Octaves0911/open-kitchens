@@ -389,10 +389,11 @@ let _coSelectedAddr  = null;
 
 // ── Location label ────────────────────────────────────────────────────────
 function _refreshLocLabel() {
-  // getCurrentLocation is defined in index.html — use typeof guard to avoid ReferenceError
-  const loc = (typeof getCurrentLocation === 'function') ? getCurrentLocation() : null;
-  const el  = document.getElementById('coLocLabel');
-  if (el) el.textContent = loc?.shortName || 'Set delivery location';
+  // Read from the same localStorage key used by the menu page (ok_delivery_location)
+  let loc = null;
+  try { loc = JSON.parse(localStorage.getItem('ok_delivery_location')); } catch {}
+  const el = document.getElementById('coLocLabel');
+  if (el) el.textContent = loc?.shortName || loc?.fullAddress || 'Set delivery location';
 }
 
 // ── Render cart items ─────────────────────────────────────────────────────
