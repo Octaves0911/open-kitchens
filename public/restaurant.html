@@ -604,30 +604,136 @@ button,input,select,textarea{font-family:inherit;}
 <!-- ══ Settings Tab ═══════════════════════════════════════════════════════ -->
 <div class="rp-tab-panel" id="tab-settings">
 
-  <!-- Restaurant Location -->
+  <!-- ── 1. Basic Info ──────────────────────────────────────────────────── -->
   <div class="rp-card">
     <div class="rp-section-hdr">
-      <div class="rp-section-title">📍 Restaurant Location & Delivery Radius</div>
+      <div class="rp-section-title">🏪 Basic Information</div>
+    </div>
+    <label class="rp-label">Restaurant Name</label>
+    <input id="st-name" class="rp-input" type="text" placeholder="e.g. Open Kitchens"/>
+
+    <label class="rp-label" style="margin-top:10px;">Tagline / Short Description</label>
+    <input id="st-tagline" class="rp-input" type="text" placeholder="e.g. Home-style food, made with love"/>
+
+    <label class="rp-label" style="margin-top:10px;">Full Description</label>
+    <textarea id="st-description" class="rp-input" rows="3" placeholder="Tell customers about your restaurant…" style="resize:vertical;"></textarea>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <div>
+        <label class="rp-label">Phone Number</label>
+        <input id="st-phone" class="rp-input" type="tel" placeholder="+91 98765 43210"/>
+      </div>
+      <div>
+        <label class="rp-label">Cuisine Type</label>
+        <input id="st-cuisine" class="rp-input" type="text" placeholder="e.g. North Indian, Bihari"/>
+      </div>
+    </div>
+
+    <label class="rp-label" style="margin-top:10px;">Full Address</label>
+    <input id="st-address" class="rp-input" type="text" placeholder="Street, Area, City, State"/>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px;">
+      <div>
+        <label class="rp-label">FSSAI Number</label>
+        <input id="st-fssai" class="rp-input" type="text" placeholder="14-digit FSSAI licence"/>
+      </div>
+      <div>
+        <label class="rp-label">GSTIN</label>
+        <input id="st-gstin" class="rp-input" type="text" placeholder="GST Identification Number"/>
+      </div>
+    </div>
+
+    <div id="st-basicMsg" style="font-size:12px;min-height:16px;margin-top:8px;"></div>
+    <button class="rp-btn rp-btn-primary" style="margin-top:6px;" onclick="settingsSaveBasic()">💾 Save Basic Info</button>
+  </div>
+
+  <!-- ── 2. Business Hours ──────────────────────────────────────────────── -->
+  <div class="rp-card">
+    <div class="rp-section-hdr">
+      <div class="rp-section-title">🕐 Business Hours</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+      <div>
+        <label class="rp-label">Opening Time</label>
+        <input id="st-open" class="rp-input" type="time" value="09:00"/>
+      </div>
+      <div>
+        <label class="rp-label">Closing Time</label>
+        <input id="st-close" class="rp-input" type="time" value="22:00"/>
+      </div>
+    </div>
+    <label class="rp-label">Order Acceptance</label>
+    <div style="display:flex;align-items:center;gap:10px;margin-top:6px;margin-bottom:10px;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="acceptOrders" id="st-accept-yes" value="1" style="accent-color:var(--rust);"/>
+        ✅ Accepting orders
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:13px;">
+        <input type="radio" name="acceptOrders" id="st-accept-no" value="0" style="accent-color:var(--rust);"/>
+        🔴 Closed / Not accepting
+      </label>
+    </div>
+    <div id="st-hoursMsg" style="font-size:12px;min-height:16px;"></div>
+    <button class="rp-btn rp-btn-primary" onclick="settingsSaveHours()">💾 Save Hours</button>
+  </div>
+
+  <!-- ── 3. Order & Pricing Settings ───────────────────────────────────── -->
+  <div class="rp-card">
+    <div class="rp-section-hdr">
+      <div class="rp-section-title">💰 Order & Pricing</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <label class="rp-label">Delivery Fee (₹)</label>
+        <input id="st-delivery-fee" class="rp-input" type="number" min="0" step="5" placeholder="0 = Free"/>
+      </div>
+      <div>
+        <label class="rp-label">Minimum Order (₹)</label>
+        <input id="st-min-order" class="rp-input" type="number" min="0" step="10" placeholder="0 = No minimum"/>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+      <div>
+        <label class="rp-label">GST / Tax (%)</label>
+        <input id="st-tax" class="rp-input" type="number" min="0" max="28" step="0.5" placeholder="5"/>
+      </div>
+      <div>
+        <label class="rp-label">Packaging Charge (₹)</label>
+        <input id="st-packaging" class="rp-input" type="number" min="0" step="5" placeholder="20"/>
+      </div>
+    </div>
+    <div style="margin-bottom:10px;">
+      <label class="rp-label">Average Prep Time (minutes)</label>
+      <input id="st-prep" class="rp-input" type="number" min="5" max="120" step="5" placeholder="20"/>
+    </div>
+    <div id="st-pricingMsg" style="font-size:12px;min-height:16px;"></div>
+    <button class="rp-btn rp-btn-primary" onclick="settingsSavePricing()">💾 Save Pricing</button>
+  </div>
+
+  <!-- ── 4. Location & Delivery Radius ─────────────────────────────────── -->
+  <div class="rp-card">
+    <div class="rp-section-hdr">
+      <div class="rp-section-title">📍 Location & Delivery Radius</div>
     </div>
     <p style="font-size:12px;color:var(--text-light);margin-bottom:12px;">
-      Set your restaurant's GPS coordinates. Customers more than <strong id="settingsMaxKmDisplay">10</strong> km away will see "Not deliverable".
+      Set your GPS coordinates so customers see accurate delivery times. Customers beyond <strong id="settingsMaxKmDisplay">50</strong> km see a distance warning.
     </p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
       <div>
         <label class="rp-label">Latitude</label>
-        <input id="settingsLat" class="rp-input" type="number" step="0.0001" placeholder="e.g. 12.9279"/>
+        <input id="settingsLat" class="rp-input" type="number" step="0.000001" placeholder="e.g. 12.927900"/>
       </div>
       <div>
         <label class="rp-label">Longitude</label>
-        <input id="settingsLng" class="rp-input" type="number" step="0.0001" placeholder="e.g. 77.6271"/>
+        <input id="settingsLng" class="rp-input" type="number" step="0.000001" placeholder="e.g. 77.627100"/>
       </div>
     </div>
     <div style="margin-bottom:12px;">
-      <label class="rp-label">Max delivery radius (km)</label>
-      <input id="settingsMaxKm" class="rp-input" type="number" step="0.5" min="1" max="50" placeholder="10"/>
+      <label class="rp-label">Max Delivery Radius (km)</label>
+      <input id="settingsMaxKm" class="rp-input" type="number" step="1" min="1" max="200" placeholder="50"/>
     </div>
     <button class="rp-btn rp-btn-outline rp-btn-sm" onclick="settingsDetectLocation()" style="margin-bottom:10px;">
-      🎯 Use my current location
+      🎯 Use my current GPS location
     </button>
     <div id="settingsLocMsg" style="font-size:12px;min-height:16px;margin-bottom:8px;"></div>
     <button class="rp-btn rp-btn-primary" onclick="settingsSaveLocation()">💾 Save Location</button>
@@ -651,51 +757,122 @@ function filterOrders(status, chip) {
   }
 }
 
-// ── Settings: Restaurant Location ────────────────────────────────────────────
-async function settingsLoadLocation() {
+// ── Settings helpers ──────────────────────────────────────────────────────────
+function _stMsg(id, html, isErr = false) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = `<span style="color:${isErr ? '#C62828' : '#2E7D32'};">${html}</span>`;
+}
+function _stVal(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+function _stSet(id, val) {
+  const el = document.getElementById(id);
+  if (el && val !== null && val !== undefined) el.value = val;
+}
+
+// Load ALL settings into form fields
+async function settingsLoadAll() {
   try {
-    const data = await apiFetch('/api/restaurant/location');
-    if (data.lat)           document.getElementById('settingsLat').value = data.lat;
-    if (data.lng)           document.getElementById('settingsLng').value = data.lng;
-    if (data.max_delivery_km) {
-      document.getElementById('settingsMaxKm').value = data.max_delivery_km;
-      document.getElementById('settingsMaxKmDisplay').textContent = data.max_delivery_km;
+    const d = await apiFetch('/api/restaurant/settings');
+    _stSet('st-name',         d.name);
+    _stSet('st-tagline',      d.tagline);
+    _stSet('st-description',  d.description);
+    _stSet('st-phone',        d.phone);
+    _stSet('st-cuisine',      d.cuisine_type);
+    _stSet('st-address',      d.address);
+    _stSet('st-fssai',        d.fssai_number);
+    _stSet('st-gstin',        d.gstin);
+    _stSet('st-open',         d.opening_time  || '09:00');
+    _stSet('st-close',        d.closing_time  || '22:00');
+    _stSet('st-delivery-fee', d.delivery_fee  ?? 0);
+    _stSet('st-min-order',    d.min_order_amount ?? 0);
+    _stSet('st-tax',          d.tax_percent   ?? 5);
+    _stSet('st-packaging',    d.packaging_charge ?? 20);
+    _stSet('st-prep',         d.prep_time_minutes ?? 20);
+    _stSet('settingsLat',     d.lat);
+    _stSet('settingsLng',     d.lng);
+    _stSet('settingsMaxKm',   d.max_delivery_km ?? 50);
+    if (d.max_delivery_km) {
+      const disp = document.getElementById('settingsMaxKmDisplay');
+      if (disp) disp.textContent = d.max_delivery_km;
     }
-  } catch (e) { console.warn('Could not load location', e); }
+    // Radio for accepting orders
+    const accepting = d.is_accepting_orders !== 0;
+    const radioYes = document.getElementById('st-accept-yes');
+    const radioNo  = document.getElementById('st-accept-no');
+    if (radioYes) radioYes.checked =  accepting;
+    if (radioNo)  radioNo.checked  = !accepting;
+  } catch (e) { console.warn('Settings load failed', e); }
+}
+
+// Save helpers — each section posts only its fields
+async function _settingsSave(payload, msgId) {
+  try {
+    await apiFetch('/api/restaurant/settings', { method: 'PUT', body: JSON.stringify(payload) });
+    _stMsg(msgId, '✅ Saved successfully!');
+    setTimeout(() => { const el = document.getElementById(msgId); if (el) el.innerHTML = ''; }, 3000);
+  } catch (e) { _stMsg(msgId, `❌ ${e.message}`, true); }
+}
+
+async function settingsSaveBasic() {
+  await _settingsSave({
+    name:         _stVal('st-name'),
+    tagline:      _stVal('st-tagline'),
+    description:  _stVal('st-description'),
+    phone:        _stVal('st-phone'),
+    cuisine_type: _stVal('st-cuisine'),
+    address:      _stVal('st-address'),
+    fssai_number: _stVal('st-fssai'),
+    gstin:        _stVal('st-gstin'),
+  }, 'st-basicMsg');
+}
+
+async function settingsSaveHours() {
+  const accepting = document.getElementById('st-accept-yes')?.checked ? 1 : 0;
+  await _settingsSave({
+    opening_time:       _stVal('st-open'),
+    closing_time:       _stVal('st-close'),
+    is_accepting_orders: accepting,
+  }, 'st-hoursMsg');
+}
+
+async function settingsSavePricing() {
+  await _settingsSave({
+    delivery_fee:      _stVal('st-delivery-fee'),
+    min_order_amount:  _stVal('st-min-order'),
+    tax_percent:       _stVal('st-tax'),
+    packaging_charge:  _stVal('st-packaging'),
+    prep_time_minutes: _stVal('st-prep'),
+  }, 'st-pricingMsg');
 }
 
 function settingsDetectLocation() {
   const msg = document.getElementById('settingsLocMsg');
-  if (!navigator.geolocation) { msg.textContent = 'Geolocation not supported'; return; }
-  msg.textContent = 'Detecting…';
+  if (!navigator.geolocation) { _stMsg('settingsLocMsg', '❌ Geolocation not supported', true); return; }
+  msg.innerHTML = 'Detecting…';
   navigator.geolocation.getCurrentPosition(pos => {
-    document.getElementById('settingsLat').value = pos.coords.latitude.toFixed(6);
-    document.getElementById('settingsLng').value = pos.coords.longitude.toFixed(6);
-    msg.innerHTML = '<span style="color:#2E7D32;">✅ Location detected — save to apply</span>';
-  }, () => { msg.innerHTML = '<span style="color:#C62828;">Could not detect location</span>'; });
+    _stSet('settingsLat', pos.coords.latitude.toFixed(6));
+    _stSet('settingsLng', pos.coords.longitude.toFixed(6));
+    _stMsg('settingsLocMsg', '📍 Location detected — click Save to apply');
+  }, () => _stMsg('settingsLocMsg', '❌ Could not detect location. Allow browser location access.', true));
 }
 
 async function settingsSaveLocation() {
-  const lat    = parseFloat(document.getElementById('settingsLat').value);
-  const lng    = parseFloat(document.getElementById('settingsLng').value);
-  const maxKm  = parseFloat(document.getElementById('settingsMaxKm').value) || 10;
-  const msg    = document.getElementById('settingsLocMsg');
-  if (isNaN(lat) || isNaN(lng)) { msg.innerHTML = '<span style="color:#C62828;">Enter valid lat/lng</span>'; return; }
-  try {
-    await apiFetch('/api/restaurant/location', { method:'PUT', body: JSON.stringify({ lat, lng, max_delivery_km: maxKm }) });
-    document.getElementById('settingsMaxKmDisplay').textContent = maxKm;
-    msg.innerHTML = '<span style="color:#2E7D32;">✅ Location saved!</span>';
-  } catch (e) { msg.innerHTML = `<span style="color:#C62828;">Error: ${e.message}</span>`; }
+  const lat   = parseFloat(_stVal('settingsLat'));
+  const lng   = parseFloat(_stVal('settingsLng'));
+  const maxKm = parseFloat(_stVal('settingsMaxKm')) || 50;
+  if (isNaN(lat) || isNaN(lng)) { _stMsg('settingsLocMsg', '❌ Enter valid latitude and longitude', true); return; }
+  await _settingsSave({ lat, lng, max_delivery_km: maxKm }, 'settingsLocMsg');
+  const disp = document.getElementById('settingsMaxKmDisplay');
+  if (disp) disp.textContent = maxKm;
 }
 
-// Load settings when settings tab is opened
-const _origSwitchTab = typeof switchTab !== 'undefined' ? switchTab : null;
+// Load settings when settings tab is clicked
 document.addEventListener('DOMContentLoaded', () => {
-  // Patch switchTab to also load settings data
-  const tabs = document.querySelectorAll('.rp-tab');
-  tabs.forEach(t => {
+  document.querySelectorAll('.rp-tab').forEach(t => {
     if (t.id === 'tab-btn-settings') {
-      t.addEventListener('click', () => setTimeout(settingsLoadLocation, 50));
+      t.addEventListener('click', () => setTimeout(settingsLoadAll, 50));
     }
   });
 });

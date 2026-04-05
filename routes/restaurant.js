@@ -286,7 +286,7 @@ router.delete('/offers/:id', requireRestaurant, (req, res) => {
 // GET /api/restaurant/location — get current restaurant GPS + delivery radius
 router.get('/location', requireRestaurant, (req, res) => {
   const r = db.prepare(`SELECT lat, lng, max_delivery_km FROM restaurants WHERE id=1`).get();
-  res.json({ lat: r?.lat ?? null, lng: r?.lng ?? null, max_delivery_km: r?.max_delivery_km ?? 10 });
+  res.json({ lat: r?.lat ?? null, lng: r?.lng ?? null, max_delivery_km: r?.max_delivery_km ?? 50 });
 });
 
 // PUT /api/restaurant/location — update restaurant GPS + delivery radius
@@ -294,7 +294,45 @@ router.put('/location', requireRestaurant, (req, res) => {
   const { lat, lng, max_delivery_km } = req.body;
   if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
   db.prepare(`UPDATE restaurants SET lat=?, lng=?, max_delivery_km=? WHERE id=1`)
-    .run(parseFloat(lat), parseFloat(lng), parseFloat(max_delivery_km) || 10);
+    .run(parseFloat(lat), parseFloat(lng), parseFloat(max_delivery_km) || 50);
+  res.json({ success: true });
+});
+
+// GET /api/restaurant/settings — all editable restaurant settings
+router.get('/settings', requireRestaurant, (req, res) => {
+  const r = db.prepare(`
+    SELECT name, address, phone, description, tagline, cuisine_type,
+           opening_time, closing_time, is_accepting_orders,
+           delivery_fee, min_order_amount, prep_time_minutes,
+           tax_percent, packaging_charge, fssai_number, gstin,
+           lat, lng, max_delivery_km
+    FROM restaurants WHERE id=1
+  `).get();
+  res.json(r || {});
+});
+
+// PUT /api/restaurant/settings — save all editable restaurant settings
+router.put('/settings', requireRestaurant, (req, res) => {
+  const allowed = [
+    'name', 'address', 'phone', 'description', 'tagline', 'cuisine_type',
+    'opening_time', 'closing_time', 'is_accepting_orders',
+    'delivery_fee', 'min_order_amount', 'prep_time_minutes',
+    'tax_percent', 'packaging_charge', 'fssai_number', 'gstin',
+    'lat', 'lng', 'max_delivery_km',
+  ];
+  const fields = Object.keys(req.body).filter(k => allowed.includes(k));
+  if (!fields.length) return res.status(400).json({ error: 'No valid fields provided' });
+  const set    = fields.map(f => `${f}=?`).join(', ');
+  const values = fields.map(f => {
+    const v = req.body[f];
+    // Coerce numeric fields
+    if (['delivery_fee','min_order_amount','tax_percent','packaging_charge','lat','lng','max_delivery_km'].includes(f))
+      return parseFloat(v) || 0;
+    if (['prep_time_minutes','is_accepting_orders'].includes(f))
+      return parseInt(v) ?? 0;
+    return v;
+  });
+  db.prepare(`UPDATE restaurants SET ${set} WHERE id=1`).run(...values);
   res.json({ success: true });
 });
 

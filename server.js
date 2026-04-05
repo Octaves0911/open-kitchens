@@ -111,16 +111,32 @@ app.use('/api/restaurant', require('./routes/restaurant'));
 const db = require('./db/database');
 const RESTAURANT_ID = 1;
 
-// Public restaurant info: location, name, max delivery radius
+// Public restaurant info — used by checkout for ETA, location, delivery settings
 app.get('/api/restaurant-info', (req, res) => {
-  const r = db.prepare(`SELECT name, address, lat, lng, max_delivery_km FROM restaurants WHERE id=?`).get(RESTAURANT_ID);
+  const r = db.prepare(`
+    SELECT name, address, tagline, cuisine_type, phone,
+           lat, lng, max_delivery_km, prep_time_minutes,
+           delivery_fee, min_order_amount, tax_percent, packaging_charge,
+           opening_time, closing_time, is_accepting_orders
+    FROM restaurants WHERE id=?
+  `).get(RESTAURANT_ID);
   res.json({
-    name:            r?.name             || 'Open Kitchens',
-    address:         r?.address          || 'Bengaluru, Karnataka',
-    lat:             r?.lat              ?? 12.9279,
-    lng:             r?.lng              ?? 77.6271,
-    max_delivery_km: r?.max_delivery_km  ?? 10,
-    prep_minutes:    20,  // fixed preparation time for all orders
+    name:              r?.name               || 'Open Kitchens',
+    address:           r?.address            || 'Bengaluru, Karnataka',
+    tagline:           r?.tagline            || null,
+    cuisine_type:      r?.cuisine_type       || null,
+    phone:             r?.phone              || null,
+    lat:               r?.lat               ?? null,
+    lng:               r?.lng               ?? null,
+    max_delivery_km:   r?.max_delivery_km   ?? 50,
+    prep_minutes:      r?.prep_time_minutes ?? 20,
+    delivery_fee:      r?.delivery_fee      ?? 0,
+    min_order_amount:  r?.min_order_amount  ?? 0,
+    tax_percent:       r?.tax_percent       ?? 5,
+    packaging_charge:  r?.packaging_charge  ?? 20,
+    opening_time:      r?.opening_time      || '09:00',
+    closing_time:      r?.closing_time      || '22:00',
+    is_accepting_orders: r?.is_accepting_orders ?? 1,
   });
 });
 

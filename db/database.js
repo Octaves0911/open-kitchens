@@ -182,9 +182,25 @@ if (!existingCols('restaurants').includes('lat')) {
   db.exec(`ALTER TABLE restaurants ADD COLUMN lat  REAL DEFAULT NULL`);
   db.exec(`ALTER TABLE restaurants ADD COLUMN lng  REAL DEFAULT NULL`);
   db.exec(`ALTER TABLE restaurants ADD COLUMN max_delivery_km REAL DEFAULT 50`);
-  // Seed default: Koramangala, Bengaluru (12.9279, 77.6271) — update via restaurant portal
   db.prepare(`UPDATE restaurants SET lat=12.9279, lng=77.6271, max_delivery_km=50 WHERE id=1`).run();
 }
+// General restaurant settings columns
+const rCols = existingCols('restaurants');
+if (!rCols.includes('description'))        db.exec(`ALTER TABLE restaurants ADD COLUMN description        TEXT    DEFAULT NULL`);
+if (!rCols.includes('tagline'))            db.exec(`ALTER TABLE restaurants ADD COLUMN tagline            TEXT    DEFAULT NULL`);
+if (!rCols.includes('logo_url'))           db.exec(`ALTER TABLE restaurants ADD COLUMN logo_url           TEXT    DEFAULT NULL`);
+if (!rCols.includes('cover_url'))          db.exec(`ALTER TABLE restaurants ADD COLUMN cover_url          TEXT    DEFAULT NULL`);
+if (!rCols.includes('opening_time'))       db.exec(`ALTER TABLE restaurants ADD COLUMN opening_time       TEXT    DEFAULT '09:00'`);
+if (!rCols.includes('closing_time'))       db.exec(`ALTER TABLE restaurants ADD COLUMN closing_time       TEXT    DEFAULT '22:00'`);
+if (!rCols.includes('is_accepting_orders'))db.exec(`ALTER TABLE restaurants ADD COLUMN is_accepting_orders INTEGER DEFAULT 1`);
+if (!rCols.includes('delivery_fee'))       db.exec(`ALTER TABLE restaurants ADD COLUMN delivery_fee       REAL    DEFAULT 0`);
+if (!rCols.includes('min_order_amount'))   db.exec(`ALTER TABLE restaurants ADD COLUMN min_order_amount   REAL    DEFAULT 0`);
+if (!rCols.includes('prep_time_minutes'))  db.exec(`ALTER TABLE restaurants ADD COLUMN prep_time_minutes  INTEGER DEFAULT 20`);
+if (!rCols.includes('tax_percent'))        db.exec(`ALTER TABLE restaurants ADD COLUMN tax_percent         REAL    DEFAULT 5`);
+if (!rCols.includes('packaging_charge'))   db.exec(`ALTER TABLE restaurants ADD COLUMN packaging_charge    REAL    DEFAULT 20`);
+if (!rCols.includes('cuisine_type'))       db.exec(`ALTER TABLE restaurants ADD COLUMN cuisine_type        TEXT    DEFAULT NULL`);
+if (!rCols.includes('fssai_number'))       db.exec(`ALTER TABLE restaurants ADD COLUMN fssai_number        TEXT    DEFAULT NULL`);
+if (!rCols.includes('gstin'))              db.exec(`ALTER TABLE restaurants ADD COLUMN gstin               TEXT    DEFAULT NULL`);
 
 // Drop unique constraint on offers.code if it was a standalone UNIQUE (can't alter, recreate not needed — just enforce at app level)
 
