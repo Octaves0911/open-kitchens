@@ -80,7 +80,7 @@ function connectWS() {
 }
 
 // ── Tab Switching ─────────────────────────────────────────────────────────────
-const TABS = ['orders', 'menu', 'offers', 'liveprep'];
+const TABS = ['orders', 'menu', 'offers', 'liveprep', 'settings'];
 let activeTab = 'orders';
 
 function switchTab(name) {
@@ -94,6 +94,7 @@ function switchTab(name) {
   if (name === 'menu')     loadMenu();
   if (name === 'offers')   loadOffers();
   if (name === 'liveprep') loadLivePrep();
+  if (name === 'settings' && typeof settingsLoadAll === 'function') settingsLoadAll();
 }
 
 // ════════════════════════════════════════════════════════════════════════════════

@@ -425,8 +425,20 @@ const DELIVERY_ZONES = {
 };
 
 // ── Cart state ────────────────────────────────────────────────────────────────
-// Each cart entry: { id, name, price, emoji, image_url, qty, selectedAddons: [{name,price}] }
-let cart = JSON.parse(localStorage.getItem('ok_cart') || '[]');
+// Each cart entry: { id, name, price, emoji, image_url, qty, addonsByUnit: [[{name,price}], ...] }
+// addonsByUnit[i] holds the selected addons for unit i (length === qty)
+let cart = (function _loadCart() {
+  const raw = JSON.parse(localStorage.getItem('ok_cart') || '[]');
+  // Migrate old format: selectedAddons → addonsByUnit
+  return raw.map(item => {
+    if (!Array.isArray(item.addonsByUnit)) {
+      const legacy = Array.isArray(item.selectedAddons) ? item.selectedAddons : [];
+      item.addonsByUnit = Array.from({ length: item.qty || 1 }, (_, i) => i === 0 ? legacy : []);
+      delete item.selectedAddons;
+    }
+    return item;
+  });
+})();
 
 // Applied coupon state
 let _appliedCoupon = null; // { code, discount_type, discount_value, min_order, max_discount }
@@ -445,12 +457,15 @@ function addToCart(itemId, qty = 1) {
   if (!item) return;
   const existing = cart.find(c => c.id === itemId);
   if (existing) {
+    // Add empty addon slots for newly added units
+    for (let i = 0; i < qty; i++) existing.addonsByUnit.push([]);
     existing.qty += qty;
   } else {
     cart.push({
       id: item.id, name: item.name, price: item.price,
       emoji: item.emoji, image_url: item.image_url || null,
-      qty, selectedAddons: []
+      qty,
+      addonsByUnit: Array.from({ length: qty }, () => [])
     });
   }
   saveCart();
@@ -465,14 +480,26 @@ function removeFromCart(itemId) {
 function updateQty(itemId, delta) {
   const existing = cart.find(c => c.id === itemId);
   if (!existing) return;
+  if (delta > 0) {
+    // Push empty addon slots for new units
+    for (let i = 0; i < delta; i++) existing.addonsByUnit.push([]);
+  } else if (delta < 0) {
+    // Remove addon slots from the end (abs(delta) units removed)
+    existing.addonsByUnit.splice(delta);
+  }
   existing.qty = Math.max(0, existing.qty + delta);
+  // Ensure addonsByUnit length always matches qty
+  existing.addonsByUnit = existing.addonsByUnit.slice(0, existing.qty);
   if (existing.qty === 0) removeFromCart(itemId);
   else saveCart();
 }
 
 function getItemLineTotal(cartEntry) {
-  const addonsExtra = (cartEntry.selectedAddons || []).reduce((s, a) => s + (a.price || 0), 0);
-  return (cartEntry.price + addonsExtra) * cartEntry.qty;
+  // Sum each unit's price + its own addons
+  return (cartEntry.addonsByUnit || [[]]).reduce((sum, unitAddons) => {
+    const extra = (unitAddons || []).reduce((s, a) => s + (a.price || 0), 0);
+    return sum + cartEntry.price + extra;
+  }, 0);
 }
 
 function getCartSubtotal() {
@@ -550,14 +577,18 @@ function renderCartItems() {
   }
 
   container.innerHTML = cart.map(item => {
-    const addonsExtra = (item.selectedAddons || []).reduce((s, a) => s + (a.price || 0), 0);
-    const lineTotal   = getItemLineTotal(item);
-    const addonsLabel = item.selectedAddons?.length
-      ? item.selectedAddons.map(a => a.name).join(', ')
-      : null;
-    // Check if this menu item has addons available
+    const lineTotal = getItemLineTotal(item);
     const menuItem  = MENU_DATA.find(m => m.id === item.id);
     const hasAddons = menuItem?.addons?.length > 0;
+    const units = item.addonsByUnit || [[]];
+
+    // Build per-unit customize rows (only if has addons)
+    const customizeRows = hasAddons ? units.map((unitAddons, idx) => {
+      const label = unitAddons.length ? `✏️ ${unitAddons.map(a => a.name).join(', ')}` : '+ Customize';
+      const unitLabel = item.qty > 1 ? `<span style="font-size:10px;color:var(--text-light);margin-right:4px;">Unit ${idx+1}:</span>` : '';
+      return `<div style="margin-bottom:2px;">${unitLabel}<button class="cart-customize-btn" onclick="openAddonModal(${item.id}, ${idx})">${label}</button></div>`;
+    }).join('') : '';
+
     return `
     <div class="cart-item" id="cart-item-${item.id}">
       <div class="cart-item-img">
@@ -567,9 +598,7 @@ function renderCartItems() {
       </div>
       <div class="cart-item-body">
         <div class="cart-item-name">${item.name}</div>
-        ${hasAddons ? `<button class="cart-customize-btn" onclick="openAddonModal(${item.id})">
-          ${addonsLabel ? `✏️ ${addonsLabel}` : '+ Customize'}
-        </button>` : ''}
+        ${customizeRows}
         <div class="cart-item-price-row">
           <div class="qty-control">
             <button class="qty-btn" onclick="updateQty(${item.id}, -1)">−</button>
@@ -608,17 +637,22 @@ function closeCart() {
 }
 
 // ── Add-ons customize modal ───────────────────────────────────────────────────
-let _addonModalItemId = null;
+let _addonModalItemId  = null;
+let _addonModalUnitIdx = 0;   // which unit (0-based) is being customized
 
-function openAddonModal(itemId) {
+function openAddonModal(itemId, unitIdx = 0) {
   const menuItem = MENU_DATA.find(m => m.id === itemId);
   const cartItem = cart.find(c => c.id === itemId);
   if (!menuItem || !cartItem) return;
-  _addonModalItemId = itemId;
+  _addonModalItemId  = itemId;
+  _addonModalUnitIdx = unitIdx;
 
-  document.getElementById('addonModalTitle').textContent = menuItem.name;
-  const addons = Array.isArray(menuItem.addons) ? menuItem.addons.filter(a => a.name) : [];
-  const selected = cartItem.selectedAddons || [];
+  // Title shows unit number only when qty > 1
+  const unitSuffix = cartItem.qty > 1 ? ` — Unit ${unitIdx + 1}` : '';
+  document.getElementById('addonModalTitle').textContent = menuItem.name + unitSuffix;
+
+  const addons   = Array.isArray(menuItem.addons) ? menuItem.addons.filter(a => a.name) : [];
+  const selected = (cartItem.addonsByUnit || [])[unitIdx] || [];
 
   document.getElementById('addonModalItems').innerHTML = addons.length
     ? addons.map((a, i) => {
@@ -641,15 +675,14 @@ function openAddonModal(itemId) {
 
 function _updateAddonModalTotal() {
   const menuItem = MENU_DATA.find(m => m.id === _addonModalItemId);
-  const cartItem = cart.find(c => c.id === _addonModalItemId);
-  if (!menuItem || !cartItem) return;
+  if (!menuItem) return;
   const addons = Array.isArray(menuItem.addons) ? menuItem.addons.filter(a => a.name) : [];
   let extra = 0;
   addons.forEach((a, i) => {
     if (document.getElementById(`am-addon-${i}`)?.checked) extra += (a.price || 0);
   });
   const el = document.getElementById('addonModalTotal');
-  if (el) el.textContent = `₹${(menuItem.price + extra) * cartItem.qty}`;
+  if (el) el.textContent = `₹${menuItem.price + extra}`;
 }
 
 function confirmAddonModal() {
@@ -657,7 +690,10 @@ function confirmAddonModal() {
   const cartItem = cart.find(c => c.id === _addonModalItemId);
   if (!menuItem || !cartItem) return;
   const addons = Array.isArray(menuItem.addons) ? menuItem.addons.filter(a => a.name) : [];
-  cartItem.selectedAddons = addons.filter((a, i) => document.getElementById(`am-addon-${i}`)?.checked);
+  // Ensure addonsByUnit has enough slots
+  if (!Array.isArray(cartItem.addonsByUnit)) cartItem.addonsByUnit = Array.from({ length: cartItem.qty }, () => []);
+  while (cartItem.addonsByUnit.length < cartItem.qty) cartItem.addonsByUnit.push([]);
+  cartItem.addonsByUnit[_addonModalUnitIdx] = addons.filter((a, i) => document.getElementById(`am-addon-${i}`)?.checked);
   saveCart();
   closeAddonModal();
 }

@@ -59,25 +59,26 @@
     /* Cart item row */
     .co-item {
       display: flex; gap: 12px; align-items: flex-start;
-      padding: 12px 0; border-bottom: 1px solid var(--border);
+      padding: 14px 0; border-bottom: 1px solid var(--border);
     }
     .co-item:last-of-type { border-bottom: none; }
     .co-item-img {
-      width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0;
+      width: 64px; height: 64px; border-radius: 10px; flex-shrink: 0;
       background: var(--cream); display: flex; align-items: center;
       justify-content: center; overflow: hidden;
     }
-    .co-item-body { flex: 1; min-width: 0; }
-    .co-item-name { font-size: 14px; font-weight: 700; color: var(--brown-dark); margin-bottom: 3px; }
+    .co-item-body { flex: 1; min-width: 0; padding-top: 2px; }
+    .co-item-name { font-size: 14px; font-weight: 700; color: var(--brown-dark); margin-bottom: 4px; }
     .co-customize-btn {
       background: none; border: 1px dashed var(--rust); color: var(--rust);
       font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
-      cursor: pointer; margin-bottom: 6px; display: inline-block;
-      transition: background .15s;
+      cursor: pointer; display: inline-block; transition: background .15s;
     }
     .co-customize-btn:hover { background: rgba(193,68,14,.08); }
-    .co-item-bottom {
-      display: flex; align-items: center; justify-content: space-between; margin-top: 4px;
+    /* Right column: qty on top, price below */
+    .co-item-right {
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 8px; flex-shrink: 0; padding-top: 2px;
     }
     .co-item-total { font-size: 14px; font-weight: 800; color: var(--rust); }
 
@@ -488,13 +489,22 @@ function renderCheckoutItems() {
   document.getElementById('coItemCount').textContent = `${count} item${count !== 1 ? 's' : ''}`;
 
   container.innerHTML = cart.map(item => {
-    const addonsExtra  = (item.selectedAddons || []).reduce((s, a) => s + (a.price || 0), 0);
-    const lineTotal    = (item.price + addonsExtra) * item.qty;
-    const addonsLabel  = item.selectedAddons?.length
-      ? item.selectedAddons.map(a => a.name).join(', ')
-      : null;
+    const lineTotal = getItemLineTotal(item);
     const menuItem  = MENU_DATA.find(m => m.id === item.id);
     const hasAddons = menuItem?.addons?.length > 0;
+    const units     = item.addonsByUnit || [[]];
+
+    // Per-unit customize buttons — shown whenever item has addons
+    const customizeRows = hasAddons ? units.map((unitAddons, idx) => {
+      const label = unitAddons.length
+        ? `✏️ ${unitAddons.map(a => a.name).join(', ')}`
+        : '+ Customize';
+      const unitBadge = item.qty > 1
+        ? `<span style="font-size:10px;background:var(--cream);border-radius:8px;padding:1px 5px;margin-right:4px;color:var(--text-mid);font-weight:600;">Unit ${idx+1}</span>`
+        : '';
+      return `<div style="margin-bottom:3px;">${unitBadge}<button class="co-customize-btn" onclick="openAddonModal(${item.id}, ${idx})">${label}</button></div>`;
+    }).join('') : '';
+
     return `
     <div class="co-item" id="co-item-${item.id}">
       <div class="co-item-img">
@@ -504,17 +514,15 @@ function renderCheckoutItems() {
       </div>
       <div class="co-item-body">
         <div class="co-item-name">${item.name}</div>
-        ${hasAddons ? `<button class="co-customize-btn" onclick="openAddonModal(${item.id})">
-          ${addonsLabel ? `✏️ ${addonsLabel}` : '+ Customize'}
-        </button>` : ''}
-        <div class="co-item-bottom">
-          <div class="qty-control">
-            <button class="qty-btn" onclick="updateQty(${item.id}, -1); renderCheckoutItems();">−</button>
-            <span class="qty-num">${item.qty}</span>
-            <button class="qty-btn" onclick="updateQty(${item.id}, 1); renderCheckoutItems();">+</button>
-          </div>
-          <div class="co-item-total">₹${lineTotal}</div>
+        ${customizeRows}
+      </div>
+      <div class="co-item-right">
+        <div class="qty-control">
+          <button class="qty-btn" onclick="updateQty(${item.id}, -1); renderCheckoutItems();">−</button>
+          <span class="qty-num">${item.qty}</span>
+          <button class="qty-btn" onclick="updateQty(${item.id}, 1); renderCheckoutItems();">+</button>
         </div>
+        <div class="co-item-total">₹${lineTotal}</div>
       </div>
     </div>`;
   }).join('');
@@ -524,10 +532,7 @@ function renderCheckoutItems() {
 
 // ── Totals ────────────────────────────────────────────────────────────────
 function updateCheckoutTotals() {
-  const sub  = cart.reduce((s, c) => {
-    const extra = (c.selectedAddons || []).reduce((x, a) => x + (a.price || 0), 0);
-    return s + (c.price + extra) * c.qty;
-  }, 0);
+  const sub = cart.reduce((s, c) => s + getItemLineTotal(c), 0);
 
   let disc = 0;
   if (_coAppliedCoupon) {

@@ -256,13 +256,22 @@ input, select, textarea { font-family: inherit; outline: none; }
   text-align: center;
   background: var(--brown-dark);
 }
-/* Kitchen photo — blurred with dark shade */
+/* Kitchen photo — fill hero at any viewport width; object-fit crops as needed */
 .hero-bg {
-  position: absolute; inset: -20px;
-  background: url('/images/hero-background.webp') center/cover no-repeat;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
   filter: blur(6px) brightness(0.45);
-  transform: scale(1.05);
+  transform: scale(1.08);
+  transform-origin: center center;
   z-index: 0;
+  pointer-events: none;
+  user-select: none;
 }
 .hero-content {
   position: relative; z-index: 1;
@@ -719,7 +728,22 @@ body.has-bottom-nav { padding-bottom: 64px; }
 
 /* ─── Why Us page ────────────────────────────────────────────────────────── */
 .why-hero { background: linear-gradient(135deg, var(--brown-dark), var(--rust)); padding: 56px 20px 40px; text-align: center; position: relative; overflow: hidden; }
-.why-hero-bg { position: absolute; inset: -20px; background: url('/images/hero-background.webp') center/cover no-repeat; filter: blur(32px) brightness(0.2); transform: scale(1.1); z-index: 0; }
+.why-hero-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  object-fit: cover;
+  object-position: center;
+  filter: blur(32px) brightness(0.2);
+  transform: scale(1.12);
+  transform-origin: center center;
+  z-index: 0;
+  pointer-events: none;
+  user-select: none;
+}
 .why-hero-content { position: relative; z-index: 1; }
 .why-card { background: var(--surface); border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm); display: flex; gap: 16px; align-items: flex-start; }
 .why-icon { font-size: 40px; flex-shrink: 0; }
