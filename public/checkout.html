@@ -7,312 +7,704 @@
   <title>Checkout — Open Kitchens</title>
   <link rel="icon" href="/images/logo.png" type="image/png"/>
   <link rel="stylesheet" href="/css/app.css"/>
+  <style>
+    /* ── Checkout-specific styles ───────────────────────────────────────── */
+    body { background: var(--cream); min-height: 100vh; }
+
+    .co-topbar {
+      position: sticky; top: 0; z-index: 100;
+      background: var(--brown-dark); color: #fff;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px; gap: 12px;
+    }
+    .co-back-btn {
+      background: rgba(255,255,255,.15); border: none; color: #fff;
+      width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+      font-size: 18px; display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background .15s;
+    }
+    .co-back-btn:hover { background: rgba(255,255,255,.25); }
+    .co-topbar-loc {
+      flex: 1; min-width: 0;
+      display: flex; flex-direction: column;
+    }
+    .co-topbar-loc-label { font-size: 10px; opacity: .7; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+    .co-topbar-loc-val   { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .co-topbar-time {
+      display: flex; align-items: center; gap: 5px; flex-shrink: 0;
+      font-size: 12px; font-weight: 700;
+      background: rgba(255,255,255,.15); border-radius: 20px; padding: 5px 10px;
+    }
+
+    /* Page wrapper */
+    .co-page { max-width: 560px; margin: 0 auto; padding: 0 0 100px; }
+
+    /* Section card */
+    .co-card {
+      background: var(--surface); border-radius: 16px;
+      margin: 12px 12px 0; overflow: hidden;
+      box-shadow: 0 1px 6px rgba(0,0,0,.06);
+    }
+    .co-card-hdr {
+      padding: 14px 16px 10px;
+      display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid var(--border);
+    }
+    .co-card-title {
+      font-size: 13px; font-weight: 800; color: var(--text-dark);
+      text-transform: uppercase; letter-spacing: .06em;
+    }
+    .co-card-body { padding: 12px 16px; }
+
+    /* Cart item row */
+    .co-item {
+      display: flex; gap: 12px; align-items: flex-start;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .co-item:last-of-type { border-bottom: none; }
+    .co-item-img {
+      width: 52px; height: 52px; border-radius: 10px; flex-shrink: 0;
+      background: var(--cream); display: flex; align-items: center;
+      justify-content: center; overflow: hidden;
+    }
+    .co-item-body { flex: 1; min-width: 0; }
+    .co-item-name { font-size: 14px; font-weight: 700; color: var(--brown-dark); margin-bottom: 3px; }
+    .co-customize-btn {
+      background: none; border: 1px dashed var(--rust); color: var(--rust);
+      font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px;
+      cursor: pointer; margin-bottom: 6px; display: inline-block;
+      transition: background .15s;
+    }
+    .co-customize-btn:hover { background: rgba(193,68,14,.08); }
+    .co-item-bottom {
+      display: flex; align-items: center; justify-content: space-between; margin-top: 4px;
+    }
+    .co-item-total { font-size: 14px; font-weight: 800; color: var(--rust); }
+
+    /* Add more button */
+    .co-add-more {
+      display: block; width: 100%; padding: 12px; margin-top: 8px;
+      background: none; border: 2px dashed var(--border); border-radius: 12px;
+      color: var(--rust); font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .co-add-more:hover { border-color: var(--rust); background: rgba(193,68,14,.04); }
+
+    /* Empty state */
+    .co-empty {
+      text-align: center; padding: 40px 20px;
+    }
+    .co-empty-icon { font-size: 52px; margin-bottom: 10px; }
+
+    /* Price box */
+    .co-price-row {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 13px; color: var(--text-mid); padding: 5px 0;
+    }
+    .co-price-row.grand {
+      font-size: 15px; font-weight: 800; color: var(--brown-dark);
+      border-top: 1px solid var(--border); padding-top: 10px; margin-top: 4px;
+    }
+
+    /* Coupon */
+    .co-coupon-row {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--cream); border: 1.5px solid var(--border); border-radius: 12px;
+      padding: 4px 4px 4px 12px; margin-bottom: 6px;
+    }
+    .co-coupon-input {
+      flex: 1; border: none; background: none; font-size: 13px; font-weight: 600;
+      color: var(--text-dark); outline: none; padding: 6px 0;
+      text-transform: uppercase;
+    }
+    .co-coupon-input::placeholder { color: var(--text-light); font-weight: 400; text-transform: none; }
+    .co-coupon-apply {
+      background: var(--rust); color: #fff; border: none; border-radius: 8px;
+      padding: 7px 14px; font-size: 13px; font-weight: 700; cursor: pointer;
+      transition: background .15s;
+    }
+    .co-coupon-apply:hover { background: var(--rust-dark); }
+    .co-view-offers {
+      background: none; border: none; color: var(--rust); font-size: 12px;
+      font-weight: 600; cursor: pointer; padding: 2px 0; text-decoration: underline;
+    }
+
+    /* Address option */
+    .co-addr-opt {
+      border: 2px solid var(--border); border-radius: 12px;
+      padding: 12px; margin-bottom: 8px; cursor: pointer; transition: border-color .15s;
+    }
+    .co-addr-opt.active { border-color: var(--rust); }
+    .co-addr-tag {
+      font-size: 11px; font-weight: 700; color: var(--rust);
+      background: #fff5f2; padding: 2px 8px; border-radius: 4px;
+      display: inline-block; margin-bottom: 4px;
+    }
+    .co-addr-main { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+    .co-addr-sub  { font-size: 12px; color: var(--text-light); }
+
+    /* Payment options */
+    .co-pay-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+    .co-pay-opt {
+      border: 2px solid var(--border); border-radius: 10px;
+      padding: 10px 6px; text-align: center; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .co-pay-opt.active { border-color: var(--rust); background: #fff5f2; }
+    .co-pay-icon  { font-size: 22px; margin-bottom: 3px; }
+    .co-pay-label { font-size: 11px; font-weight: 600; color: var(--text-mid); }
+
+    /* Sticky CTA */
+    .co-sticky-cta {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 99;
+      background: var(--surface); border-top: 1px solid var(--border);
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      box-shadow: 0 -4px 20px rgba(0,0,0,.1);
+    }
+    .co-place-btn {
+      width: 100%; padding: 15px; font-size: 16px; font-weight: 800;
+      background: var(--rust); color: #fff; border: none; border-radius: 14px;
+      cursor: pointer; display: flex; align-items: center; justify-content: space-between;
+      transition: background .15s;
+    }
+    .co-place-btn:hover { background: var(--rust-dark); }
+    .co-place-btn:disabled { opacity: .6; cursor: not-allowed; }
+
+    /* Order confirm overlay */
+    #orderConfirm {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,.6); z-index: 400;
+      align-items: center; justify-content: center;
+    }
+    .co-confirm-card {
+      background: #fff; border-radius: 20px; padding: 32px 24px;
+      margin: 20px; text-align: center; max-width: 380px; width: 100%;
+      animation: slideUp .3s ease;
+    }
+    @keyframes slideUp { from { transform: translateY(40px); opacity:0; } to { transform: translateY(0); opacity:1; } }
+  </style>
 </head>
 <body>
 
-<!-- ── Header ─────────────────────────────────────────────────────────────── -->
-<header class="header">
-  <div class="header-inner">
-    <a href="/#menu" class="header-logo" style="gap:8px;">
-      <span style="font-size:22px;color:var(--cream);">←</span>
-      <div class="header-logo-text">
-        <span class="brand-name">Checkout</span>
-        <span class="brand-tagline">Open Kitchens</span>
+<!-- ── Top bar: location + delivery time ─────────────────────────────────── -->
+<div class="co-topbar">
+  <button class="co-back-btn" onclick="window.history.back()">←</button>
+  <div class="co-topbar-loc">
+    <span class="co-topbar-loc-label">Delivering to</span>
+    <span class="co-topbar-loc-val" id="coLocLabel">Set delivery location</span>
+  </div>
+  <div class="co-topbar-time" id="coTimePill">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    <span id="coTimeLabel">…</span>
+  </div>
+</div>
+<!-- Not-deliverable warning banner (hidden by default) -->
+<div id="coNotDeliverableBanner" style="display:none;background:#C62828;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-weight:600;">
+  📍 Sorry, we don't deliver to this location yet. Please choose a closer address.
+</div>
+
+<div class="co-page">
+
+  <!-- ── Cart Items ─────────────────────────────────────────────────────── -->
+  <div class="co-card">
+    <div class="co-card-hdr">
+      <span class="co-card-title">What's cooking 🔥</span>
+      <span id="coItemCount" style="font-size:12px;color:var(--text-light);"></span>
+    </div>
+    <div class="co-card-body">
+      <div id="coItemsList"></div>
+      <button class="co-add-more" onclick="window.location.href='/#menu'">
+        + Add more items
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Coupon ─────────────────────────────────────────────────────────── -->
+  <div class="co-card">
+    <div class="co-card-hdr">
+      <span class="co-card-title">🎁 Offers & Coupons</span>
+    </div>
+    <div class="co-card-body">
+      <div class="co-coupon-row">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <input type="text" id="couponCode" class="co-coupon-input" placeholder="Enter coupon code…" autocomplete="off"/>
+        <button class="co-coupon-apply" onclick="checkoutApplyCoupon()">Apply</button>
       </div>
-    </a>
-    <nav class="header-nav">
-      <a href="/">Home</a><a href="/#menu">Menu</a>
-      <a href="/why-us">Why Us</a><a href="/rider">Ride With Us</a>
-    </nav>
-    <div style="font-size:13px;color:rgba(255,255,255,.6);">Step 1 of 2</div>
+      <div id="couponMsg" style="font-size:12px;margin-bottom:6px;padding-left:2px;min-height:16px;"></div>
+      <button class="co-view-offers" onclick="checkoutOpenOffers()">🎁 View all available offers</button>
+    </div>
   </div>
-</header>
-<div style="max-width:720px;margin:0 auto;">
 
-<!-- ── Order Summary ──────────────────────────────────────────────────────── -->
-<div class="checkout-section" style="margin-top:12px;">
-  <h3>🧾 Order Summary</h3>
-  <div id="orderSummary">
-    <div style="color:var(--text-light);font-size:14px;text-align:center;padding:8px;">Loading cart...</div>
-  </div>
-  <div class="divider"></div>
-  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-    <span style="font-size:13px;color:var(--text-light);">Item Total</span>
-    <span id="itemTotal" style="font-size:13px;font-weight:600;color:var(--text-dark);">₹0</span>
-  </div>
-  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-    <span style="font-size:13px;color:var(--text-light);">Delivery Fee</span>
-    <span style="font-size:13px;font-weight:600;color:#2E7D32;">FREE</span>
-  </div>
-  <div style="display:flex;justify-content:space-between;margin-bottom:6px;" id="discountRow" style="display:none;">
-    <span style="font-size:13px;color:var(--text-light);">Discount (FIRST50)</span>
-    <span style="font-size:13px;font-weight:600;color:#C62828;">− ₹50</span>
-  </div>
-  <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
-    <span style="font-size:13px;color:var(--text-light);">Packing & GST</span>
-    <span style="font-size:13px;font-weight:600;color:var(--text-dark);">₹20</span>
-  </div>
-  <div class="divider"></div>
-  <div style="display:flex;justify-content:space-between;margin-top:8px;">
-    <span style="font-size:15px;font-weight:800;color:var(--brown-dark);">Grand Total</span>
-    <span id="grandTotal" style="font-size:18px;font-weight:800;color:var(--rust);">₹0</span>
-  </div>
-</div>
-
-<!-- ── Coupon ──────────────────────────────────────────────────────────────── -->
-<div class="checkout-section">
-  <h3>🎁 Have a Coupon?</h3>
-  <div style="display:flex;gap:8px;">
-    <input type="text" id="couponCode" class="form-input" placeholder="Enter coupon code (try FIRST50)" style="flex:1;text-transform:uppercase;"/>
-    <button class="btn btn-amber btn-sm" onclick="applyCoupon()">Apply</button>
-  </div>
-  <div id="couponMsg" style="margin-top:8px;font-size:12px;"></div>
-</div>
-
-<!-- ── Delivery Address ────────────────────────────────────────────────────── -->
-<div class="checkout-section">
-  <h3>📍 Delivery Address</h3>
-  <div id="savedAddresses">
-    <div class="address-option selected" id="addr1" onclick="selectAddress('addr1')" style="padding:12px;border:2px solid var(--rust);border-radius:10px;margin-bottom:10px;cursor:pointer;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
-        <span style="font-size:12px;font-weight:700;color:var(--rust);background:#fff5f2;padding:2px 8px;border-radius:4px;">🏠 Home</span>
-        <span style="font-size:11px;color:var(--rust);font-weight:700;">Selected ✓</span>
+  <!-- ── Price Breakdown ────────────────────────────────────────────────── -->
+  <div class="co-card">
+    <div class="co-card-hdr"><span class="co-card-title">Bill Summary</span></div>
+    <div class="co-card-body">
+      <div class="co-price-row"><span>Item total</span><span id="coSubtotal">₹0</span></div>
+      <div class="co-price-row"><span>Delivery fee</span><span style="color:#2E7D32;font-weight:700;">FREE</span></div>
+      <div class="co-price-row" id="coDiscountRow" style="display:none;color:#2E7D32;">
+        <span id="coDiscountLabel">Discount</span>
+        <span id="coDiscountAmt" style="font-weight:700;">−₹0</span>
       </div>
-      <div style="font-size:14px;font-weight:600;color:var(--text-dark);">Flat 302, Sunrise Apartments</div>
-      <div style="font-size:12px;color:var(--text-light);">3rd Main, Hebbal · Bengaluru · 560024</div>
+      <div class="co-price-row"><span>Packaging &amp; GST</span><span>₹20</span></div>
+      <div class="co-price-row grand">
+        <span>Grand Total</span>
+        <span id="coGrandTotal" style="color:var(--rust);">₹0</span>
+      </div>
     </div>
   </div>
-  <button class="btn btn-outline btn-sm" onclick="showAddAddressForm()" style="width:100%;justify-content:center;">
-    + Add New Address
-  </button>
-  <div id="addAddressForm" style="display:none;margin-top:14px;">
-    <div class="form-group">
-      <label class="form-label">Flat / House No.</label>
-      <input type="text" class="form-input" placeholder="e.g. Flat 302, Tower B"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Building / Society</label>
-      <input type="text" class="form-input" placeholder="e.g. Sunrise Apartments"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Street / Area</label>
-      <input type="text" class="form-input" placeholder="e.g. 3rd Main, Hebbal"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Landmark</label>
-      <input type="text" class="form-input" placeholder="e.g. Near SBI ATM"/>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Pincode</label>
-      <input type="number" class="form-input" id="newPincode" placeholder="6-digit pincode"/>
-    </div>
-    <div class="map-placeholder" style="margin-bottom:14px;">
-      <span class="map-pin">📍</span>
-      <span style="font-size:13px;color:var(--text-mid);margin-left:10px;">Drop pin on map</span>
-    </div>
-    <button class="btn btn-primary btn-full" onclick="saveAddress()">Save Address</button>
-  </div>
-</div>
 
-<!-- ── Delivery Time ───────────────────────────────────────────────────────── -->
-<div class="checkout-section">
-  <h3>⏱️ Estimated Delivery</h3>
-  <div style="display:flex;align-items:center;gap:12px;">
-    <div style="font-size:36px;">🛵</div>
+  <!-- ── Delivery Address ───────────────────────────────────────────────── -->
+  <div class="co-card">
+    <div class="co-card-hdr"><span class="co-card-title">📍 Delivery Address</span></div>
+    <div class="co-card-body">
+      <div id="coAddressList"></div>
+      <button class="btn btn-outline btn-sm" onclick="toggleAddressForm()" style="width:100%;justify-content:center;margin-top:4px;">
+        + Add New Address
+      </button>
+      <div id="addAddressForm" style="display:none;margin-top:14px;">
+        <div class="form-group">
+          <label class="form-label">Flat / House No.</label>
+          <input type="text" id="addrFlat" class="form-input" placeholder="e.g. Flat 302, Tower B"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Building / Society</label>
+          <input type="text" id="addrBuilding" class="form-input" placeholder="e.g. Sunrise Apartments"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Street / Area</label>
+          <input type="text" id="addrStreet" class="form-input" placeholder="e.g. 3rd Main, Hebbal"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Landmark <span style="color:var(--text-light)">(optional)</span></label>
+          <input type="text" id="addrLandmark" class="form-input" placeholder="e.g. Near SBI ATM"/>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="saveNewAddress()">Save Address</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Payment Method ─────────────────────────────────────────────────── -->
+  <div class="co-card">
+    <div class="co-card-hdr"><span class="co-card-title">💳 Payment Method</span></div>
+    <div class="co-card-body">
+      <div class="co-pay-grid">
+        <div class="co-pay-opt active" onclick="selectPayment(this,'upi')">
+          <div class="co-pay-icon">📱</div><div class="co-pay-label">UPI</div>
+        </div>
+        <div class="co-pay-opt" onclick="selectPayment(this,'card')">
+          <div class="co-pay-icon">💳</div><div class="co-pay-label">Card</div>
+        </div>
+        <div class="co-pay-opt" onclick="selectPayment(this,'netbanking')">
+          <div class="co-pay-icon">🏦</div><div class="co-pay-label">Net Banking</div>
+        </div>
+        <div class="co-pay-opt" onclick="selectPayment(this,'cod')">
+          <div class="co-pay-icon">💵</div><div class="co-pay-label">Cash</div>
+        </div>
+      </div>
+      <div id="upiSection" style="margin-top:12px;">
+        <input type="text" class="form-input" placeholder="yourname@upi" style="margin:0;"/>
+      </div>
+      <div id="cardSection" style="display:none;margin-top:12px;">
+        <input type="text" class="form-input" placeholder="•••• •••• •••• ••••" style="margin-bottom:8px;"/>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <input type="text" class="form-input" placeholder="MM/YY" style="margin:0;"/>
+          <input type="text" class="form-input" placeholder="CVV" style="margin:0;"/>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Special Instructions ──────────────────────────────────────────── -->
+  <div class="co-card" style="margin-bottom:0;">
+    <div class="co-card-hdr"><span class="co-card-title">📝 Special Instructions</span></div>
+    <div class="co-card-body">
+      <textarea id="specialInstructions" class="form-input" rows="2"
+        placeholder="Any requests? (e.g. extra spicy, less oil, no onion…)" style="resize:none;margin:0;"></textarea>
+    </div>
+  </div>
+
+  <!-- ── Kitchen stream notice ─────────────────────────────────────────── -->
+  <div style="margin:12px 12px 0;background:linear-gradient(135deg,#e8f5e9,#f1faf2);border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:10px;border:1.5px solid #c8e6c9;">
+    <span style="font-size:22px;">🎥</span>
     <div>
-      <div style="font-size:18px;font-weight:800;color:var(--brown-dark);">28–35 minutes</div>
-      <div style="font-size:12px;color:var(--text-light);">From our kitchen at Hebbal to your doorstep</div>
+      <div style="font-size:13px;font-weight:700;color:#2E7D32;">Watch your food live!</div>
+      <div style="font-size:12px;color:#388E3C;">After placing your order you'll get a link to our live kitchen stream.</div>
     </div>
   </div>
-</div>
 
-<!-- ── Payment Method ─────────────────────────────────────────────────────── -->
-<div class="checkout-section">
-  <h3>💳 Payment Method</h3>
-  <div class="payment-options" id="paymentOptions">
-    <div class="payment-option selected" onclick="selectPayment(this,'upi')">
-      <div class="pay-icon">📱</div>
-      <div class="pay-label">UPI</div>
-    </div>
-    <div class="payment-option" onclick="selectPayment(this,'card')">
-      <div class="pay-icon">💳</div>
-      <div class="pay-label">Card</div>
-    </div>
-    <div class="payment-option" onclick="selectPayment(this,'netbanking')">
-      <div class="pay-icon">🏦</div>
-      <div class="pay-label">Net Banking</div>
-    </div>
-    <div class="payment-option" onclick="selectPayment(this,'cod')">
-      <div class="pay-icon">💵</div>
-      <div class="pay-label">Cash on Delivery</div>
-    </div>
-  </div>
-  <div id="upiSection" style="margin-top:14px;">
-    <div class="form-group">
-      <label class="form-label">UPI ID</label>
-      <input type="text" class="form-input" placeholder="yourname@upi"/>
-    </div>
-  </div>
-  <div id="cardSection" style="display:none;margin-top:14px;">
-    <div class="form-group">
-      <label class="form-label">Card Number</label>
-      <input type="text" class="form-input" placeholder="•••• •••• •••• ••••"/>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-      <div class="form-group" style="margin-bottom:0;">
-        <label class="form-label">Expiry</label>
-        <input type="text" class="form-input" placeholder="MM/YY"/>
-      </div>
-      <div class="form-group" style="margin-bottom:0;">
-        <label class="form-label">CVV</label>
-        <input type="text" class="form-input" placeholder="•••"/>
-      </div>
-    </div>
-  </div>
-</div>
+</div><!-- /.co-page -->
 
-<!-- ── Special Instructions ───────────────────────────────────────────────── -->
-<div class="checkout-section">
-  <h3>📝 Special Instructions</h3>
-  <textarea class="form-input" rows="2" placeholder="Any special requests? (e.g. extra spicy, less oil, no onion...)" style="resize:none;"></textarea>
-</div>
-
-<!-- ── Place Order CTA ────────────────────────────────────────────────────── -->
-<div style="padding:16px;padding-bottom:32px;">
-  <div class="alert alert-info" style="margin-bottom:12px;">
-    🎥 <strong>Watch your food live!</strong> After placing your order, get a link to stream our kitchen in real-time.
-  </div>
-  <button class="btn btn-primary btn-full" style="font-size:16px;padding:16px;" onclick="placeOrder()">
-    🛒 Place Order — <span id="payBtnTotal">₹0</span>
+<!-- ── Sticky place-order CTA ─────────────────────────────────────────────── -->
+<div class="co-sticky-cta">
+  <button class="co-place-btn" id="placeOrderBtn" onclick="placeOrder()">
+    <span>🛒 Place Order</span>
+    <span id="payBtnTotal">₹0</span>
   </button>
-  <p style="text-align:center;font-size:11px;color:var(--text-light);margin-top:8px;">Secured by Razorpay · 100% safe payments</p>
 </div>
 
-<!-- ── Order Placed Confirmation ──────────────────────────────────────────── -->
-<div id="orderConfirm" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:400;align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:20px;padding:32px 24px;margin:20px;text-align:center;max-width:380px;width:100%;animation:slideUp .3s ease;">
+<!-- ── Order Confirmed overlay ────────────────────────────────────────────── -->
+<div id="orderConfirm">
+  <div class="co-confirm-card">
     <div style="font-size:64px;margin-bottom:12px;">🎉</div>
     <h2 style="font-size:22px;font-weight:800;color:var(--brown-dark);margin-bottom:8px;">Order Placed!</h2>
-    <p style="font-size:14px;color:var(--text-light);margin-bottom:16px;">Your order <strong id="confirmOrderId"></strong> has been confirmed. The kitchen is starting to prepare your food!</p>
+    <p style="font-size:14px;color:var(--text-light);margin-bottom:16px;">
+      Your order <strong id="confirmOrderId"></strong> is confirmed. The kitchen is getting started!
+    </p>
     <div style="background:var(--cream);border-radius:10px;padding:12px;margin-bottom:20px;border:1.5px solid var(--amber);">
-      <div style="font-size:13px;font-weight:700;color:var(--brown-dark);margin-bottom:6px;">🎥 Your kitchen stream is ready!</div>
-      <div style="font-size:12px;color:var(--text-light);">Watch our chef prepare your order live in the kitchen.</div>
+      <div style="font-size:13px;font-weight:700;color:var(--brown-dark);margin-bottom:4px;">🎥 Kitchen stream is ready!</div>
+      <div style="font-size:12px;color:var(--text-light);">Watch our chef prepare your order live.</div>
     </div>
-    <button class="btn btn-primary btn-full" onclick="goToTracking()">Track My Order →</button>
+    <button class="btn btn-primary btn-full" onclick="window.location.href='/tracking'">Track My Order →</button>
   </div>
 </div>
 
-</div><!-- end max-width wrapper -->
+<!-- ── Add-ons modal (reused from menu-data.js) ───────────────────────────── -->
+<div class="addon-modal-overlay" id="addonModalOverlay" onclick="closeAddonModal()"></div>
+<div class="addon-modal" id="addonModal">
+  <div class="addon-modal-handle"></div>
+  <div class="addon-modal-header">
+    <h4 id="addonModalTitle">Customize</h4>
+    <button class="cart-close-btn" onclick="closeAddonModal()">✕</button>
+  </div>
+  <div id="addonModalItems" class="addon-modal-items"></div>
+  <div class="addon-modal-footer">
+    <div style="font-size:13px;color:var(--text-mid);">Item total: <strong id="addonModalTotal">₹0</strong></div>
+    <button class="btn btn-primary" onclick="confirmAddonModal(); renderCheckoutItems();">Done</button>
+  </div>
+</div>
+
+<!-- ── All Offers Sheet (reused from menu-data.js) ────────────────────────── -->
+<div class="offers-sheet-overlay" id="offersSheetOverlay" onclick="closeOffersSheet()"></div>
+<div class="offers-sheet-panel" id="offersSheetPanel">
+  <div class="addon-modal-handle"></div>
+  <div class="addon-modal-header">
+    <h4>🎁 Available Offers</h4>
+    <button class="cart-close-btn" onclick="closeOffersSheet()">✕</button>
+  </div>
+  <div id="offersSheetList" class="offers-sheet-list"></div>
+</div>
+
 <script src="/js/menu-data.js"></script>
 <script>
-let selectedPayment = 'upi';
-let discount = 0;
+// ── State ──────────────────────────────────────────────────────────────────
+let selectedPayment  = 'upi';
+let _coAppliedCoupon = null;
+let _coSelectedAddr  = null;
 
-// ─── Render order summary ─────────────────────────────────────────────────────
-function renderSummary() {
-  const container = document.getElementById('orderSummary');
+// ── Haversine distance (km) — clamp 'a' to [0,1] for floating-point safety ──
+function _haversineKm(lat1, lon1, lat2, lon2) {
+  const R    = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a    = Math.min(1, Math.max(0,
+                 Math.sin(dLat / 2) ** 2
+               + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180)
+               * Math.sin(dLon / 2) ** 2
+               ));
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// ── Location label + delivery time ───────────────────────────────────────
+let _restaurantInfo = null; // cached from API
+
+async function _refreshLocLabel() {
+  // Read the selected delivery location (same localStorage key as menu page)
+  let loc = null;
+  try { loc = JSON.parse(localStorage.getItem('ok_delivery_location')); } catch {}
+
+  const locEl   = document.getElementById('coLocLabel');
+  const timeLbl = document.getElementById('coTimeLabel');
+  const banner  = document.getElementById('coNotDeliverableBanner');
+  const placeBtn = document.getElementById('placeOrderBtn');
+
+  if (locEl) locEl.textContent = loc?.shortName || loc?.fullAddress || 'Set delivery location';
+
+  // Always ensure order button is enabled by default
+  if (placeBtn) { placeBtn.disabled = false; placeBtn.style.opacity = ''; }
+  if (banner)   banner.style.display = 'none';
+
+  // Fetch restaurant info once and cache
+  if (!_restaurantInfo) {
+    try { _restaurantInfo = await fetch('/api/restaurant-info').then(r => r.json()); } catch {}
+  }
+
+  const info = _restaurantInfo;
+
+  // If no restaurant coords or no user coords, show generic time — never block
+  const rLat = parseFloat(info?.lat);
+  const rLng = parseFloat(info?.lng);
+  const uLat = parseFloat(loc?.lat);
+  const uLng = parseFloat(loc?.lng);
+  const hasRestaurantCoords = info && !isNaN(rLat) && !isNaN(rLng);
+  const hasUserCoords       = loc  && !isNaN(uLat) && !isNaN(uLng);
+
+  if (!hasRestaurantCoords || !hasUserCoords) {
+    if (timeLbl) timeLbl.textContent = '30–40 min';
+    return;
+  }
+
+  const distKm = _haversineKm(uLat, uLng, rLat, rLng);
+  const maxKm  = parseFloat(info.max_delivery_km) || 50;
+  const prepMin = parseInt(info.prep_minutes) || 20;
+
+  if (distKm > maxKm) {
+    // Outside delivery zone — show warning banner but DON'T block the order
+    if (timeLbl) timeLbl.textContent = 'Far from us';
+    if (banner)  banner.style.display = 'block';
+    // Still show approximate time (capped at a reasonable max for display)
+    const transitMin = Math.min(Math.ceil(distKm * 3), 120);
+    const eta        = prepMin + transitMin;
+    if (timeLbl) timeLbl.textContent = `~${eta} min (far)`;
+    return;
+  }
+
+  // Within delivery zone — compute ETA: prep + 3 min/km, shown as range
+  if (timeLbl) {
+    const transitMin = Math.ceil(distKm * 3);
+    const eta        = prepMin + transitMin;
+    timeLbl.textContent = `${eta}–${eta + 10} min`;
+  }
+}
+
+// ── Render cart items ─────────────────────────────────────────────────────
+function renderCheckoutItems() {
+  const container = document.getElementById('coItemsList');
+  if (!container) return;
+
   if (!cart || cart.length === 0) {
-    container.innerHTML = '<p style="color:var(--text-light);font-size:14px;">Cart is empty. <a href="/#menu" style="color:var(--rust);font-weight:700;">Browse Menu →</a></p>';
+    container.innerHTML = `
+      <div class="co-empty">
+        <div class="co-empty-icon">🛒</div>
+        <p style="font-weight:700;color:var(--text-dark);">Your plate is empty!</p>
+        <p style="font-size:13px;color:var(--text-light);margin-bottom:16px;">Head back and add some dishes.</p>
+        <a href="/#menu" class="btn btn-primary btn-sm">Browse Menu 🍽️</a>
+      </div>`;
+    document.getElementById('coItemCount').textContent = '';
+    updateCheckoutTotals();
     return;
   }
-  container.innerHTML = cart.map(item => `
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;font-size:14px;">
-      <span>${item.emoji} ${item.name} × ${item.qty}</span>
-      <span style="font-weight:600;color:var(--brown-dark);">₹${item.price * item.qty}</span>
-    </div>
-  `).join('');
-  updateTotals();
+
+  const count = cart.reduce((s, c) => s + c.qty, 0);
+  document.getElementById('coItemCount').textContent = `${count} item${count !== 1 ? 's' : ''}`;
+
+  container.innerHTML = cart.map(item => {
+    const addonsExtra  = (item.selectedAddons || []).reduce((s, a) => s + (a.price || 0), 0);
+    const lineTotal    = (item.price + addonsExtra) * item.qty;
+    const addonsLabel  = item.selectedAddons?.length
+      ? item.selectedAddons.map(a => a.name).join(', ')
+      : null;
+    const menuItem  = MENU_DATA.find(m => m.id === item.id);
+    const hasAddons = menuItem?.addons?.length > 0;
+    return `
+    <div class="co-item" id="co-item-${item.id}">
+      <div class="co-item-img">
+        ${item.image_url
+          ? `<img src="${item.image_url}" alt="${item.name}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:10px;"/>`
+          : `<span style="font-size:26px;">${item.emoji}</span>`}
+      </div>
+      <div class="co-item-body">
+        <div class="co-item-name">${item.name}</div>
+        ${hasAddons ? `<button class="co-customize-btn" onclick="openAddonModal(${item.id})">
+          ${addonsLabel ? `✏️ ${addonsLabel}` : '+ Customize'}
+        </button>` : ''}
+        <div class="co-item-bottom">
+          <div class="qty-control">
+            <button class="qty-btn" onclick="updateQty(${item.id}, -1); renderCheckoutItems();">−</button>
+            <span class="qty-num">${item.qty}</span>
+            <button class="qty-btn" onclick="updateQty(${item.id}, 1); renderCheckoutItems();">+</button>
+          </div>
+          <div class="co-item-total">₹${lineTotal}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateCheckoutTotals();
 }
 
-function updateTotals() {
-  const itemTotal = getCartTotal();
-  const grand = itemTotal + 20 - discount;
-  document.getElementById('itemTotal').textContent = `₹${itemTotal}`;
-  document.getElementById('grandTotal').textContent = `₹${grand}`;
-  document.getElementById('payBtnTotal').textContent = `₹${grand}`;
-}
+// ── Totals ────────────────────────────────────────────────────────────────
+function updateCheckoutTotals() {
+  const sub  = cart.reduce((s, c) => {
+    const extra = (c.selectedAddons || []).reduce((x, a) => x + (a.price || 0), 0);
+    return s + (c.price + extra) * c.qty;
+  }, 0);
 
-// ─── Coupon ───────────────────────────────────────────────────────────────────
-function applyCoupon() {
-  const code = document.getElementById('couponCode').value.trim().toUpperCase();
-  const msg = document.getElementById('couponMsg');
-  if (code === 'FIRST50') {
-    discount = 50;
-    msg.innerHTML = '<span style="color:#2E7D32;font-weight:600;">✅ FIRST50 applied — ₹50 off!</span>';
-    document.getElementById('discountRow').style.display = 'flex';
-    showToast('🎉 ₹50 discount applied!');
-  } else if (code === 'WELCOME10') {
-    discount = Math.floor(getCartTotal() * 0.1);
-    msg.innerHTML = `<span style="color:#2E7D32;font-weight:600;">✅ 10% off applied — ₹${discount} off!</span>`;
-    document.getElementById('discountRow').style.display = 'flex';
-    showToast('🎉 10% discount applied!');
-  } else {
-    discount = 0;
-    msg.innerHTML = '<span style="color:#C62828;font-weight:600;">❌ Invalid coupon code</span>';
+  let disc = 0;
+  if (_coAppliedCoupon) {
+    const c = _coAppliedCoupon;
+    if (sub >= (c.min_order || 0)) {
+      disc = c.discount_type === 'flat'
+        ? c.discount_value
+        : Math.round(sub * c.discount_value / 100);
+      if (c.max_discount) disc = Math.min(disc, c.max_discount);
+    }
   }
-  updateTotals();
+  const grand = Math.max(0, sub - disc) + 20;
+
+  document.getElementById('coSubtotal').textContent  = `₹${sub}`;
+  document.getElementById('coGrandTotal').textContent = `₹${grand}`;
+  document.getElementById('payBtnTotal').textContent  = `₹${grand}`;
+
+  const discRow = document.getElementById('coDiscountRow');
+  const discAmt = document.getElementById('coDiscountAmt');
+  const discLbl = document.getElementById('coDiscountLabel');
+  if (discRow) {
+    discRow.style.display = disc > 0 ? 'flex' : 'none';
+    if (discAmt) discAmt.textContent = `−₹${disc}`;
+    if (discLbl && _coAppliedCoupon) discLbl.textContent = `Discount (${_coAppliedCoupon.code})`;
+  }
 }
 
-// ─── Address ──────────────────────────────────────────────────────────────────
-function showAddAddressForm() {
-  const form = document.getElementById('addAddressForm');
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+// ── Coupon ────────────────────────────────────────────────────────────────
+async function checkoutApplyCoupon() {
+  const code = document.getElementById('couponCode')?.value.trim().toUpperCase();
+  const msg  = document.getElementById('couponMsg');
+  if (!code) { if (msg) msg.innerHTML = '<span style="color:#C62828;">Enter a coupon code first.</span>'; return; }
+  try {
+    const { offers } = await fetch('/api/offers').then(r => r.json());
+    const offer = offers.find(o => o.code === code);
+    if (!offer) {
+      _coAppliedCoupon = null;
+      if (msg) msg.innerHTML = `<span style="color:#C62828;">❌ "${code}" is not a valid coupon.</span>`;
+    } else {
+      const sub = cart.reduce((s, c) => s + c.price * c.qty, 0);
+      if (sub < (offer.min_order || 0)) {
+        if (msg) msg.innerHTML = `<span style="color:#C62828;">❌ Minimum order ₹${offer.min_order} required.</span>`;
+        return;
+      }
+      _coAppliedCoupon = offer;
+      if (msg) msg.innerHTML = `<span style="color:#2E7D32;">✅ "${code}" applied!</span>`;
+      updateCheckoutTotals();
+    }
+  } catch {
+    if (msg) msg.innerHTML = `<span style="color:#C62828;">Could not validate. Try again.</span>`;
+  }
 }
 
-function selectAddress(id) {
-  document.querySelectorAll('.address-option').forEach(a => {
-    a.style.borderColor = 'var(--border)';
-    a.querySelector('.selected-marker')?.remove();
-  });
-  const el = document.getElementById(id);
-  el.style.borderColor = 'var(--rust)';
+async function checkoutOpenOffers() {
+  document.getElementById('offersSheetOverlay')?.classList.add('open');
+  document.getElementById('offersSheetPanel')?.classList.add('open');
+  const list = document.getElementById('offersSheetList');
+  if (!list) return;
+  list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px;">Loading…</div>';
+  try {
+    const { offers } = await fetch('/api/offers').then(r => r.json());
+    if (!offers.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px;">No offers right now.</div>';
+      return;
+    }
+    list.innerHTML = offers.map(o => {
+      const discText = o.discount_type === 'flat' ? `₹${o.discount_value} off` : `${o.discount_value}% off`;
+      const minText  = o.min_order ? ` on orders above ₹${o.min_order}` : '';
+      return `<div class="offer-list-card">
+        <div class="offer-list-card-top">
+          <span class="offer-list-code">${o.code}</span>
+          <button class="offer-list-apply-btn" onclick="applyCheckoutOfferCode('${o.code}')">Apply</button>
+        </div>
+        <div class="offer-list-title">${o.title}</div>
+        <div class="offer-list-desc">${discText}${minText}${o.max_discount ? ` (max ₹${o.max_discount})` : ''}</div>
+      </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#C62828;font-size:13px;">Failed to load offers.</div>';
+  }
 }
 
-function saveAddress() {
-  const pincode = document.getElementById('newPincode')?.value;
-  const zones = Object.keys(DELIVERY_ZONES);
-  if (!zones.includes(pincode)) {
-    showToast('❌ We don\'t deliver to this pincode yet');
-    return;
+function applyCheckoutOfferCode(code) {
+  document.getElementById('couponCode').value = code;
+  closeOffersSheet();
+  checkoutApplyCoupon();
+}
+
+// ── Address ───────────────────────────────────────────────────────────────
+function renderAddresses() {
+  const container = document.getElementById('coAddressList');
+  if (!container) return;
+  const saved = getSavedAddresses?.() || [];
+  const loc   = getCurrentLocation?.();
+  const all   = loc ? [{ id:'current', shortName: loc.shortName, fullAddress: loc.fullAddress, label: 'Current' }, ...saved] : saved;
+  if (!all.length) { container.innerHTML = ''; return; }
+  container.innerHTML = all.slice(0, 3).map((a, i) => {
+    const isFirst = i === 0;
+    if (!_coSelectedAddr && isFirst) _coSelectedAddr = a;
+    const active = _coSelectedAddr?.id === a.id || (_coSelectedAddr === null && isFirst);
+    return `<div class="co-addr-opt ${active ? 'active' : ''}" onclick="selectAddress(${i})">
+      <span class="co-addr-tag">${a.label || '📍 Saved'}</span>
+      <div class="co-addr-main">${a.shortName || 'Saved Location'}</div>
+      ${a.fullAddress ? `<div class="co-addr-sub">${a.fullAddress.split(',').slice(1,3).join(',').trim()}</div>` : ''}
+    </div>`;
+  }).join('');
+  if (!_coSelectedAddr && all.length) _coSelectedAddr = all[0];
+}
+
+window._coAddressList = [];
+function selectAddress(idx) {
+  _coSelectedAddr = window._coAddressList[idx];
+  document.querySelectorAll('.co-addr-opt').forEach((el, i) => el.classList.toggle('active', i === idx));
+}
+
+function toggleAddressForm() {
+  const f = document.getElementById('addAddressForm');
+  f.style.display = f.style.display === 'none' ? 'block' : 'none';
+}
+
+function saveNewAddress() {
+  const flat     = document.getElementById('addrFlat')?.value.trim();
+  const building = document.getElementById('addrBuilding')?.value.trim();
+  const street   = document.getElementById('addrStreet')?.value.trim();
+  if (!flat && !building && !street) { showToast('Fill in address details'); return; }
+  const fullAddress = [flat, building, street].filter(Boolean).join(', ');
+  if (typeof saveAddressToStore === 'function') {
+    saveAddressToStore({ id: Date.now(), shortName: flat || building, fullAddress, label: 'Home' });
   }
   showToast('✅ Address saved!');
   document.getElementById('addAddressForm').style.display = 'none';
+  renderAddresses();
 }
 
-// ─── Payment ──────────────────────────────────────────────────────────────────
+// ── Payment ───────────────────────────────────────────────────────────────
 function selectPayment(el, type) {
   selectedPayment = type;
-  document.querySelectorAll('.payment-option').forEach(p => p.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('upiSection').style.display = type === 'upi' ? 'block' : 'none';
+  document.querySelectorAll('.co-pay-opt').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('upiSection').style.display  = type === 'upi'  ? 'block' : 'none';
   document.getElementById('cardSection').style.display = type === 'card' ? 'block' : 'none';
 }
 
-// ─── Place order ──────────────────────────────────────────────────────────────
+// ── Place order ───────────────────────────────────────────────────────────
 function placeOrder() {
-  if (!cart || cart.length === 0) {
-    showToast('❌ Your cart is empty!');
-    return;
+  if (!cart || cart.length === 0) { showToast('❌ Your cart is empty!'); return; }
+  // Warn if location is outside delivery zone but still allow order
+  if (document.getElementById('coNotDeliverableBanner')?.style.display === 'block') {
+    showToast('⚠️ Your location may be outside our usual delivery area');
   }
-  const btn = event.target;
-  btn.textContent = '⏳ Processing...';
+  const btn = document.getElementById('placeOrderBtn');
   btn.disabled = true;
-
-  // Simulate payment processing
+  btn.innerHTML = '<span>⏳ Processing…</span>';
   setTimeout(() => {
     const orderId = 'OK' + Date.now().toString().slice(-6);
     localStorage.setItem('ok_order_id', orderId);
+    cart = [];
     localStorage.setItem('ok_cart', '[]');
     document.getElementById('confirmOrderId').textContent = `#${orderId}`;
     document.getElementById('orderConfirm').style.display = 'flex';
   }, 1800);
 }
 
-function goToTracking() {
-  window.location.href = '/tracking';
-}
-
-document.addEventListener('DOMContentLoaded', renderSummary);
+// ── Init ──────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  _refreshLocLabel();
+  renderCheckoutItems();
+  renderAddresses();
+  // Re-render items once MENU_DATA is populated (for add-ons button)
+  const _origLoadDone = window._onMenuLoaded;
+  const _poll = setInterval(() => {
+    if (MENU_DATA && MENU_DATA.length > 0) {
+      clearInterval(_poll);
+      renderCheckoutItems();
+    }
+  }, 200);
+});
 </script>
 </body>
 </html>

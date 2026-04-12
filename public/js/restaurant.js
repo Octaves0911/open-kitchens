@@ -1,0 +1,688 @@
+/**
+ * Open Kitchens — Restaurant Portal JS
+ * Handles: auth guard, tab switching, Orders/Menu/Offers/LivePrep tabs,
+ * real-time WebSocket updates, full API integration.
+ */
+
+'use strict';
+
+// ── Config ────────────────────────────────────────────────────────────────────
+const API    = (path, opts = {}) => apiFetch(path, opts);
+const SECRET_KEY = 'ok_restaurant_secret';
+let   secret = localStorage.getItem(SECRET_KEY) || '';
+
+// ── Auth Guard ────────────────────────────────────────────────────────────────
+function checkAuth() {
+  if (!secret) { showAuthModal(); return false; }
+  return true;
+}
+
+function showAuthModal() {
+  document.getElementById('authOverlay').style.display = 'flex';
+}
+
+function hideAuthModal() {
+  document.getElementById('authOverlay').style.display = 'none';
+}
+
+function submitSecret() {
+  const val = document.getElementById('secretInput').value.trim();
+  if (!val) return;
+  secret = val;
+  localStorage.setItem(SECRET_KEY, secret);
+  hideAuthModal();
+  init();
+}
+
+// ── API Helper ────────────────────────────────────────────────────────────────
+async function apiFetch(path, { method = 'GET', body = null, form = null } = {}) {
+  const opts = {
+    method,
+    headers: { 'x-restaurant-secret': encodeURIComponent(secret) }
+  };
+  if (form) {
+    opts.body = form; // FormData — don't set Content-Type
+  } else if (body) {
+    opts.headers['Content-Type'] = 'application/json';
+    opts.body = JSON.stringify(body);
+  }
+  const res = await fetch('/api/restaurant' + path, opts);
+  const data = await res.json();
+  if (!res.ok) {
+    if (res.status === 403) { secret = ''; localStorage.removeItem(SECRET_KEY); showAuthModal(); }
+    throw new Error(data.error || 'Request failed');
+  }
+  return data;
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.createElement('div');
+  t.className = `rp-toast rp-toast-${type}`;
+  t.textContent = msg;
+  document.getElementById('toastContainer').appendChild(t);
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => { t.classList.remove('show'); setTimeout(() => t.remove(), 300); }, 3000);
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+let ws = null;
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}`);
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'register', userId: 'restaurant' }));
+  ws.onmessage = ({ data }) => {
+    try {
+      const msg = JSON.parse(data);
+      if (msg.type === 'order_update') onOrderUpdate(msg);
+    } catch {}
+  };
+  ws.onclose = () => setTimeout(connectWS, 3000); // auto-reconnect
+}
+
+// ── Tab Switching ─────────────────────────────────────────────────────────────
+const TABS = ['orders', 'menu', 'offers', 'liveprep'];
+let activeTab = 'orders';
+
+function switchTab(name) {
+  if (!checkAuth()) return;
+  activeTab = name;
+  TABS.forEach(t => {
+    document.getElementById(`tab-btn-${t}`)?.classList.toggle('active', t === name);
+    document.getElementById(`tab-${t}`)?.classList.toggle('active', t === name);
+  });
+  if (name === 'orders')   loadOrders();
+  if (name === 'menu')     loadMenu();
+  if (name === 'offers')   loadOffers();
+  if (name === 'liveprep') loadLivePrep();
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// ORDERS TAB
+// ════════════════════════════════════════════════════════════════════════════════
+let ordersData = [];
+
+async function loadOrders() {
+  const container = document.getElementById('ordersList');
+  container.innerHTML = '<div class="rp-loading">Loading orders…</div>';
+  try {
+    const { orders } = await API('/orders');
+    ordersData = orders;
+    renderOrders(orders);
+    updateOrderBadge(orders.filter(o => o.status === 'placed').length);
+  } catch (e) {
+    container.innerHTML = `<div class="rp-empty">Failed to load orders: ${e.message}</div>`;
+  }
+}
+
+function renderOrders(orders) {
+  const container = document.getElementById('ordersList');
+  if (!orders.length) {
+    container.innerHTML = '<div class="rp-empty">No orders yet today.</div>';
+    return;
+  }
+  const groups = {
+    placed:    orders.filter(o => o.status === 'placed'),
+    active:    orders.filter(o => ['accepted','preparing','ready'].includes(o.status)),
+    done:      orders.filter(o => ['dispatched','delivered','declined'].includes(o.status)),
+  };
+  container.innerHTML = [
+    groups.placed.length  ? `<div class="rp-group-label new-label">🔔 New Orders (${groups.placed.length})</div>`  + groups.placed.map(orderCard).join('') : '',
+    groups.active.length  ? `<div class="rp-group-label">👩‍🍳 In Progress (${groups.active.length})</div>`             + groups.active.map(orderCard).join('') : '',
+    groups.done.length    ? `<div class="rp-group-label done-label">✅ Completed / Declined (${groups.done.length})</div>` + groups.done.map(orderCard).join('') : '',
+  ].join('');
+}
+
+function orderCard(o) {
+  const items   = (o.items || []).map(i => `${i.name || i.item_id} ×${i.quantity || 1}`).join(', ');
+  const since   = timeSince(o.created_at);
+  const statusLabel = {
+    placed: '🆕 New', accepted: '✅ Accepted', preparing: '👩‍🍳 Preparing',
+    ready: '📦 Ready', dispatched: '🛵 Dispatched', delivered: '✔ Delivered', declined: '❌ Declined'
+  }[o.status] || o.status;
+  const statusClass = { placed:'badge-new', accepted:'badge-accepted', preparing:'badge-preparing',
+    ready:'badge-ready', dispatched:'badge-dispatched', declined:'badge-declined' }[o.status] || '';
+
+  const actions = o.status === 'placed' ? `
+    <button class="rp-btn rp-btn-primary" onclick="updateOrder(${o.id},'accepted')">✅ Accept</button>
+    <button class="rp-btn rp-btn-danger"  onclick="updateOrder(${o.id},'declined')">❌ Decline</button>` :
+  o.status === 'accepted' ? `
+    <button class="rp-btn rp-btn-amber"   onclick="updateOrder(${o.id},'preparing')">👩‍🍳 Start Preparing</button>` :
+  o.status === 'preparing' ? `
+    <button class="rp-btn rp-btn-primary" onclick="updateOrder(${o.id},'ready')">📦 Mark Ready</button>` :
+  o.status === 'ready' ? `
+    <button class="rp-btn rp-btn-primary" onclick="updateOrder(${o.id},'dispatched')">🛵 Dispatched</button>` : '';
+
+  return `
+  <div class="rp-order-card ${o.status === 'placed' ? 'card-new' : ''}" id="order-${o.id}">
+    <div class="rp-order-head">
+      <div>
+        <span class="rp-order-id">#OK${String(o.id).padStart(6,'0')}</span>
+        <span class="rp-status-badge ${statusClass}">${statusLabel}</span>
+      </div>
+      <span class="rp-order-time">${since}</span>
+    </div>
+    <div class="rp-order-items">${items || '—'}</div>
+    <div class="rp-order-meta">
+      👤 ${o.user_name || 'Guest'} · 📞 ${o.user_phone || '—'} · 💰 ₹${o.total || 0}
+    </div>
+    ${actions ? `<div class="rp-order-actions">${actions}</div>` : ''}
+  </div>`;
+}
+
+async function updateOrder(id, status) {
+  try {
+    await API(`/orders/${id}`, { method: 'PATCH', body: { status } });
+    showToast(`Order #${id} → ${status}`);
+    loadOrders();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function onOrderUpdate(msg) {
+  // Refresh if on orders tab; show badge otherwise
+  if (activeTab === 'orders') loadOrders();
+  else if (msg.status === 'placed') {
+    const badge = document.getElementById('orderBadge');
+    const count = parseInt(badge.textContent || '0') + 1;
+    updateOrderBadge(count);
+    showToast('🔔 New order received!', 'info');
+  }
+}
+
+function updateOrderBadge(count) {
+  const badge = document.getElementById('orderBadge');
+  badge.textContent = count || '';
+  badge.style.display = count ? 'flex' : 'none';
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// MENU TAB
+// ════════════════════════════════════════════════════════════════════════════════
+let menuItems     = [];
+let editingItemId = null;
+
+async function loadMenu() {
+  const container = document.getElementById('menuList');
+  container.innerHTML = '<div class="rp-loading">Loading menu…</div>';
+  try {
+    const { items } = await API('/menu');
+    menuItems = items;
+    renderMenuList(items);
+  } catch (e) {
+    container.innerHTML = `<div class="rp-empty">Failed to load menu: ${e.message}</div>`;
+  }
+}
+
+function renderMenuList(items) {
+  const container = document.getElementById('menuList');
+  const search = (document.getElementById('menuSearch')?.value || '').toLowerCase();
+  const filtered = search ? items.filter(i => i.name.toLowerCase().includes(search) || (i.category||'').toLowerCase().includes(search)) : items;
+  if (!filtered.length) { container.innerHTML = '<div class="rp-empty">No items found.</div>'; return; }
+
+  // Group by category
+  const groups = {};
+  filtered.forEach(i => { const c = i.category || 'Other'; if (!groups[c]) groups[c] = []; groups[c].push(i); });
+  container.innerHTML = Object.entries(groups).map(([cat, items]) => `
+    <div class="rp-menu-category">
+      <div class="rp-category-title">${cat}</div>
+      ${items.map(menuItemRow).join('')}
+    </div>`).join('');
+}
+
+function menuItemRow(item) {
+  const img    = item.image_url ? `<img src="${item.image_url}" class="rp-item-thumb" alt="${item.name}"/>` : `<div class="rp-item-thumb-placeholder">${item.emoji || '🍽️'}</div>`;
+  const veg    = item.is_veg ? '<span class="veg-dot">●</span>' : '<span class="nonveg-dot">●</span>';
+  const addons = Array.isArray(item.addons) ? item.addons : JSON.parse(item.addons_json || '[]');
+  const addonTag = addons.length
+    ? `➕ ${addons.length} add-on${addons.length > 1 ? 's' : ''}: ${addons.map(a => a.name + (a.price ? ' +₹' + a.price : '')).join(', ')}`
+    : '';
+  const tags = [
+    item.is_bestseller ? '⭐ Bestseller' : '',
+    item.is_spicy      ? '🌶 Spicy'     : '',
+    addonTag
+  ].filter(Boolean).join(' · ');
+  return `
+  <div class="rp-menu-item ${!item.is_available ? 'item-unavailable' : ''}">
+    ${img}
+    <div class="rp-item-info">
+      <div class="rp-item-name">${veg} ${item.name}</div>
+      ${item.description ? `<div class="rp-item-desc">${item.description}</div>` : ''}
+      ${tags ? `<div class="rp-item-tags">${tags}</div>` : ''}
+      <div class="rp-item-price">₹${item.price}</div>
+    </div>
+    <div class="rp-item-actions">
+      <label class="rp-toggle" title="${item.is_available ? 'Available' : 'Unavailable'}">
+        <input type="checkbox" ${item.is_available ? 'checked' : ''} onchange="toggleAvailability(${item.id}, this.checked)"/>
+        <span class="rp-toggle-slider"></span>
+      </label>
+      <button class="rp-btn rp-btn-sm rp-btn-outline" onclick="openItemForm(${item.id})">✏️</button>
+      <button class="rp-btn rp-btn-sm rp-btn-danger"  onclick="deleteItem(${item.id}, '${item.name.replace(/'/g,"\\'")}')">🗑</button>
+    </div>
+  </div>`;
+}
+
+async function toggleAvailability(id, available) {
+  try {
+    await API(`/menu/${id}`, { method: 'PUT', body: { is_available: available ? 1 : 0 } });
+    showToast(available ? 'Item marked available' : 'Item marked unavailable');
+  } catch (e) { showToast(e.message, 'error'); loadMenu(); }
+}
+
+async function deleteItem(id, name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  try {
+    await API(`/menu/${id}`, { method: 'DELETE' });
+    showToast(`"${name}" deleted`);
+    loadMenu();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function openItemForm(id = null) {
+  editingItemId = id;
+  const form  = document.getElementById('itemFormPanel');
+  const title = document.getElementById('itemFormTitle');
+  title.textContent = id ? 'Edit Menu Item' : 'Add Menu Item';
+  resetItemForm();
+  if (id) {
+    const item = menuItems.find(i => i.id === id);
+    if (!item) return;
+    document.getElementById('iName').value        = item.name;
+    document.getElementById('iCategory').value    = item.category || '';
+    document.getElementById('iPrice').value       = item.price;
+    document.getElementById('iDesc').value        = item.description || '';
+    document.getElementById('iVeg').checked        = !!item.is_veg;
+    document.getElementById('iBestseller').checked = !!item.is_bestseller;
+    document.getElementById('iSpicy').checked      = !!item.is_spicy;
+    document.getElementById('iAvail').checked      = item.is_available !== 0;
+    document.getElementById('iFanFav').checked     = !!item.is_fan_favourite;
+    if (item.image_url) {
+      document.getElementById('iImgPreview').src          = item.image_url;
+      document.getElementById('iImgPreviewWrap').style.display = 'block';
+    }
+    renderAddons(item.addons || []);
+  }
+  document.getElementById('menuList').style.display = 'none';
+  document.getElementById('menuToolbar').style.display = 'none';
+  form.style.display = 'block';
+}
+
+function closeItemForm() {
+  document.getElementById('itemFormPanel').style.display = 'none';
+  document.getElementById('menuList').style.display = 'block';
+  document.getElementById('menuToolbar').style.display = 'flex';
+  editingItemId = null;
+}
+
+function resetItemForm() {
+  ['iName','iCategory','iPrice','iDesc'].forEach(id => document.getElementById(id).value = '');
+  ['iVeg','iBestseller','iSpicy','iAvail','iFanFav'].forEach(id => document.getElementById(id).checked = false);
+  document.getElementById('iVeg').checked   = true;
+  document.getElementById('iAvail').checked = true;
+  document.getElementById('iImgPreviewWrap').style.display = 'none';
+  document.getElementById('iImgFile').value = '';
+  document.getElementById('addonsContainer').innerHTML = '';
+}
+
+// ── Add-ons editor ────────────────────────────────────────────────────────────
+function renderAddons(addons) {
+  document.getElementById('addonsContainer').innerHTML = addons.map((a, i) => addonRow(a, i)).join('');
+}
+
+function addonRow(addon = {}, idx = Date.now()) {
+  return `
+  <div class="rp-addon-row" id="addon-${idx}">
+    <input class="rp-input rp-addon-name"  placeholder="Add-on name"  value="${addon.name  || ''}"/>
+    <input class="rp-input rp-addon-price" placeholder="Price (₹)" type="number" min="0" value="${addon.price || 0}"/>
+    <button class="rp-btn rp-btn-sm rp-btn-danger" onclick="this.closest('.rp-addon-row').remove()">✕</button>
+  </div>`;
+}
+
+function addAddonRow() {
+  const c = document.getElementById('addonsContainer');
+  const div = document.createElement('div');
+  div.innerHTML = addonRow({}, Date.now());
+  c.appendChild(div.firstElementChild);
+}
+
+function collectAddons() {
+  return [...document.querySelectorAll('.rp-addon-row')].map(row => ({
+    name:  row.querySelector('.rp-addon-name').value.trim(),
+    price: parseFloat(row.querySelector('.rp-addon-price').value) || 0
+  })).filter(a => a.name);
+}
+
+// ── Image preview ─────────────────────────────────────────────────────────────
+function onImageSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('iImgPreview').src = e.target.result;
+    document.getElementById('iImgPreviewWrap').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function saveItem() {
+  const name  = document.getElementById('iName').value.trim();
+  const price = document.getElementById('iPrice').value;
+  if (!name || !price) { showToast('Name and price are required', 'error'); return; }
+
+  const form = new FormData();
+  form.append('name',         name);
+  form.append('category',     document.getElementById('iCategory').value.trim());
+  form.append('description',  document.getElementById('iDesc').value.trim());
+  form.append('price',        price);
+  form.append('is_veg',       document.getElementById('iVeg').checked        ? 1 : 0);
+  form.append('is_bestseller',  document.getElementById('iBestseller').checked ? 1 : 0);
+  form.append('is_spicy',       document.getElementById('iSpicy').checked      ? 1 : 0);
+  form.append('is_available',   document.getElementById('iAvail').checked      ? 1 : 0);
+  form.append('is_fan_favourite', document.getElementById('iFanFav').checked   ? 1 : 0);
+  form.append('addons',       JSON.stringify(collectAddons()));
+  const file = document.getElementById('iImgFile').files[0];
+  if (file) form.append('image', file);
+
+  try {
+    if (editingItemId) {
+      await API(`/menu/${editingItemId}`, { method: 'PUT', form });
+      showToast('Item updated ✅');
+    } else {
+      await API('/menu', { method: 'POST', form });
+      showToast('Item added ✅');
+    }
+    closeItemForm();
+    loadMenu();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// OFFERS TAB
+// ════════════════════════════════════════════════════════════════════════════════
+let offersData    = [];
+let editingOfferId = null;
+
+async function loadOffers() {
+  const container = document.getElementById('offersList');
+  container.innerHTML = '<div class="rp-loading">Loading offers…</div>';
+  try {
+    const { offers } = await API('/offers');
+    offersData = offers;
+    renderOffers(offers);
+  } catch (e) {
+    container.innerHTML = `<div class="rp-empty">Failed to load offers: ${e.message}</div>`;
+  }
+}
+
+function renderOffers(offers) {
+  const container = document.getElementById('offersList');
+  if (!offers.length) { container.innerHTML = '<div class="rp-empty">No offers yet. Create one above!</div>'; return; }
+  container.innerHTML = offers.map(offerCard).join('');
+}
+
+function offerCard(o) {
+  const disc  = o.discount_type === 'percent' ? `${o.discount_value}% off` : `₹${o.discount_value} off`;
+  const valid = o.valid_until ? `Valid until ${new Date(o.valid_until).toLocaleDateString('en-IN')}` : 'No expiry';
+  return `
+  <div class="rp-offer-card ${!o.is_active ? 'offer-inactive' : ''}">
+    <div class="rp-offer-head">
+      <div>
+        <span class="rp-offer-code">${o.code}</span>
+        <span class="rp-offer-disc">${disc}</span>
+      </div>
+      <label class="rp-toggle">
+        <input type="checkbox" ${o.is_active ? 'checked' : ''} onchange="toggleOffer(${o.id}, this.checked)"/>
+        <span class="rp-toggle-slider"></span>
+      </label>
+    </div>
+    <div class="rp-offer-title">${o.title}</div>
+    ${o.description ? `<div class="rp-offer-desc">${o.description}</div>` : ''}
+    <div class="rp-offer-meta">
+      Min ₹${o.min_order || 0} · ${valid} · Used ${o.usage_count || 0}×${o.usage_limit ? '/' + o.usage_limit : ''}
+    </div>
+    <div class="rp-offer-actions">
+      <button class="rp-btn rp-btn-sm rp-btn-outline" onclick="openOfferForm(${o.id})">✏️ Edit</button>
+      <button class="rp-btn rp-btn-sm rp-btn-danger"  onclick="deleteOffer(${o.id}, '${o.code}')">🗑 Delete</button>
+    </div>
+  </div>`;
+}
+
+async function toggleOffer(id, active) {
+  try {
+    await API(`/offers/${id}`, { method: 'PUT', body: { is_active: active ? 1 : 0 } });
+    showToast(active ? 'Offer activated' : 'Offer deactivated');
+    loadOffers();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function deleteOffer(id, code) {
+  if (!confirm(`Delete offer "${code}"?`)) return;
+  try {
+    await API(`/offers/${id}`, { method: 'DELETE' });
+    showToast(`Offer "${code}" deleted`);
+    loadOffers();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+// Offer image preview helpers
+function previewOfferImage(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('oImgPreview').src = e.target.result;
+    document.getElementById('oImgPreviewWrap').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+function clearOfferImage() {
+  document.getElementById('oImgFile').value = '';
+  document.getElementById('oImgPreview').src = '';
+  document.getElementById('oImgPreviewWrap').style.display = 'none';
+}
+
+function openOfferForm(id = null) {
+  editingOfferId = id;
+  resetOfferForm();
+  document.getElementById('offerFormTitle').textContent = id ? 'Edit Offer' : 'New Offer';
+  if (id) {
+    const o = offersData.find(x => x.id === id);
+    if (!o) return;
+    document.getElementById('oCode').value         = o.code;
+    document.getElementById('oTitle').value        = o.title;
+    document.getElementById('oDesc').value         = o.description || '';
+    document.getElementById('oType').value         = o.discount_type;
+    document.getElementById('oValue').value        = o.discount_value;
+    document.getElementById('oMinOrder').value     = o.min_order || 0;
+    document.getElementById('oMaxDisc').value      = o.max_discount || '';
+    document.getElementById('oValidUntil').value   = o.valid_until ? o.valid_until.split('T')[0] : '';
+    document.getElementById('oUsageLimit').value   = o.usage_limit || '';
+    document.getElementById('oEmoji').value        = o.emoji    || '';
+    document.getElementById('oBadge').value        = o.badge    || '';
+    document.getElementById('oOldPrice').value     = o.old_price || '';
+    if (o.image_url) {
+      document.getElementById('oImgPreview').src = o.image_url;
+      document.getElementById('oImgPreviewWrap').style.display = 'block';
+    }
+  }
+  document.getElementById('offerFormPanel').style.display = 'block';
+  document.getElementById('offerFormPanel').scrollIntoView({ behavior: 'smooth' });
+}
+
+function closeOfferForm() {
+  document.getElementById('offerFormPanel').style.display = 'none';
+  editingOfferId = null;
+}
+
+function resetOfferForm() {
+  ['oCode','oTitle','oDesc','oValue','oMinOrder','oMaxDisc','oValidUntil','oUsageLimit','oEmoji','oBadge','oOldPrice']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('oType').value = 'percent';
+  clearOfferImage();
+}
+
+async function saveOffer() {
+  const code  = document.getElementById('oCode').value.trim().toUpperCase();
+  const title = document.getElementById('oTitle').value.trim();
+  const value = document.getElementById('oValue').value;
+  if (!code || !title || !value) { showToast('Code, title and discount value required', 'error'); return; }
+
+  // Use FormData to support image upload
+  const form = new FormData();
+  form.append('code',           code);
+  form.append('title',          title);
+  form.append('description',    document.getElementById('oDesc').value.trim()     || '');
+  form.append('discount_type',  document.getElementById('oType').value);
+  form.append('discount_value', parseFloat(value));
+  form.append('min_order',      parseFloat(document.getElementById('oMinOrder').value) || 0);
+  form.append('max_discount',   document.getElementById('oMaxDisc').value   || '');
+  form.append('valid_until',    document.getElementById('oValidUntil').value || '');
+  form.append('usage_limit',    document.getElementById('oUsageLimit').value || '');
+  form.append('emoji',          document.getElementById('oEmoji').value.trim()    || '');
+  form.append('badge',          document.getElementById('oBadge').value.trim()    || '');
+  form.append('old_price',      document.getElementById('oOldPrice').value        || '');
+  form.append('is_active',      1);
+  const imgFile = document.getElementById('oImgFile').files[0];
+  if (imgFile) form.append('image', imgFile);
+
+  try {
+    if (editingOfferId) {
+      await API(`/offers/${editingOfferId}`, { method: 'PUT', form });
+      showToast('Offer updated ✅');
+    } else {
+      await API('/offers', { method: 'POST', form });
+      showToast('Offer created ✅');
+    }
+    closeOfferForm();
+    loadOffers();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// LIVE PREP TAB
+// ════════════════════════════════════════════════════════════════════════════════
+async function loadLivePrep() {
+  // Load saved RTSP URL
+  try {
+    const { value } = await API('/config/rtsp_url');
+    if (value) document.getElementById('rtspInput').value = value;
+  } catch {}
+  loadAcceptedOrders();
+}
+
+async function saveRtspUrl() {
+  const url = document.getElementById('rtspInput').value.trim();
+  if (!url) { showToast('Enter an RTSP URL first', 'error'); return; }
+  try {
+    await API('/config/rtsp_url', { method: 'PUT', body: { value: url } });
+    showToast('RTSP URL saved ✅');
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function toggleRtspVisibility() {
+  const input = document.getElementById('rtspInput');
+  input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+async function loadAcceptedOrders() {
+  const container = document.getElementById('acceptedOrdersList');
+  container.innerHTML = '<div class="rp-loading">Loading…</div>';
+  try {
+    const { orders } = await API('/orders?status=accepted');
+    const preparing  = (await API('/orders?status=preparing')).orders;
+    const combined   = [...orders, ...preparing];
+    if (!combined.length) {
+      container.innerHTML = '<div class="rp-empty">No accepted orders right now.</div>';
+      return;
+    }
+    // Load active streams to know which orders are already streaming
+    const { streams } = await API('/stream/active').catch(() => ({ streams: [] }));
+    const streamingIds = new Set(streams.map(s => s.order_id));
+
+    container.innerHTML = combined.map(o => {
+      const items   = (o.items || []).map(i => `${i.name || i.item_id} ×${i.quantity || 1}`).join(', ');
+      const streaming = streamingIds.has(o.id);
+      return `
+      <div class="rp-live-order" id="live-order-${o.id}">
+        <div class="rp-live-order-info">
+          <span class="rp-order-id">#OK${String(o.id).padStart(6,'0')}</span>
+          <span class="rp-live-items">${items}</span>
+          <span class="rp-live-user">👤 ${o.user_name || 'Guest'}</span>
+        </div>
+        <div class="rp-live-controls">
+          ${streaming
+            ? `<span class="live-badge-sm">🔴 LIVE</span>
+               <button class="rp-btn rp-btn-danger rp-btn-sm" onclick="stopStream(${o.id})">⏹ Stop</button>`
+            : `<button class="rp-btn rp-btn-primary rp-btn-sm" onclick="startStream(${o.id})">▶ Start</button>`
+          }
+        </div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = `<div class="rp-empty">Failed to load orders: ${e.message}</div>`;
+  }
+}
+
+async function startStream(orderId) {
+  try {
+    const { streamUrl, token } = await API(`/stream/start/${orderId}`, { method: 'POST' });
+    showToast(`🔴 Stream started — customer notified`, 'success');
+    // Show copy link
+    const row = document.getElementById(`live-order-${orderId}`);
+    if (row) {
+      row.querySelector('.rp-live-controls').innerHTML = `
+        <span class="live-badge-sm">🔴 LIVE</span>
+        <button class="rp-btn rp-btn-sm rp-btn-outline" onclick="copyStreamLink('${token}')">🔗 Copy Link</button>
+        <button class="rp-btn rp-btn-danger rp-btn-sm" onclick="stopStream(${orderId})">⏹ Stop</button>`;
+    }
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+async function stopStream(orderId) {
+  try {
+    await API(`/stream/stop/${orderId}`, { method: 'POST' });
+    showToast('Stream stopped', 'success');
+    loadAcceptedOrders();
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function copyStreamLink(token) {
+  const url = `${location.origin}/stream?token=${token}`;
+  navigator.clipboard.writeText(url).then(() => showToast('Stream link copied!'));
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const { orders } = await API('/orders');
+    const today = orders.filter(o => {
+      const d = new Date(o.created_at);
+      const now = new Date();
+      return d.getDate() === now.getDate() && d.getMonth() === now.getMonth();
+    });
+    document.getElementById('statToday').textContent    = today.length;
+    document.getElementById('statPending').textContent  = today.filter(o => o.status === 'placed').length;
+    document.getElementById('statRevenue').textContent  = '₹' + today.filter(o => !['declined'].includes(o.status)).reduce((s, o) => s + (o.total || 0), 0).toFixed(0);
+    document.getElementById('statAccepted').textContent = today.filter(o => ['accepted','preparing','ready','dispatched','delivered'].includes(o.status)).length;
+  } catch {}
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────────
+function timeSince(dateStr) {
+  const secs = Math.floor((Date.now() - new Date(dateStr)) / 1000);
+  if (secs < 60)  return `${secs}s ago`;
+  if (secs < 3600) return `${Math.floor(secs/60)}m ago`;
+  return `${Math.floor(secs/3600)}h ago`;
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+function init() {
+  connectWS();
+  loadStats();
+  switchTab('orders');
+  // Refresh stats every 60s
+  setInterval(loadStats, 60000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (secret) init();
+  else showAuthModal();
+});

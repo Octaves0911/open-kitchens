@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="theme-color" content="#1a0a00"/>
+  <title>Live Kitchen Stream — Open Kitchens</title>
+  <link rel="icon" href="/images/logo.png" type="image/png"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--rust:#C0392B;}
+body{background:#0d0703;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;}
+.stream-container{width:min(96vw,720px);text-align:center;}
+.stream-header{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px;}
+.stream-logo{width:36px;height:36px;border-radius:8px;}
+.stream-brand{font-size:18px;font-weight:800;letter-spacing:.3px;}
+.stream-title{font-size:14px;color:rgba(255,255,255,.6);margin-bottom:16px;}
+.live-badge{
+  display:inline-flex;align-items:center;gap:6px;background:var(--rust);
+  color:#fff;padding:5px 14px;border-radius:50px;font-size:12px;font-weight:800;
+  letter-spacing:.5px;margin-bottom:14px;
+}
+.live-dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:blink 1s infinite;}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+#videoWrapper{
+  width:100%;aspect-ratio:16/9;background:#1a0a00;border-radius:12px;
+  overflow:hidden;position:relative;margin-bottom:16px;
+}
+#videoWrapper video{width:100%;height:100%;object-fit:cover;}
+#streamOverlay{
+  position:absolute;inset:0;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:12px;
+  background:rgba(10,4,0,.7);backdrop-filter:blur(2px);
+}
+.overlay-icon{font-size:48px;}
+.overlay-msg{font-size:15px;color:rgba(255,255,255,.8);max-width:280px;line-height:1.5;}
+.overlay-sub{font-size:12px;color:rgba(255,255,255,.5);}
+.stream-info{font-size:13px;color:rgba(255,255,255,.5);margin-top:8px;}
+a.back-link{
+  display:inline-block;margin-top:20px;color:rgba(255,255,255,.5);
+  font-size:12px;text-decoration:none;
+}
+a.back-link:hover{color:#fff;}
+</style>
+</head>
+<body>
+<div class="stream-container">
+  <div class="stream-header">
+    <img src="/images/logo.png" alt="Open Kitchens" class="stream-logo"/>
+    <span class="stream-brand">Open Kitchens</span>
+  </div>
+
+  <div id="liveInfo" style="display:none;">
+    <div class="live-badge"><span class="live-dot"></span> LIVE KITCHEN</div>
+  </div>
+  <div class="stream-title" id="streamTitle">Connecting to live stream…</div>
+
+  <div id="videoWrapper">
+    <video id="hlsVideo" controls playsinline></video>
+    <div id="streamOverlay">
+      <div class="overlay-icon">🎥</div>
+      <div class="overlay-msg" id="overlayMsg">Validating your stream access…</div>
+      <div class="overlay-sub" id="overlaySub">Please wait</div>
+    </div>
+  </div>
+
+  <div class="stream-info" id="streamInfo"></div>
+  <a href="/" class="back-link">← Back to Open Kitchens</a>
+</div>
+
+<!-- HLS.js for non-Safari browsers -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
+<script>
+(async () => {
+  const params = new URLSearchParams(location.search);
+  const token  = params.get('token');
+  const overlay    = document.getElementById('streamOverlay');
+  const overlayMsg = document.getElementById('overlayMsg');
+  const overlaySub = document.getElementById('overlaySub');
+  const video      = document.getElementById('hlsVideo');
+  const titleEl    = document.getElementById('streamTitle');
+  const infoEl     = document.getElementById('streamInfo');
+  const liveInfo   = document.getElementById('liveInfo');
+
+  function showError(msg, sub = '') {
+    overlay.style.display = 'flex';
+    overlay.querySelector('.overlay-icon').textContent = '⚠️';
+    overlayMsg.textContent = msg;
+    overlaySub.textContent = sub;
+    titleEl.textContent = 'Stream unavailable';
+  }
+
+  if (!token) {
+    showError('No stream token provided.', 'Please use the link sent to you.');
+    return;
+  }
+
+  // Validate token with backend
+  try {
+    const res  = await fetch(`/api/restaurant/stream/token/${token}`);
+    const data = await res.json();
+    if (!res.ok || !data.valid) {
+      showError('Stream not found or has ended.', data.error || 'The restaurant may have stopped the stream.');
+      return;
+    }
+
+    // Token valid — load HLS player
+    titleEl.textContent = `Live Kitchen Preparation — Order #${data.orderId}`;
+    liveInfo.style.display = 'block';
+    infoEl.textContent = 'You are watching your food being prepared live 🍳';
+
+    const hlsUrl = data.hlsUrl;
+    if (Hls.isSupported()) {
+      const hls = new Hls({ lowLatencyMode: true });
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        overlay.style.display = 'none';
+        video.play().catch(() => {});
+      });
+      hls.on(Hls.Events.ERROR, (_, errData) => {
+        if (errData.fatal) showError('Stream failed to load.', 'Please refresh the page.');
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      // Safari native HLS
+      video.src = hlsUrl;
+      video.addEventListener('loadedmetadata', () => {
+        overlay.style.display = 'none';
+        video.play().catch(() => {});
+      });
+    } else {
+      showError('Your browser does not support HLS streams.', 'Try opening this link in Chrome or Safari.');
+    }
+
+    // Poll for stream status every 10s
+    const poll = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/restaurant/stream/token/${token}`);
+        if (!r.ok) {
+          clearInterval(poll);
+          overlay.style.display = 'flex';
+          overlay.querySelector('.overlay-icon').textContent = '✅';
+          overlayMsg.textContent = 'Stream has ended.';
+          overlaySub.textContent = 'Your order is on its way!';
+          titleEl.textContent = 'Stream ended';
+          liveInfo.style.display = 'none';
+        }
+      } catch {}
+    }, 10000);
+
+  } catch (e) {
+    showError('Could not connect to the server.', 'Please check your connection and try again.');
+  }
+})();
+</script>
+</body>
+</html>

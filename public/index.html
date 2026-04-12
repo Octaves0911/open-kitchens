@@ -8,32 +8,63 @@
   <title>Open Kitchens — See What You Eat</title>
   <link rel="icon" href="/images/logo.png" type="image/png"/>
   <link rel="stylesheet" href="/css/app.css"/>
+  <!-- Mapbox GL JS v2.15.0 (stable LTS) -->
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
+  <meta name="mapbox-token" content="__MAPBOX_TOKEN__"/>
 </head>
 <body>
 
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <header class="header">
   <div class="header-inner">
-    <a href="/" class="header-logo">
-      <img src="/images/logo.png" alt="Open Kitchens"/>
-      <div class="header-logo-text">
-        <span class="brand-name">Open Kitchens</span>
-        <span class="brand-tagline">See What You Eat</span>
+
+    <!-- Brand: desktop full (logo + name + tagline), mobile logo only -->
+    <a href="/" class="hdr-brand desktop-only">
+      <img src="/images/logo.png" alt="Open Kitchens" class="hdr-brand-logo"/>
+      <div class="hdr-brand-text">
+        <span class="hdr-brand-name">Open Kitchens</span>
+        <span class="hdr-brand-tagline">See What You Eat</span>
       </div>
     </a>
-    <!-- Desktop nav -->
-    <nav class="header-nav">
-      <a href="/" class="active">Home</a>
-      <a href="/#menu">Menu</a>
-      <a href="/why-us">Why Us</a>
-      <a href="/rider">Ride With Us</a>
-    </nav>
-    <div class="header-actions">
-      <button class="header-btn" onclick="openAuthSheet()">Login</button>
-      <button class="cart-btn" onclick="openCart()">
-        🛒 Cart <span class="cart-count" style="display:none;">0</span>
+    <!-- Mobile: logo only + vertical divider -->
+    <a href="/" class="hdr-logo-mobile mobile-only">
+      <img src="/images/logo.png" alt="Open Kitchens" class="hdr-brand-logo"/>
+    </a>
+    <span class="hdr-divider mobile-only"></span>
+
+    <!-- Location search bar: shown on all screen sizes -->
+    <div class="hdr-loc-center" onclick="openLocationSheet()">
+      <div class="hdr-loc-search-bar">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span id="locationLabel" class="hdr-loc-input-text">Detecting location…</span>
+        <button class="hdr-detect-btn" onclick="event.stopPropagation(); openLocationSheet(); setTimeout(useCurrentLocation, 250)">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+          Detect My Location
+        </button>
+      </div>
+    </div>
+
+    <!-- Right: nav + profile + cart (desktop only) -->
+    <div class="hdr-right desktop-only">
+      <nav class="hdr-nav">
+        <a href="/" class="hdr-nav-link">Home</a>
+        <a href="/#menu" class="hdr-nav-link">Menu</a>
+        <a href="/#offers" class="hdr-nav-link">Offers</a>
+      </nav>
+      <button class="hdr-cart-btn" onclick="openCart()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+        Cart
+        <span class="hdr-cart-count cart-count" style="display:none;">0</span>
+      </button>
+      <button class="hdr-profile-btn" onclick="openAuthSheet()">
+        <div class="hdr-profile-avatar">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <span id="hdrProfileName">Hi, Guest!</span>
       </button>
     </div>
+
   </div>
 </header>
 
@@ -41,7 +72,6 @@
 <section class="hero">
   <div class="hero-bg"></div>
   <div class="hero-content">
-    <!-- Left: branding -->
     <div class="hero-text-col">
       <h1>Open <span>Kitchens</span></h1>
       <p class="hero-tagline">See What You Eat</p>
@@ -49,22 +79,120 @@
         <span class="dot"></span>
         Watch your food being prepared live
       </div>
-    </div>
-    <!-- Right: pincode card -->
-    <div class="pincode-card">
-      <h3>🚚 Check delivery to your area</h3>
-      <div class="pincode-input-row">
-        <input type="number" class="pincode-input" id="pincodeInput"
-          placeholder="Enter 6-digit pincode" maxlength="6"/>
-        <button class="btn btn-primary" onclick="checkPincode()">Check</button>
-      </div>
-      <button class="btn btn-location btn-full" onclick="useMyLocation()">
-        📍 Use My Location
-      </button>
-      <div id="pincodeResult"></div>
+      <a href="/#menu" class="btn btn-amber" style="margin-top:20px;font-size:15px;padding:12px 32px;">Order Now →</a>
     </div>
   </div>
 </section>
+
+<!-- ── Location Bottom Sheet ──────────────────────────────────────────────── -->
+<div class="loc-sheet-overlay" id="locationSheet" role="dialog" aria-modal="true">
+  <div class="loc-sheet-backdrop" onclick="closeLocationSheet()"></div>
+  <div class="loc-sheet-card">
+
+    <!-- Drag handle -->
+    <div class="loc-sheet-handle"></div>
+
+    <!-- Header row -->
+    <div class="loc-sheet-header">
+      <span class="loc-sheet-title">Set Delivery Location</span>
+      <button class="loc-sheet-close" onclick="closeLocationSheet()">✕</button>
+    </div>
+
+    <!-- Search bar -->
+    <div class="loc-sheet-search-wrap">
+      <div class="loc-sheet-search-inner">
+        <svg class="loc-sheet-search-ico" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="locSearchInput" class="loc-sheet-search-input"
+          placeholder="Search area, street or landmark…"
+          autocomplete="off" oninput="onLocSearch(this.value)" onfocus="onLocSearchFocus()"/>
+        <button class="loc-sheet-clear" id="locSearchClear" onclick="clearLocSearch()" style="display:none;">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 1l12 12M13 1L1 13"/></svg>
+        </button>
+      </div>
+      <ul class="loc-suggestions" id="locSuggestions" style="display:none;"></ul>
+    </div>
+
+    <!-- ── Map view (shown after search/GPS) ── -->
+    <div class="loc-map-section" id="locMapSection" style="display:none;">
+      <!-- Mapbox map container -->
+      <div class="loc-map-container" id="locMapContainer">
+        <!-- Fixed center pin overlay -->
+        <div class="loc-map-pin-wrap" id="locMapPinWrap">
+          <div class="loc-map-pin">
+            <svg width="36" height="44" viewBox="0 0 36 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M18 0C8.059 0 0 8.059 0 18c0 13.5 18 26 18 26s18-12.5 18-26C36 8.059 27.941 0 18 0z" fill="#C1440E"/>
+              <circle cx="18" cy="18" r="7" fill="white"/>
+            </svg>
+          </div>
+          <div class="loc-map-pin-shadow"></div>
+        </div>
+      </div>
+
+      <!-- Address bar below map -->
+      <div class="loc-addr-bar">
+        <div class="loc-addr-bar-inner">
+          <div class="loc-addr-icon">📍</div>
+          <div class="loc-addr-text">
+            <p class="loc-addr-name" id="locAddrName">Locating…</p>
+            <p class="loc-addr-full" id="locAddrFull"></p>
+          </div>
+          <!-- GPS recenter button -->
+          <button class="loc-gps-recenter" onclick="useCurrentLocation()" title="Use my location">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 2"/></svg>
+          </button>
+        </div>
+        <button class="btn btn-primary btn-full loc-confirm-btn" id="locConfirmBtn" onclick="confirmMapLocation()">
+          Confirm this location
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Default state: GPS + saved addresses ── -->
+    <div class="loc-sheet-body" id="locSheetBody">
+      <button class="loc-gps-row" onclick="useCurrentLocation()" id="locGpsBtn">
+        <span class="loc-gps-pulse">
+          <span class="loc-gps-ring"></span>
+          <span class="loc-gps-core">📍</span>
+        </span>
+        <span class="loc-gps-label"><strong>Use current location</strong></span>
+      </button>
+
+      <!-- Not deliverable popup: shown below GPS btn when location is outside service area -->
+      <div class="loc-not-deliverable" id="locNotDeliverable" style="display:none;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="locNotDeliverableMsg">Sorry, we don't deliver to this location yet.</span>
+      </div>
+
+      <div class="loc-divider"><span>Saved addresses</span></div>
+      <ul class="loc-saved-list" id="locSavedList"></ul>
+      <p class="loc-no-saved" id="locNoSaved" style="display:none;">No saved addresses yet.</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- Save address label dialog -->
+<div class="auth-modal" id="saveLabelSheet" role="dialog" aria-modal="true">
+  <div class="auth-modal-backdrop" onclick="closeSaveLabelSheet()"></div>
+  <div class="auth-modal-dialog" style="max-width:360px;">
+    <div class="auth-modal-header">
+      <div><h3>💾 Save Address</h3><p id="saveLabelAddr" style="font-size:12px;color:var(--text-light);max-width:240px;"></p></div>
+      <button class="auth-modal-close" onclick="closeSaveLabelSheet()">✕</button>
+    </div>
+    <div class="auth-modal-body">
+      <p style="font-size:13px;margin-bottom:12px;color:var(--text-mid);">Give this address a name (optional)</p>
+      <div class="loc-label-chips">
+        <button class="loc-label-chip active" data-label="Home">🏠 Home</button>
+        <button class="loc-label-chip" data-label="Work">💼 Work</button>
+        <button class="loc-label-chip" data-label="Other">📌 Other</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;">
+        <button class="btn btn-outline" onclick="closeSaveLabelSheet()" style="flex:1;">Skip</button>
+        <button class="btn btn-primary" onclick="confirmSaveLabel()" style="flex:1;">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ── USP Strip ──────────────────────────────────────────────────────────── -->
 <div class="marquee-strip">
@@ -110,152 +238,21 @@
       <span>Swipe to explore →</span>
     </div>
     <div class="offers-track" id="offersTrack">
-
-      <!-- Card 1: First Order Special -->
-      <div class="offer-card" onclick="window.location.href='/#menu'">
-        <div class="offer-badge">NEW USER</div>
-        <div class="offer-card-bg" style="background:linear-gradient(135deg,#FFF8E1,#FFD54F30);">🎉</div>
-        <div class="offer-card-body">
-          <div class="offer-card-name">First Order Special</div>
-          <div class="offer-card-desc">Flat ₹50 off on orders above ₹199. Use code <strong>WELCOME50</strong> at checkout!</div>
-          <div class="offer-card-footer">
-            <div>
-              <span class="offer-price-new">₹50 OFF</span>
-            </div>
-            <button class="offer-cta" onclick="event.stopPropagation();showToast('Code WELCOME50 copied! Use at checkout 🎉')">Grab Deal</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 2: Rise & Shine Breakfast Combo -->
-      <div class="offer-card" onclick="window.location.href='/#menu'">
-        <div class="offer-badge">SAVE ₹40</div>
-        <div class="offer-card-bg" style="background:linear-gradient(135deg,#FFF3E0,#FFCC80);">☀️</div>
-        <div class="offer-card-body">
-          <div class="offer-card-name">Rise &amp; Shine Breakfast</div>
-          <div class="offer-card-desc">Indori Poha + Chai + Boiled Eggs. The perfect morning fuel.</div>
-          <div class="offer-card-footer">
-            <div>
-              <span class="offer-price-new">₹149</span>
-              <span class="offer-price-old">₹189</span>
-            </div>
-            <button class="offer-cta" onclick="event.stopPropagation();showToast('Added to cart!')">Order</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 3: Royal Thali Feast -->
-      <div class="offer-card" onclick="window.location.href='/#menu'">
-        <div class="offer-badge">BEST VALUE</div>
-        <div class="offer-card-bg" style="background:linear-gradient(135deg,#FFFDE7,#FFE57F);">👑</div>
-        <div class="offer-card-body">
-          <div class="offer-card-name">Royal Thali Feast</div>
-          <div class="offer-card-desc">Veg Thali + Sattu Paratha + Raita + Dessert. Complete home meal.</div>
-          <div class="offer-card-footer">
-            <div>
-              <span class="offer-price-new">₹269</span>
-              <span class="offer-price-old">₹329</span>
-            </div>
-            <button class="offer-cta" onclick="event.stopPropagation();showToast('Added to cart!')">Order</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 4: Family Dinner Pack -->
-      <div class="offer-card" onclick="window.location.href='/#menu'">
-        <div class="offer-badge">FAMILY PACK</div>
-        <div class="offer-card-bg" style="background:linear-gradient(135deg,#FBE9E7,#FFAB91);">🏠</div>
-        <div class="offer-card-body">
-          <div class="offer-card-name">Family Dinner Pack</div>
-          <div class="offer-card-desc">2× Main Course + 4× Rotis + Rice + Sides. Feeds 3–4 people.</div>
-          <div class="offer-card-footer">
-            <div>
-              <span class="offer-price-new">₹549</span>
-              <span class="offer-price-old">₹649</span>
-            </div>
-            <button class="offer-cta" onclick="event.stopPropagation();showToast('Added to cart!')">Order</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Card 5: Snack Binge Box -->
-      <div class="offer-card" onclick="window.location.href='/#menu'">
-        <div class="offer-badge">SAVE ₹35</div>
-        <div class="offer-card-bg" style="background:linear-gradient(135deg,#E8F5E9,#A5D6A7);">⚡</div>
-        <div class="offer-card-body">
-          <div class="offer-card-name">Snack Binge Box</div>
-          <div class="offer-card-desc">Samosa (4 pc) + Maggi + Masala Chai. Anytime snack sorted!</div>
-          <div class="offer-card-footer">
-            <div>
-              <span class="offer-price-new">₹199</span>
-              <span class="offer-price-old">₹234</span>
-            </div>
-            <button class="offer-cta" onclick="event.stopPropagation();showToast('Added to cart!')">Order</button>
-          </div>
-        </div>
-      </div>
-
+      <!-- Offer cards are rendered dynamically by loadOffersSection() -->
     </div><!-- /offers-track -->
     <div class="offers-dots" id="offersDots">
-      <button class="offer-dot active" onclick="scrollOfferTo(0)"></button>
-      <button class="offer-dot" onclick="scrollOfferTo(1)"></button>
-      <button class="offer-dot" onclick="scrollOfferTo(2)"></button>
-      <button class="offer-dot" onclick="scrollOfferTo(3)"></button>
-      <button class="offer-dot" onclick="scrollOfferTo(4)"></button>
+      <!-- Dots are rendered dynamically by loadOffersSection() -->
     </div>
   </div>
 </section>
 
 <!-- ── Fan Favourites ─────────────────────────────────────────────────────── -->
-<section class="section" style="background:var(--surface);">
+<section class="section" id="fanFavSection" style="background:var(--surface);">
   <div class="section-inner">
     <div class="section-title">🌟 Fan Favourites</div>
     <div class="section-sub">Most loved from our kitchen</div>
-    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
-      <div class="fav-card" onclick="openItemModal(1)">
-        <div style="font-size:48px;text-align:center;padding:16px 8px 8px;">🍛</div>
-        <div style="padding:0 12px 14px;">
-          <div style="font-size:14px;font-weight:700;color:var(--brown-dark);">Indori Poha</div>
-          <div style="font-size:12px;color:var(--text-light);">Light &amp; flavourful</div>
-          <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:15px;font-weight:800;color:var(--rust);">₹119</span>
-            <span style="background:var(--rust);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;">ADD</span>
-          </div>
-        </div>
-      </div>
-      <div class="fav-card" onclick="openItemModal(17)">
-        <div style="font-size:48px;text-align:center;padding:16px 8px 8px;">🍱</div>
-        <div style="padding:0 12px 14px;">
-          <div style="font-size:14px;font-weight:700;color:var(--brown-dark);">Veg Thali</div>
-          <div style="font-size:12px;color:var(--text-light);">Complete meal</div>
-          <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:15px;font-weight:800;color:var(--rust);">₹229</span>
-            <span style="background:var(--rust);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;">ADD</span>
-          </div>
-        </div>
-      </div>
-      <div class="fav-card" onclick="openItemModal(25)">
-        <div style="font-size:48px;text-align:center;padding:16px 8px 8px;">🧀</div>
-        <div style="padding:0 12px 14px;">
-          <div style="font-size:14px;font-weight:700;color:var(--brown-dark);">Paneer Butter Masala</div>
-          <div style="font-size:12px;color:var(--text-light);">Rich &amp; creamy</div>
-          <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:15px;font-weight:800;color:var(--rust);">₹219</span>
-            <span style="background:var(--rust);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;">ADD</span>
-          </div>
-        </div>
-      </div>
-      <div class="fav-card" onclick="openItemModal(33)">
-        <div style="font-size:48px;text-align:center;padding:16px 8px 8px;">🍽️</div>
-        <div style="padding:0 12px 14px;">
-          <div style="font-size:14px;font-weight:700;color:var(--brown-dark);">Litti Chokha</div>
-          <div style="font-size:12px;color:var(--text-light);">Bihari special</div>
-          <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-size:15px;font-weight:800;color:var(--rust);">₹169</span>
-            <span style="background:var(--rust);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;">ADD</span>
-          </div>
-        </div>
-      </div>
+    <div id="fanFavGrid" style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+      <!-- Rendered dynamically by loadFanFavourites() in menu-data.js -->
     </div>
   </div>
 </section>
@@ -302,22 +299,98 @@
 </section>
 
 <!-- ── Cart Sheet ─────────────────────────────────────────────────────────── -->
-<div class="cart-overlay"></div>
-<div class="cart-sheet">
+<div class="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-sheet" id="cartSheet">
   <div class="cart-handle"></div>
-  <div class="cart-header"><h3>🛒 Your Cart</h3></div>
-  <div class="cart-items"></div>
-  <div class="cart-footer">
-    <div class="cart-total-row">
-      <span class="cart-total-label">Total</span>
-      <span class="cart-total-amount">₹0</span>
+
+  <!-- Top bar: location + delivery time -->
+  <div class="cart-topbar">
+    <div class="cart-topbar-loc">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span id="cartLocLabel">Set delivery location</span>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:8px;">
-      <input type="text" id="couponInput" class="form-input" placeholder="Coupon code" style="flex:1;padding:10px 12px;"/>
-      <button class="btn btn-secondary btn-sm" onclick="applyCoupon()">Apply</button>
+    <div class="cart-topbar-time">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      30–40 min
     </div>
-    <a href="/checkout" class="btn btn-primary btn-full" id="checkoutBtn">Proceed to Checkout →</a>
   </div>
+
+  <!-- Header -->
+  <div class="cart-header">
+    <div>
+      <h3 style="margin:0;font-size:18px;font-weight:800;color:var(--brown-dark);">🍽️ Your Plate</h3>
+      <p style="margin:2px 0 0;font-size:12px;color:var(--text-light);">Review &amp; customise before ordering</p>
+    </div>
+    <button class="cart-close-btn" onclick="closeCart()">✕</button>
+  </div>
+
+  <!-- Section label -->
+  <div class="cart-section-label">What's cooking 🔥</div>
+
+  <!-- Items list -->
+  <div class="cart-items"></div>
+
+  <!-- Footer -->
+  <div class="cart-footer">
+
+    <!-- Coupon row -->
+    <div class="cart-coupon-wrap">
+      <div class="cart-coupon-row">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+        <input type="text" id="couponInput" class="cart-coupon-input" placeholder="Enter coupon code…" autocomplete="off" style="text-transform:uppercase;"/>
+        <button class="cart-coupon-apply" onclick="applyCoupon()">Apply</button>
+      </div>
+      <div id="couponMsg" style="font-size:12px;margin-top:5px;padding-left:4px;"></div>
+      <button class="cart-view-offers-btn" onclick="openOffersSheet()">🎁 View all available offers</button>
+    </div>
+
+    <!-- Price breakdown -->
+    <div class="cart-price-box">
+      <div class="cart-price-row">
+        <span>Item total</span>
+        <span id="cartSubtotal">₹0</span>
+      </div>
+      <div class="cart-price-row" id="cartDiscountRow" style="display:none;color:#2E7D32;">
+        <span id="cartDiscountLabel">Discount</span>
+        <span id="cartDiscountAmt" style="font-weight:700;">−₹0</span>
+      </div>
+      <div class="cart-price-row" style="font-weight:800;font-size:15px;color:var(--brown-dark);border-top:1px solid var(--border);padding-top:8px;margin-top:4px;">
+        <span>Grand Total</span>
+        <span class="cart-total-amount">₹0</span>
+      </div>
+    </div>
+
+    <!-- CTA -->
+    <button class="btn btn-primary btn-full cart-checkout-btn" onclick="proceedToCheckout()">
+      Proceed to Order →
+    </button>
+  </div>
+</div>
+
+<!-- ── Add-ons Customize Modal ───────────────────────────────────────────── -->
+<div class="addon-modal-overlay" id="addonModalOverlay" onclick="closeAddonModal()"></div>
+<div class="addon-modal" id="addonModal">
+  <div class="addon-modal-handle"></div>
+  <div class="addon-modal-header">
+    <h4 id="addonModalTitle">Customize</h4>
+    <button class="cart-close-btn" onclick="closeAddonModal()">✕</button>
+  </div>
+  <div id="addonModalItems" class="addon-modal-items"></div>
+  <div class="addon-modal-footer">
+    <div style="font-size:13px;color:var(--text-mid);">Item total: <strong id="addonModalTotal">₹0</strong></div>
+    <button class="btn btn-primary" onclick="confirmAddonModal()">Done</button>
+  </div>
+</div>
+
+<!-- ── All Offers Sheet ───────────────────────────────────────────────────── -->
+<div class="offers-sheet-overlay" id="offersSheetOverlay" onclick="closeOffersSheet()"></div>
+<div class="offers-sheet-panel" id="offersSheetPanel">
+  <div class="addon-modal-handle"></div>
+  <div class="addon-modal-header">
+    <h4>🎁 Available Offers</h4>
+    <button class="cart-close-btn" onclick="closeOffersSheet()">✕</button>
+  </div>
+  <div id="offersSheetList" class="offers-sheet-list"></div>
 </div>
 
 <!-- ── Food Detail Modal ──────────────────────────────────────────────────── -->
@@ -390,106 +463,512 @@
     <div class="auth-modal-header">
       <div>
         <h3 id="authModalTitle">Sign In / Sign Up</h3>
-        <p>Access your account to place orders</p>
+        <p id="authModalSubtitle">Access your account to place orders</p>
       </div>
       <button class="auth-modal-close" onclick="closeAuthSheet()" aria-label="Close">✕</button>
     </div>
     <div class="auth-modal-body">
-      <button class="btn btn-full" style="background:#fff;border:2px solid var(--border);color:var(--text-dark);margin-bottom:4px;font-size:14px;display:flex;align-items:center;justify-content:center;gap:8px;" onclick="showToast('Google Sign-In — coming soon!')">
-        <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#34A853" d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"/><path fill="#EA4335" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"/></svg>
-        Continue with Google
-      </button>
-      <div class="auth-divider">or use phone / email</div>
-      <div class="form-group">
-        <label class="form-label">Phone Number</label>
-        <div style="display:flex;gap:8px;">
-          <span style="padding:11px 10px;background:var(--cream);border:2px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;color:var(--text-mid);white-space:nowrap;">🇮🇳 +91</span>
-          <input type="tel" class="form-input" placeholder="10-digit mobile number" maxlength="10" style="flex:1;"/>
+
+      <!-- Tab switcher -->
+      <div class="auth-tabs" id="authTabs">
+        <button class="auth-tab active" data-tab="phone" onclick="switchAuthTab('phone')">📱 Phone</button>
+        <button class="auth-tab" data-tab="email" onclick="switchAuthTab('email')">✉️ Email</button>
+      </div>
+      <div id="authError" class="alert alert-warn" style="display:none;margin-bottom:10px;"></div>
+
+      <!-- Phone / OTP panel -->
+      <div id="authPanelPhone" class="auth-panel">
+        <!-- Step 1: Enter phone -->
+        <div id="authStepPhone">
+          <div class="form-group">
+            <label class="form-label">Phone Number</label>
+            <div style="display:flex;gap:8px;">
+              <span style="padding:11px 10px;background:var(--cream);border:2px solid var(--border);border-radius:10px;font-size:14px;font-weight:600;color:var(--text-mid);white-space:nowrap;">🇮🇳 +91</span>
+              <input type="tel" id="authPhone" class="form-input" placeholder="10-digit mobile number" maxlength="10" style="flex:1;" onkeydown="if(event.key==='Enter')sendOtp()"/>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-full" id="authSendOtpBtn" onclick="sendOtp()">Send OTP</button>
+        </div>
+        <!-- Step 2: Enter OTP -->
+        <div id="authStepOtp" style="display:none;">
+          <p style="font-size:13px;color:var(--text-mid);margin-bottom:12px;">OTP sent to <strong id="authPhoneDisplay"></strong></p>
+          <div class="form-group">
+            <label class="form-label">Enter OTP</label>
+            <input type="number" id="authOtp" class="form-input" placeholder="6-digit OTP" maxlength="6" onkeydown="if(event.key==='Enter')verifyOtp()"/>
+          </div>
+          <button class="btn btn-primary btn-full" id="authVerifyBtn" onclick="verifyOtp()">Verify OTP</button>
+          <button class="btn btn-text btn-full" style="margin-top:6px;font-size:12px;" onclick="resetAuthToPhone()">← Change number</button>
         </div>
       </div>
-      <button class="btn btn-primary btn-full" onclick="showToast('OTP sent! — demo mode');closeAuthSheet()">Send OTP</button>
-      <div class="auth-divider">or</div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input type="email" class="form-input" placeholder="your@email.com" style="margin-bottom:8px;"/>
-        <label class="form-label">Password</label>
-        <input type="password" class="form-input" placeholder="Password"/>
+
+      <!-- Email panel -->
+      <div id="authPanelEmail" class="auth-panel" style="display:none;">
+        <div class="auth-subtabs">
+          <button class="auth-subtab active" data-mode="login" onclick="switchEmailMode('login')">Login</button>
+          <button class="auth-subtab" data-mode="register" onclick="switchEmailMode('register')">Register</button>
+        </div>
+        <div id="authEmailRegisterName" class="form-group" style="display:none;">
+          <label class="form-label">Your Name</label>
+          <input type="text" id="authName" class="form-input" placeholder="Full name"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" id="authEmail" class="form-input" placeholder="your@email.com"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <input type="password" id="authPassword" class="form-input" placeholder="Password (min 6 chars)" onkeydown="if(event.key==='Enter')submitEmailAuth()"/>
+        </div>
+        <button class="btn btn-primary btn-full" id="authEmailBtn" onclick="submitEmailAuth()">Login</button>
       </div>
-      <button class="btn btn-outline btn-full" onclick="showToast('Logged in! — demo mode');closeAuthSheet()">Login with Email</button>
+
       <p style="text-align:center;font-size:11px;color:var(--text-light);margin-top:14px;">By continuing, you agree to our Terms & Privacy Policy</p>
+    </div>
+  </div>
+</div>
+
+<!-- Logged-in profile sheet -->
+<div class="auth-modal" id="profileSheet" role="dialog" aria-modal="true">
+  <div class="auth-modal-backdrop" onclick="closeProfileSheet()"></div>
+  <div class="auth-modal-dialog" style="max-width:360px;">
+    <div class="auth-modal-header">
+      <div><h3>👤 My Profile</h3></div>
+      <button class="auth-modal-close" onclick="closeProfileSheet()">✕</button>
+    </div>
+    <div class="auth-modal-body">
+      <div style="text-align:center;padding:10px 0 20px;">
+        <div style="width:60px;height:60px;border-radius:50%;background:var(--rust);color:#fff;font-size:26px;display:flex;align-items:center;justify-content:center;margin:0 auto 10px;">👤</div>
+        <p id="profileName" style="font-size:16px;font-weight:700;color:var(--text-dark);"></p>
+        <p id="profileEmail" style="font-size:13px;color:var(--text-light);"></p>
+        <p id="profilePhone" style="font-size:13px;color:var(--text-light);"></p>
+      </div>
+      <button class="btn btn-outline btn-full" style="border-color:var(--rust);color:var(--rust);" onclick="logoutUser()">Sign Out</button>
     </div>
   </div>
 </div>
 
 <script src="/js/menu-data.js"></script>
 <script>
-// ─── Pincode check ────────────────────────────────────────────────────────────
-function checkPincode() {
-  const val = document.getElementById('pincodeInput').value.trim();
-  const result = document.getElementById('pincodeResult');
-  if (val.length !== 6 || isNaN(val)) {
-    result.innerHTML = '<div class="alert alert-warn" style="margin-top:10px;">⚠️ Please enter a valid 6-digit pincode</div>';
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── DELIVERY LOCATION SYSTEM (Mapbox) ─────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LOC_KEY        = 'ok_delivery_location';
+const SAVED_ADDR_KEY = 'ok_saved_addresses';
+const MB_TOKEN       = document.querySelector('meta[name="mapbox-token"]')?.content || '';
+const MB_GEOCODE     = 'https://api.mapbox.com/geocoding/v5/mapbox.places';
+
+let _locSearchTimer = null;
+let _mbMap          = null;   // Mapbox GL map instance
+let _mapReady       = false;
+let _mapMoveTimer   = null;
+let _currentMapLoc  = null;   // {lat, lng, shortName, fullAddress}
+
+// ── localStorage helpers ──────────────────────────────────────────────────────
+function getSavedAddresses() {
+  try { return JSON.parse(localStorage.getItem(SAVED_ADDR_KEY)) || []; }
+  catch { return []; }
+}
+function saveAddressToStore(addr) {
+  const list = getSavedAddresses().filter(a => a.id !== addr.id);
+  list.unshift(addr);
+  localStorage.setItem(SAVED_ADDR_KEY, JSON.stringify(list.slice(0, 10)));
+}
+function getCurrentLocation() {
+  try { return JSON.parse(localStorage.getItem(LOC_KEY)); }
+  catch { return null; }
+}
+function setCurrentLocation(loc) {
+  localStorage.setItem(LOC_KEY, JSON.stringify(loc));
+  updateHeaderPill(loc);
+}
+
+// ── Header pill ───────────────────────────────────────────────────────────────
+function updateHeaderPill(loc) {
+  const el  = document.getElementById('locationLabel');
+  const text = loc && loc.shortName
+    ? (loc.label ? loc.label + ' · ' : '') + loc.shortName
+    : 'Set delivery location';
+  if (el) el.textContent = text;
+}
+
+// ── Auto-detect on page load (silent) ─────────────────────────────────────────
+function autoDetectLocation() {
+  const dot = document.getElementById('hdrLocDot');
+  if (dot) dot.classList.add('unknown');
+  const cur = getCurrentLocation();
+  if (cur) { updateHeaderPill(cur); return; }
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(
+    pos => mbReverseGeocode(pos.coords.latitude, pos.coords.longitude, result => {
+      if (!result) return;
+      const saved = getSavedAddresses();
+      const match = saved.find(a => a.lat && a.lng && haversineKm(a.lat, a.lng, result.lat, result.lng) < 1);
+      setCurrentLocation(match ? { ...result, label: match.label, shortName: match.shortName } : result);
+    }),
+    () => {},
+    { timeout: 8000, enableHighAccuracy: false }
+  );
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ── Mapbox reverse geocode ─────────────────────────────────────────────────────
+function mbReverseGeocode(lat, lng, cb) {
+  fetch(`${MB_GEOCODE}/${lng},${lat}.json?access_token=${MB_TOKEN}&language=en&types=neighborhood,locality,place`)
+    .then(r => r.json())
+    .then(data => {
+      const feat = data.features?.[0];
+      if (!feat) { cb(null); return; }
+      const parts     = feat.place_name.split(',');
+      const shortName = parts[0].trim();
+      const fullAddress = feat.place_name;
+      cb({ lat, lng, shortName, fullAddress });
+    })
+    .catch(() => cb(null));
+}
+
+// ── Mapbox forward geocode (search suggestions) ────────────────────────────────
+function mbForwardGeocode(q, cb) {
+  const url = `${MB_GEOCODE}/${encodeURIComponent(q)}.json?access_token=${MB_TOKEN}&country=in&language=en&limit=6&types=address,neighborhood,locality,place,poi`;
+  fetch(url)
+    .then(r => r.json())
+    .then(data => cb(data.features || []))
+    .catch(() => cb([]));
+}
+
+// ── Map initialisation ─────────────────────────────────────────────────────────
+// Default center: New Delhi, India — fallback when no coords provided
+const DEFAULT_LNG = 77.2090;
+const DEFAULT_LAT = 28.6139;
+
+function _showMapError(msg) {
+  const c = document.getElementById('locMapContainer');
+  if (c) c.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;height:100%;flex-direction:column;gap:8px;color:#666;font-size:13px;padding:16px;text-align:center;">
+    <span style="font-size:28px;">🗺️</span><span>${msg}</span></div>`;
+}
+
+function initMap(centerLng, centerLat) {
+  const lng = (centerLng != null && isFinite(+centerLng)) ? +centerLng : DEFAULT_LNG;
+  const lat = (centerLat != null && isFinite(+centerLat)) ? +centerLat : DEFAULT_LAT;
+
+  // If map already exists just fly to the new location
+  if (_mbMap) {
+    _mbMap.resize();
+    _mbMap.flyTo({ center: [lng, lat], zoom: 15, speed: 1.4 });
     return;
   }
-  if (DELIVERY_ZONES[val]) {
-    result.innerHTML = `<div class="zone-result zone-available">✅ We deliver to <strong>${DELIVERY_ZONES[val]}</strong>! <a href="/#menu" style="color:var(--rust);margin-left:6px;font-weight:700;">Order Now →</a></div>`;
-  } else {
-    result.innerHTML = `<div class="zone-result zone-unavailable">😔 Sorry, we don't deliver to <strong>${val}</strong> yet. <button onclick="notifyMe()" style="background:none;border:none;color:var(--rust);font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">Notify me</button></div>`;
+
+  // WebGL support check
+  if (typeof mapboxgl === 'undefined') {
+    _showMapError('Map library failed to load. Please refresh the page.');
+    return;
+  }
+  if (!mapboxgl.supported()) {
+    _showMapError('Your browser does not support WebGL maps. Please try a different browser.');
+    return;
+  }
+
+  // Verify container has real dimensions before initialising
+  const container = document.getElementById('locMapContainer');
+  const rect = container.getBoundingClientRect();
+  if (!rect.width || !rect.height) {
+    // Retry once after a short delay to allow layout
+    setTimeout(() => initMap(lng, lat), 150);
+    return;
+  }
+
+  try {
+    mapboxgl.accessToken = MB_TOKEN;
+    _mbMap = new mapboxgl.Map({
+      container: 'locMapContainer',
+      style: 'mapbox://styles/mapbox/streets-v12',
+      center: [lng, lat],
+      zoom: 15,
+      attributionControl: false,
+      failIfMajorPerformanceCaveat: false   // allow software rendering fallback
+    });
+
+    _mbMap.addControl(new mapboxgl.AttributionControl({ compact: true }));
+
+    _mbMap.on('error', e => {
+      console.warn('Mapbox error:', e);
+    });
+
+    // Reverse geocode on every map move-end
+    _mbMap.on('moveend', () => {
+      clearTimeout(_mapMoveTimer);
+      _mapMoveTimer = setTimeout(() => {
+        const c = _mbMap.getCenter();
+        updateAddrBar('Locating…', '');
+        mbReverseGeocode(c.lat, c.lng, result => {
+          _currentMapLoc = result || { lat: c.lat, lng: c.lng, shortName: 'Selected location', fullAddress: '' };
+          updateAddrBar(_currentMapLoc.shortName, _currentMapLoc.fullAddress);
+        });
+      }, 400);
+    });
+
+    _mbMap.on('load', () => {
+      _mapReady = true;
+      _mbMap.resize();
+      const c = _mbMap.getCenter();
+      mbReverseGeocode(c.lat, c.lng, result => {
+        _currentMapLoc = result || { lat: c.lat, lng: c.lng, shortName: 'Selected location', fullAddress: '' };
+        updateAddrBar(_currentMapLoc.shortName, _currentMapLoc.fullAddress);
+      });
+    });
+  } catch(e) {
+    console.error('Map init error:', e);
+    _showMapError('Could not load map. Please try again.');
   }
 }
 
-// ─── Real geolocation via OpenStreetMap Nominatim ─────────────────────────────
-function useMyLocation() {
-  const result = document.getElementById('pincodeResult');
-  const input  = document.getElementById('pincodeInput');
+function updateAddrBar(name, full) {
+  const n = document.getElementById('locAddrName');
+  const f = document.getElementById('locAddrFull');
+  if (n) n.textContent = name;
+  if (f) f.textContent = full ? full.split(',').slice(1, 3).join(',').trim() : '';
+}
 
-  if (!navigator.geolocation) {
-    result.innerHTML = '<div class="alert alert-warn" style="margin-top:10px;">⚠️ Geolocation not supported. Please enter pincode manually.</div>';
+function showMapSection(lng, lat) {
+  document.getElementById('locSheetBody').style.display  = 'none';
+  // Must use 'flex' — the CSS defines this element as a flex container
+  document.getElementById('locMapSection').style.display = 'flex';
+  // Double rAF ensures the browser has completed layout before Mapbox reads container size
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      initMap(lng, lat);
+    });
+  });
+}
+
+function hideMapSection() {
+  document.getElementById('locSheetBody').style.display  = '';
+  document.getElementById('locMapSection').style.display = 'none';
+}
+
+// ── Confirm the pinned location ────────────────────────────────────────────────
+// ── Not-deliverable popup ──────────────────────────────────────────────────────
+function showNotDeliverable(msg) {
+  const el = document.getElementById('locNotDeliverable');
+  const msgEl = document.getElementById('locNotDeliverableMsg');
+  if (msgEl && msg) msgEl.textContent = msg;
+  if (el) el.style.display = 'flex';
+}
+function hideNotDeliverable() {
+  const el = document.getElementById('locNotDeliverable');
+  if (el) el.style.display = 'none';
+}
+
+function confirmMapLocation() {
+  if (!_mbMap) return;
+  const { lng, lat } = _mbMap.getCenter();
+  const loc = _currentMapLoc || { lat, lng, shortName: 'Selected location', fullAddress: '' };
+  // Directly set location and return to landing page — no save dialog
+  setCurrentLocation(loc);
+  closeLocationSheet();
+}
+
+// ── Location sheet open/close ──────────────────────────────────────────────────
+function openLocationSheet() {
+  document.getElementById('locationSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+  hideMapSection();
+  hideNotDeliverable();
+  renderSavedAddresses();
+  setTimeout(() => document.getElementById('locSearchInput')?.focus(), 220);
+}
+function closeLocationSheet() {
+  document.getElementById('locationSheet').classList.remove('open');
+  document.body.style.overflow = '';
+  clearLocSearch();
+  hideMapSection();
+}
+
+// ── Search bar logic ───────────────────────────────────────────────────────────
+function onLocSearch(q) {
+  const clear = document.getElementById('locSearchClear');
+  if (clear) clear.style.display = q.length ? 'flex' : 'none';
+  clearTimeout(_locSearchTimer);
+  if (q.trim().length < 2) { hideSuggestions(); return; }
+  _locSearchTimer = setTimeout(() => {
+    showSuggestionsLoading();
+    mbForwardGeocode(q.trim(), renderSuggestions);
+  }, 320);
+}
+
+function onLocSearchFocus() {
+  const q = document.getElementById('locSearchInput')?.value || '';
+  if (q.trim().length >= 2) { showSuggestionsLoading(); mbForwardGeocode(q.trim(), renderSuggestions); }
+}
+
+function clearLocSearch() {
+  const inp = document.getElementById('locSearchInput');
+  if (inp) { inp.value = ''; }
+  document.getElementById('locSearchClear').style.display = 'none';
+  hideSuggestions();
+}
+
+function showSuggestionsLoading() {
+  const ul = document.getElementById('locSuggestions');
+  ul.innerHTML = '<li class="loc-sug-loading">🔍 Searching…</li>';
+  ul.style.display = 'block';
+}
+
+function renderSuggestions(features) {
+  const ul = document.getElementById('locSuggestions');
+  if (!features.length) {
+    ul.innerHTML = '<li class="loc-sug-empty">No results found. Try a different search.</li>';
+    ul.style.display = 'block';
     return;
   }
+  ul.innerHTML = features.map((f, i) => {
+    const name = f.text || f.place_name.split(',')[0];
+    const sub  = f.place_name.split(',').slice(1, 3).join(',').trim();
+    const [lng, lat] = f.center;
+    const payload = JSON.stringify({ lat, lng, shortName: name, fullAddress: f.place_name }).replace(/'/g, "&#39;");
+    return `<li class="loc-sug-item" onclick="selectSuggestion(this)" data-result='${payload}'>
+      <span class="loc-sug-icon">📍</span>
+      <span class="loc-sug-text"><strong>${name}</strong><small>${sub}</small></span>
+    </li>`;
+  }).join('');
+  ul.style.display = 'block';
+}
 
-  result.innerHTML = '<div class="alert alert-info" style="margin-top:10px;">📍 Detecting your location…</div>';
+function hideSuggestions() {
+  const ul = document.getElementById('locSuggestions');
+  ul.style.display = 'none'; ul.innerHTML = '';
+}
 
+function selectSuggestion(el) {
+  try {
+    const data = JSON.parse(el.dataset.result.replace(/&#39;/g, "'"));
+    hideSuggestions();
+    document.getElementById('locSearchInput').value = data.shortName;
+    document.getElementById('locSearchClear').style.display = 'flex';
+    // Show map centered on the selected result
+    _currentMapLoc = data;
+    updateAddrBar(data.shortName, data.fullAddress);
+    showMapSection(data.lng, data.lat);
+  } catch(e) { console.warn(e); }
+}
+
+// ── GPS button ─────────────────────────────────────────────────────────────────
+function useCurrentLocation() {
+  const lbl = document.querySelector('.loc-gps-label strong');
+  if (lbl) lbl.textContent = 'Detecting…';
+  if (!navigator.geolocation) {
+    showToast('⚠️ Geolocation not supported.'); if (lbl) lbl.textContent = 'Use current location'; return;
+  }
   navigator.geolocation.getCurrentPosition(
-    (pos) => {
-      const { latitude, longitude } = pos.coords;
-      // Use OpenStreetMap Nominatim — free, no API key needed
-      fetch(`https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json&addressdetails=1`, {
-        headers: { 'Accept-Language': 'en' }
-      })
-      .then(r => r.json())
-      .then(data => {
-        const addr    = data.address || {};
-        const pincode = addr.postcode ? addr.postcode.replace(/\s/g, '').slice(0, 6) : null;
-        const area    = addr.suburb || addr.neighbourhood || addr.county || addr.city || 'your area';
-
-        if (!pincode) {
-          result.innerHTML = '<div class="alert alert-warn" style="margin-top:10px;">⚠️ Could not determine pincode. Please enter it manually.</div>';
-          return;
-        }
-
-        input.value = pincode;
-
-        if (DELIVERY_ZONES[pincode]) {
-          result.innerHTML = `<div class="zone-result zone-available">✅ Detected: <strong>${area}</strong> (${pincode}) — We deliver here! <a href="/#menu" style="color:var(--rust);margin-left:6px;font-weight:700;">Order Now →</a></div>`;
-        } else {
-          result.innerHTML = `<div class="zone-result zone-unavailable">📍 Detected: <strong>${area}</strong> (${pincode}) — Sorry, we don't deliver here yet. <button onclick="notifyMe()" style="background:none;border:none;color:var(--rust);font-weight:700;cursor:pointer;text-decoration:underline;padding:0;">Notify me</button></div>`;
-        }
-      })
-      .catch(() => {
-        result.innerHTML = '<div class="alert alert-warn" style="margin-top:10px;">⚠️ Could not fetch address. Please enter pincode manually.</div>';
+    pos => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      if (lbl) lbl.textContent = 'Use current location';
+      mbReverseGeocode(lat, lng, result => {
+        _currentMapLoc = result || { lat, lng, shortName: 'Your location', fullAddress: '' };
+        updateAddrBar(_currentMapLoc.shortName, _currentMapLoc.fullAddress);
+        showMapSection(lng, lat);
       });
     },
-    (err) => {
-      const msgs = {
-        1: 'Location access denied. Please allow location access or enter your pincode.',
-        2: 'Location unavailable. Please enter pincode manually.',
-        3: 'Location request timed out. Please enter pincode manually.'
-      };
-      result.innerHTML = `<div class="alert alert-warn" style="margin-top:10px;">⚠️ ${msgs[err.code] || 'Could not get location.'}</div>`;
+    err => {
+      if (lbl) lbl.textContent = 'Use current location';
+      const msgs = { 1: 'Location permission denied.', 2: 'Location unavailable.', 3: 'Request timed out.' };
+      showToast('⚠️ ' + (msgs[err.code] || 'Could not get location.'));
     },
     { timeout: 10000, enableHighAccuracy: true }
   );
+}
+
+// ── Save label flow ────────────────────────────────────────────────────────────
+let _pendingLocation = null;
+
+function closeSaveLabelSheet() {
+  document.getElementById('saveLabelSheet').classList.remove('open');
+  if (_pendingLocation) { confirmLocation(_pendingLocation, null); _pendingLocation = null; }
+}
+
+function confirmSaveLabel() {
+  const activeChip = document.querySelector('.loc-label-chip.active');
+  const label = activeChip ? activeChip.dataset.label : null;
+  document.getElementById('saveLabelSheet').classList.remove('open');
+  if (_pendingLocation) { confirmLocation(_pendingLocation, label); _pendingLocation = null; }
+}
+
+document.addEventListener('click', e => {
+  const chip = e.target.closest('.loc-label-chip');
+  if (chip) {
+    document.querySelectorAll('.loc-label-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+  }
+});
+
+function confirmLocation(loc, label) {
+  const finalLoc = { ...loc, label: label || null, id: 'addr_' + Date.now() };
+  setCurrentLocation(finalLoc);
+  if (label) saveAddressToStore(finalLoc);
+  // Persist to DB if logged in
+  if (label && isLoggedIn()) {
+    apiFetch('/api/addresses', 'POST', {
+      id: finalLoc.id, label: finalLoc.label,
+      short_name: finalLoc.shortName, full_address: finalLoc.fullAddress,
+      lat: finalLoc.lat, lng: finalLoc.lng
+    }).catch(() => {});
+  }
+  closeLocationSheet();
+  showToast('📍 Delivery location set' + (label ? ': ' + label : ''));
+}
+
+// ── Saved addresses ────────────────────────────────────────────────────────────
+function renderSavedAddresses() {
+  const list    = document.getElementById('locSavedList');
+  const noSaved = document.getElementById('locNoSaved');
+  // Load from DB if logged in, else localStorage
+  if (isLoggedIn()) {
+    apiFetch('/api/addresses').then(data => {
+      const addresses = data.addresses || [];
+      _renderSavedList(list, noSaved, addresses.map(a => ({
+        id: a.id, label: a.label, shortName: a.short_name, fullAddress: a.full_address, lat: a.lat, lng: a.lng
+      })));
+    }).catch(() => _renderSavedList(list, noSaved, getSavedAddresses()));
+  } else {
+    _renderSavedList(list, noSaved, getSavedAddresses());
+  }
+}
+
+function _renderSavedList(list, noSaved, saved) {
+  if (!saved.length) {
+    list.innerHTML = ''; if (noSaved) noSaved.style.display = 'block'; return;
+  }
+  if (noSaved) noSaved.style.display = 'none';
+  const icons = { Home: '🏠', Work: '💼', Other: '📌' };
+  list.innerHTML = saved.map(a => `
+    <li class="loc-saved-item" onclick="selectSavedAddress('${a.id}','${(a.shortName||'').replace(/'/g,'&#39;')}','${(a.fullAddress||'').replace(/'/g,'&#39;')}',${a.lat||0},${a.lng||0})">
+      <span class="loc-saved-icon">${icons[a.label] || '📍'}</span>
+      <span class="loc-saved-text">
+        <strong>${a.label || 'Address'}</strong>
+        <small>${a.shortName || a.fullAddress || ''}</small>
+      </span>
+    </li>`).join('');
+}
+
+function selectSavedAddress(id, shortName, fullAddress, lat, lng) {
+  // Directly set saved address as current location — no map step needed
+  const saved = getSavedAddresses().find(a => a.id === id);
+  const loc = saved || { id, shortName, fullAddress, lat, lng };
+  setCurrentLocation(loc);
+  closeLocationSheet();
+}
+
+function deleteSavedAddress(e, id) {
+  e.stopPropagation();
+  const list = getSavedAddresses().filter(a => a.id !== id);
+  localStorage.setItem(SAVED_ADDR_KEY, JSON.stringify(list));
+  if (isLoggedIn()) apiFetch('/api/addresses/' + id, 'DELETE').catch(() => {});
+  renderSavedAddresses();
 }
 
 function notifyMe() {
@@ -497,7 +976,69 @@ function notifyMe() {
   if (contact) showToast('✅ You\'ll be notified when we expand to your area!');
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── AUTH SYSTEM ───────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+const AUTH_TOKEN_KEY = 'ok_auth_token';
+const AUTH_USER_KEY  = 'ok_auth_user';
+
+function getToken()   { return localStorage.getItem(AUTH_TOKEN_KEY); }
+function getAuthUser(){ try { return JSON.parse(localStorage.getItem(AUTH_USER_KEY)); } catch { return null; } }
+function isLoggedIn() { return !!getToken(); }
+
+function storeSession(token, user) {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+  updateAuthUI(user);
+  // Sync local saved addresses to DB
+  const localAddresses = getSavedAddresses();
+  if (localAddresses.length) {
+    apiFetch('/api/addresses/sync', 'POST', { addresses: localAddresses }).catch(() => {});
+  }
+}
+
+function clearSession() {
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem(AUTH_USER_KEY);
+  updateAuthUI(null);
+}
+
+// Authenticated fetch helper
+function apiFetch(url, method = 'GET', body = null) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' }
+  };
+  const token = getToken();
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body)  opts.body = JSON.stringify(body);
+  return fetch(url, opts).then(async r => {
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.error || 'Request failed');
+    return data;
+  });
+}
+
+// Update header profile button + bottom nav icon
+function updateAuthUI(user) {
+  const hdrName    = document.getElementById('hdrProfileName');
+  const mbnProfile = document.querySelector('.mbn-item:last-child .mbn-label');
+  if (user) {
+    const first = (user.name || user.email || user.phone || 'Me').split(' ')[0];
+    if (hdrName)    hdrName.textContent    = 'Hi, ' + first + '!';
+    if (mbnProfile) mbnProfile.textContent = first;
+  } else {
+    if (hdrName)    hdrName.textContent    = 'Hi, Guest!';
+    if (mbnProfile) mbnProfile.textContent = 'Profile';
+  }
+}
+
+// Open: if logged in → show profile sheet, else → auth sheet
 function openAuthSheet() {
+  if (isLoggedIn()) {
+    openProfileSheet(); return;
+  }
+  resetAuthForms();
   document.getElementById('authSheet').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -505,6 +1046,230 @@ function closeAuthSheet() {
   document.getElementById('authSheet').classList.remove('open');
   document.body.style.overflow = '';
 }
+
+// ── Tab / mode switching ──────────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('authPanelPhone').style.display = tab === 'phone' ? 'block' : 'none';
+  document.getElementById('authPanelEmail').style.display = tab === 'email' ? 'block' : 'none';
+  clearAuthError();
+}
+
+function switchEmailMode(mode) {
+  document.querySelectorAll('.auth-subtab').forEach(t => t.classList.toggle('active', t.dataset.mode === mode));
+  document.getElementById('authEmailRegisterName').style.display = mode === 'register' ? 'block' : 'none';
+  document.getElementById('authEmailBtn').textContent = mode === 'register' ? 'Create Account' : 'Login';
+  clearAuthError();
+}
+
+function resetAuthForms() {
+  switchAuthTab('phone');
+  resetAuthToPhone();
+  clearAuthError();
+  ['authPhone','authOtp','authName','authEmail','authPassword'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
+}
+
+function resetAuthToPhone() {
+  document.getElementById('authStepPhone').style.display = 'block';
+  document.getElementById('authStepOtp').style.display   = 'none';
+  clearAuthError();
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('authError');
+  el.textContent = msg; el.style.display = 'block';
+}
+function clearAuthError() {
+  const el = document.getElementById('authError');
+  if (el) el.style.display = 'none';
+}
+
+// ── Phone OTP flow ────────────────────────────────────────────────────────────
+function sendOtp() {
+  const phone = document.getElementById('authPhone').value.trim();
+  if (!/^\d{10}$/.test(phone)) { showAuthError('Enter a valid 10-digit phone number'); return; }
+
+  const btn = document.getElementById('authSendOtpBtn');
+  btn.textContent = 'Sending…'; btn.disabled = true;
+
+  apiFetch('/api/auth/send-otp', 'POST', { phone })
+    .then(data => {
+      btn.textContent = 'Send OTP'; btn.disabled = false;
+      document.getElementById('authPhoneDisplay').textContent = '+91 ' + phone;
+      document.getElementById('authStepPhone').style.display = 'none';
+      document.getElementById('authStepOtp').style.display   = 'block';
+      // In dev mode show OTP as toast so it's easy to test
+      if (data.dev_otp) showToast('🔑 Dev OTP: ' + data.dev_otp, 8000);
+    })
+    .catch(err => {
+      btn.textContent = 'Send OTP'; btn.disabled = false;
+      showAuthError(err.message);
+    });
+}
+
+function verifyOtp() {
+  const phone = document.getElementById('authPhone').value.trim();
+  const otp   = document.getElementById('authOtp').value.trim();
+  if (!otp) { showAuthError('Enter the OTP'); return; }
+
+  const btn = document.getElementById('authVerifyBtn');
+  btn.textContent = 'Verifying…'; btn.disabled = true;
+
+  apiFetch('/api/auth/verify-otp', 'POST', { phone, otp })
+    .then(data => {
+      btn.textContent = 'Verify OTP'; btn.disabled = false;
+      storeSession(data.token, data.user);
+      closeAuthSheet();
+      showToast('✅ Welcome to Open Kitchens!');
+    })
+    .catch(err => {
+      btn.textContent = 'Verify OTP'; btn.disabled = false;
+      showAuthError(err.message);
+    });
+}
+
+// ── Email auth ────────────────────────────────────────────────────────────────
+function submitEmailAuth() {
+  const activeMode = document.querySelector('.auth-subtab.active')?.dataset.mode || 'login';
+  const email      = document.getElementById('authEmail').value.trim();
+  const password   = document.getElementById('authPassword').value;
+  const name       = document.getElementById('authName').value.trim();
+
+  if (!email || !password) { showAuthError('Email and password required'); return; }
+
+  const btn = document.getElementById('authEmailBtn');
+  btn.disabled = true;
+  btn.textContent = activeMode === 'register' ? 'Creating…' : 'Logging in…';
+
+  const endpoint = activeMode === 'register' ? '/api/auth/register' : '/api/auth/login';
+  const payload  = activeMode === 'register' ? { name, email, password } : { email, password };
+
+  apiFetch(endpoint, 'POST', payload)
+    .then(data => {
+      btn.disabled = false;
+      btn.textContent = activeMode === 'register' ? 'Create Account' : 'Login';
+      storeSession(data.token, data.user);
+      closeAuthSheet();
+      showToast(activeMode === 'register' ? '🎉 Account created!' : '✅ Welcome back!');
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.textContent = activeMode === 'register' ? 'Create Account' : 'Login';
+      showAuthError(err.message);
+    });
+}
+
+// ── Profile sheet ─────────────────────────────────────────────────────────────
+function openProfileSheet() {
+  const user = getAuthUser();
+  if (!user) { openAuthSheet(); return; }
+  document.getElementById('profileName').textContent  = user.name  || '—';
+  document.getElementById('profileEmail').textContent = user.email || '';
+  document.getElementById('profilePhone').textContent = user.phone ? '+91 ' + user.phone : '';
+  document.getElementById('profileSheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+function closeProfileSheet() {
+  document.getElementById('profileSheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function logoutUser() {
+  apiFetch('/api/auth/logout', 'POST').catch(() => {});
+  clearSession();
+  closeProfileSheet();
+  showToast('👋 Signed out');
+}
+
+// ─── Offer cards — load from API ──────────────────────────────────────────────
+// Colour gradients cycled per card index
+const _OFFER_GRADIENTS = [
+  'linear-gradient(135deg,#FFF8E1,#FFD54F30)',
+  'linear-gradient(135deg,#FFF3E0,#FFCC80)',
+  'linear-gradient(135deg,#FFFDE7,#FFE57F)',
+  'linear-gradient(135deg,#FBE9E7,#FFAB91)',
+  'linear-gradient(135deg,#E8F5E9,#A5D6A7)',
+  'linear-gradient(135deg,#E3F2FD,#90CAF9)',
+  'linear-gradient(135deg,#FCE4EC,#F48FB1)',
+];
+
+function _buildOfferCard(o, idx) {
+  const emoji = o.emoji || '🎁';
+  const badge = o.badge || o.code || '';
+  const grad  = _OFFER_GRADIENTS[idx % _OFFER_GRADIENTS.length];
+  // Card visual: image if available, otherwise gradient + emoji
+  const cardBg = o.image_url
+    ? `<div class="offer-card-bg" style="padding:0;overflow:hidden;">
+         <img src="${o.image_url}" alt="${o.title}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;border-radius:14px 14px 0 0;"/>
+       </div>`
+    : `<div class="offer-card-bg" style="background:${grad};">${emoji}</div>`;
+  // Price display
+  let priceHtml = '';
+  if (o.old_price) {
+    const newPrice = o.old_price - o.discount_value;
+    priceHtml = `<span class="offer-price-new">₹${newPrice}</span><span class="offer-price-old">₹${o.old_price}</span>`;
+  } else {
+    const label = o.discount_type === 'flat' ? `₹${o.discount_value} OFF` : `${o.discount_value}% OFF`;
+    priceHtml = `<span class="offer-price-new">${label}</span>`;
+  }
+  // CTA
+  const ctaLabel = o.code ? 'Grab Deal' : 'Order';
+  const ctaAction = o.code
+    ? `event.stopPropagation();showToast('Code ${o.code} — use at checkout!')`
+    : `event.stopPropagation();showToast('Added to cart!')`;
+  return `
+  <div class="offer-card" onclick="window.location.href='/#menu'">
+    <div class="offer-badge">${badge}</div>
+    ${cardBg}
+    <div class="offer-card-body">
+      <div class="offer-card-name">${o.title}</div>
+      <div class="offer-card-desc">${o.description || ''}</div>
+      <div class="offer-card-footer">
+        <div>${priceHtml}</div>
+        <button class="offer-cta" onclick="${ctaAction}">${ctaLabel}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// Cached offer fingerprint — skip DOM update if nothing changed
+let _offersFingerprint = '';
+
+async function loadOffersSection(isInitial = false) {
+  try {
+    const res    = await fetch('/api/offers?_=' + Date.now());
+    const data   = await res.json();
+    const offers = data.offers || [];
+
+    // Only re-render if data actually changed (avoids disrupting scroll position)
+    const fingerprint = JSON.stringify(offers.map(o => [o.id, o.image_url, o.title, o.is_active]));
+    if (!isInitial && fingerprint === _offersFingerprint) return;
+    _offersFingerprint = fingerprint;
+
+    const track = document.getElementById('offersTrack');
+    const dots  = document.getElementById('offersDots');
+    if (!track) return;
+    track.innerHTML = offers.length
+      ? offers.map((o, i) => _buildOfferCard(o, i)).join('')
+      : '<div style="padding:20px;color:var(--text-light);font-size:13px;">No active offers right now. Check back soon!</div>';
+    if (dots) {
+      dots.innerHTML = offers.map((_, i) =>
+        `<button class="offer-dot${i===0?' active':''}" onclick="scrollOfferTo(${i})"></button>`
+      ).join('');
+    }
+    if (isInitial) startOfferAutoScroll();
+  } catch (e) {
+    console.warn('[offers] Failed to load offers:', e.message);
+  }
+}
+
+// Auto-refresh offers when tab is refocused or every 30 seconds
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) loadOffersSection();
+});
+setInterval(loadOffersSection, 30 * 1000);
 
 // ─── Offer cards auto-scroll ──────────────────────────────────────────────────
 let offerIndex = 0;
@@ -531,11 +1296,14 @@ function startOfferAutoScroll() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('pincodeInput')?.addEventListener('keypress', e => {
-    if (e.key === 'Enter') checkPincode();
-  });
+  // Restore auth session
+  updateAuthUI(getAuthUser());
+
+  // Auto-detect delivery location on load
+  autoDetectLocation();
+
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeAuthSheet();
+    if (e.key === 'Escape') { closeAuthSheet(); closeLocationSheet(); closeSaveLabelSheet(); closeProfileSheet(); }
   });
 
   // Sync dots on manual scroll
@@ -556,11 +1324,12 @@ document.addEventListener('DOMContentLoaded', () => {
     track.addEventListener('touchend',    startOfferAutoScroll, { passive: true });
   }
 
-  startOfferAutoScroll();
+  // Load offers from DB — isInitial=true starts the auto-scroll after first render
+  loadOffersSection(true);
 
   // ── Init inline menu ──────────────────────────────────────────────────────
-  renderCategoryBar();
-  renderMenu();
+  // renderCategoryBar() and renderMenu() are called by _loadMenuFromAPI()
+  // (in menu-data.js) once the API responds — avoids a flash of empty content.
   setupCategoryObserver();
 
   document.getElementById('foodModal')?.addEventListener('click', function(e) {
@@ -639,8 +1408,10 @@ function renderMenu() {
       html += `
       <div class="menu-card" onclick="openItemModal(${item.id})">
         <div class="menu-card-img" style="background:${grad};">
-          <span>${item.emoji || '🍽️'}</span>
-          <span class="menu-card-veg">${item.veg ? '🟢' : '🔴'}</span>
+          ${item.image_url
+            ? `<img src="${item.image_url}" alt="${item.name}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:12px 12px 0 0;display:block;"/>`
+            : `<span>${item.emoji || '🍽️'}</span>`}
+          <span class="menu-card-veg" style="${item.image_url ? 'position:absolute;top:6px;right:6px;' : ''}">${item.veg ? '🟢' : '🔴'}</span>
           ${item.bestSeller ? '<span class="menu-card-badge">⭐ Best Seller</span>' : ''}
           ${item.spicy && !item.bestSeller ? '<span class="menu-card-badge" style="background:var(--amber-light);color:var(--brown-dark);">🌶️ Spicy</span>' : ''}
         </div>
@@ -651,11 +1422,13 @@ function renderMenu() {
             <span class="menu-card-price">₹${item.price}</span>
             ${qty > 0
               ? `<div class="qty-control" onclick="event.stopPropagation()">
-                  <button class="qty-btn" onclick="updateQty(${item.id},-1);renderMenu()">−</button>
+                  <button class="qty-btn" onclick="event.stopPropagation();updateQty(${item.id},-1)">−</button>
                   <span class="qty-num">${qty}</span>
-                  <button class="qty-btn" onclick="updateQty(${item.id},1);renderMenu()">+</button>
+                  <button class="qty-btn" onclick="event.stopPropagation();updateQty(${item.id},1)">+</button>
                  </div>`
-              : `<button class="add-btn" onclick="event.stopPropagation();openItemModal(${item.id})">ADD</button>`
+              : item.addons && item.addons.length > 0
+                ? `<button class="add-btn" onclick="event.stopPropagation();openItemModal(${item.id})">ADD</button>`
+                : `<button class="add-btn" onclick="event.stopPropagation();addToCart(${item.id})">ADD</button>`
             }
           </div>
         </div>
@@ -695,12 +1468,23 @@ function openItemModal(itemId) {
   const item = MENU_DATA.find(i => i.id === itemId);
   if (!item) return;
   selectedItem = item;
-  const addons = [
-    { name:'Extra Pickle', price:10 }, { name:'Extra Butter', price:15 },
-    { name:'Extra Roti',   price:15 }, { name:'Extra Gravy',  price:20 }
-  ];
+  // Use add-ons from the database (set via restaurant portal)
+  const addons = Array.isArray(item.addons) ? item.addons.filter(a => a.name) : [];
+  const addonsHTML = addons.length
+    ? addons.map((a, i) => `
+        <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <input type="checkbox" id="addon-${i}" style="width:18px;height:18px;accent-color:var(--rust);" onchange="updateModalTotal()"/>
+            <span style="font-size:14px;">${a.name}</span>
+          </div>
+          <span style="font-size:14px;font-weight:600;color:var(--text-mid);">+₹${a.price || 0}</span>
+        </label>`).join('')
+    : '<p style="font-size:13px;color:var(--text-light);padding:8px 0;">No add-ons available for this item.</p>';
+
   document.getElementById('modalContent').innerHTML = `
-    <div class="modal-img-placeholder">${item.emoji}</div>
+    ${item.image_url
+      ? `<div class="modal-img-placeholder" style="padding:0;overflow:hidden;"><img src="${item.image_url}" alt="${item.name}" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>`
+      : `<div class="modal-img-placeholder">${item.emoji}</div>`}
     <div class="modal-body">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span>${item.veg?'🟢':'🔴'}</span>
@@ -708,17 +1492,10 @@ function openItemModal(itemId) {
       </div>
       <p style="font-size:14px;color:var(--text-light);line-height:1.5;margin-bottom:12px;">${item.desc}</p>
       <div style="font-size:22px;font-weight:800;color:var(--brown-dark);margin-bottom:16px;">₹${item.price}</div>
-      <div style="margin-bottom:20px;">
+      ${addons.length ? `<div style="margin-bottom:20px;">
         <div style="font-size:14px;font-weight:700;color:var(--brown-dark);margin-bottom:10px;">Add-ons (Optional)</div>
-        ${addons.map((a,i) => `
-          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <input type="checkbox" id="addon-${i}" style="width:18px;height:18px;accent-color:var(--rust);" onchange="updateModalTotal()"/>
-              <span style="font-size:14px;">${a.name}</span>
-            </div>
-            <span style="font-size:14px;font-weight:600;color:var(--text-mid);">+₹${a.price}</span>
-          </label>`).join('')}
-      </div>
+        ${addonsHTML}
+      </div>` : ''}
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
         <span style="font-size:15px;font-weight:700;color:var(--text-mid);">Total</span>
         <span id="modalTotal" style="font-size:22px;font-weight:800;color:var(--rust);">₹${item.price}</span>
@@ -733,22 +1510,40 @@ function closeModal() {
 }
 function updateModalTotal() {
   if (!selectedItem) return;
-  const prices = [10,15,15,20];
+  const addons = Array.isArray(selectedItem.addons) ? selectedItem.addons.filter(a => a.name) : [];
   let extra = 0;
-  prices.forEach((p,i) => { if (document.getElementById('addon-'+i)?.checked) extra += p; });
+  addons.forEach((a, i) => { if (document.getElementById('addon-'+i)?.checked) extra += (a.price || 0); });
   document.getElementById('modalTotal').textContent = `₹${selectedItem.price + extra}`;
 }
 function addToCartFromModal(itemId) {
   addToCart(itemId); closeModal(); renderMenu();
 }
 
-// ─── Coupon ───────────────────────────────────────────────────────────────────
-function applyCoupon() {
-  const code = document.getElementById('couponInput')?.value.trim().toUpperCase();
-  if (code === 'WELCOME50' || code === 'FIRST50') showToast('🎉 ₹50 off applied!');
-  else if (code === 'OPENKITCHENS') showToast('🎉 10% off applied!');
-  else showToast('❌ Invalid coupon code');
-}
+// ─── Coupon: handled in menu-data.js (applyCoupon, openOffersSheet) ──────────
+
+// ─── (location sheet open/close defined above in DELIVERY LOCATION SYSTEM) ───
 </script>
+
+<!-- ── Floating Bottom Nav (mobile only) ────────────────────────────────── -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav">
+  <a href="/" class="mbn-item active">
+    <span class="mbn-icon">🏠</span>
+    <span class="mbn-label">Home</span>
+  </a>
+  <a href="/#menu" class="mbn-item" onclick="closeMobileMenuHighlight()">
+    <span class="mbn-icon">🍽️</span>
+    <span class="mbn-label">Menu</span>
+  </a>
+  <a href="/checkout" class="mbn-item">
+    <span class="mbn-icon" style="position:relative;">
+      🛒<span class="mbn-cart-badge cart-count" style="display:none;">0</span>
+    </span>
+    <span class="mbn-label">Cart</span>
+  </a>
+  <a href="#" class="mbn-item" onclick="openAuthSheet();return false;">
+    <span class="mbn-icon">👤</span>
+    <span class="mbn-label">Profile</span>
+  </a>
+</nav>
 </body>
 </html>

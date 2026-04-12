@@ -1,7 +1,82 @@
 // ─── Open Kitchens Menu Data ──────────────────────────────────────────────
-// Source: cloud_kitchen_pricing.xlsx
+// Menu is loaded dynamically from /api/menu (backed by the DB).
+// MENU_DATA starts empty and is populated after the API call.
 
-const MENU_DATA = [
+let MENU_DATA = [];
+
+// Normalise a DB item → legacy shape used by renderMenu() / addToCart()
+function _normaliseItem(i) {
+  const meta = (typeof i.metadata === 'object' ? i.metadata : {});
+  return {
+    id:           i.id,
+    category:     i.category  || 'Other',
+    name:         i.name,
+    price:        i.price,
+    desc:         i.description || '',
+    emoji:        i.emoji || meta.emoji || '🍽️',
+    veg:          !!i.is_veg,
+    bestSeller:   !!i.is_bestseller,
+    spicy:        !!i.is_spicy,
+    available:    i.is_available !== 0,
+    fanFavourite: !!i.is_fan_favourite,
+    image_url:    i.image_url   || null,
+    addons:       i.addons      || [],
+  };
+}
+
+// Render the Fan Favourites section from MENU_DATA
+function loadFanFavourites() {
+  const grid    = document.getElementById('fanFavGrid');
+  const section = document.getElementById('fanFavSection');
+  if (!grid) return;
+  const favs = MENU_DATA.filter(i => i.fanFavourite && i.available);
+  if (!favs.length) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;color:var(--text-light);font-size:13px;">No fan favourites selected yet.</div>';
+    return;
+  }
+  grid.innerHTML = favs.map(item => `
+    <div class="fav-card" onclick="openItemModal(${item.id})">
+      ${item.image_url
+        ? `<div style="height:100px;overflow:hidden;border-radius:12px 12px 0 0;">
+             <img src="${item.image_url}" alt="${item.name}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/>
+           </div>`
+        : `<div style="font-size:48px;text-align:center;padding:16px 8px 8px;">${item.emoji}</div>`}
+      <div style="padding:0 12px 14px;">
+        <div style="font-size:14px;font-weight:700;color:var(--brown-dark);">${item.name}</div>
+        <div style="font-size:12px;color:var(--text-light);margin-top:2px;">${item.desc.slice(0,40)}${item.desc.length>40?'…':''}</div>
+        <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
+          <span style="font-size:15px;font-weight:800;color:var(--rust);">&#8377;${item.price}</span>
+          <span style="background:var(--rust);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;">ADD</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function _loadMenuFromAPI() {
+  try {
+    const res  = await fetch('/api/menu?_=' + Date.now());
+    const data = await res.json();
+    MENU_DATA  = (data.items || []).map(_normaliseItem);
+    // Re-derive CATEGORIES after load
+    CATEGORIES.length = 0;
+    [...new Set(MENU_DATA.map(i => i.category))].forEach(c => CATEGORIES.push(c));
+    // Re-render category bar, menu grid, and fan favourites
+    if (typeof renderCategoryBar  === 'function') renderCategoryBar();
+    if (typeof renderMenu         === 'function') renderMenu();
+    loadFanFavourites();
+  } catch (e) {
+    console.warn('[menu-data] Could not load menu from API:', e.message);
+  }
+}
+
+// Auto-refresh: reload when tab refocused OR every 30 seconds
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) _loadMenuFromAPI();
+});
+setInterval(_loadMenuFromAPI, 30 * 1000);
+
+// ── Legacy static array kept for reference (now unused — DB is source of truth)
+const _STATIC_MENU_BACKUP = [
   // ── Breakfast ──────────────────────────────────────────────────────────
   {
     id: 1, category: 'Breakfast', name: 'Indori Poha', price: 119,
@@ -334,7 +409,7 @@ const MENU_DATA = [
   }
 ];
 
-const CATEGORIES = [...new Set(MENU_DATA.map(i => i.category))];
+const CATEGORIES = [];
 
 const DELIVERY_ZONES = {
   '560024': 'Hebbal',
@@ -349,12 +424,20 @@ const DELIVERY_ZONES = {
   '560045': 'Nagawara'
 };
 
-// Cart state
+// ── Cart state ────────────────────────────────────────────────────────────────
+// Each cart entry: { id, name, price, emoji, image_url, qty, selectedAddons: [{name,price}] }
 let cart = JSON.parse(localStorage.getItem('ok_cart') || '[]');
+
+// Applied coupon state
+let _appliedCoupon = null; // { code, discount_type, discount_value, min_order, max_discount }
 
 function saveCart() {
   localStorage.setItem('ok_cart', JSON.stringify(cart));
   updateCartUI();
+  // Re-render menu cards (ADD → qty controls) if on menu page
+  if (typeof renderMenu === 'function') renderMenu();
+  // Re-render checkout items list if on checkout page
+  if (typeof renderCheckoutItems === 'function') renderCheckoutItems();
 }
 
 function addToCart(itemId, qty = 1) {
@@ -364,7 +447,11 @@ function addToCart(itemId, qty = 1) {
   if (existing) {
     existing.qty += qty;
   } else {
-    cart.push({ id: item.id, name: item.name, price: item.price, emoji: item.emoji, qty });
+    cart.push({
+      id: item.id, name: item.name, price: item.price,
+      emoji: item.emoji, image_url: item.image_url || null,
+      qty, selectedAddons: []
+    });
   }
   saveCart();
   showToast(`${item.emoji} ${item.name} added to cart`);
@@ -383,8 +470,29 @@ function updateQty(itemId, delta) {
   else saveCart();
 }
 
+function getItemLineTotal(cartEntry) {
+  const addonsExtra = (cartEntry.selectedAddons || []).reduce((s, a) => s + (a.price || 0), 0);
+  return (cartEntry.price + addonsExtra) * cartEntry.qty;
+}
+
+function getCartSubtotal() {
+  return cart.reduce((sum, c) => sum + getItemLineTotal(c), 0);
+}
+
+function getCartDiscount(subtotal) {
+  if (!_appliedCoupon) return 0;
+  const c = _appliedCoupon;
+  if (subtotal < (c.min_order || 0)) return 0;
+  let disc = c.discount_type === 'flat'
+    ? c.discount_value
+    : Math.round(subtotal * c.discount_value / 100);
+  if (c.max_discount) disc = Math.min(disc, c.max_discount);
+  return disc;
+}
+
 function getCartTotal() {
-  return cart.reduce((sum, c) => sum + c.price * c.qty, 0);
+  const sub = getCartSubtotal();
+  return Math.max(0, sub - getCartDiscount(sub));
 }
 
 function getCartCount() {
@@ -392,16 +500,36 @@ function getCartCount() {
 }
 
 function updateCartUI() {
-  const count = getCartCount();
-  const total = getCartTotal();
+  const count   = getCartCount();
+  const sub     = getCartSubtotal();
+  const disc    = getCartDiscount(sub);
+  const total   = Math.max(0, sub - disc);
+
   document.querySelectorAll('.cart-count').forEach(el => {
     el.textContent = count;
     el.style.display = count > 0 ? 'flex' : 'none';
   });
-  document.querySelectorAll('.cart-total-amount').forEach(el => {
-    el.textContent = `₹${total}`;
-  });
-  // Update cart items list if cart is open
+  document.querySelectorAll('.cart-total-amount').forEach(el => el.textContent = `₹${total}`);
+
+  const subEl = document.getElementById('cartSubtotal');
+  if (subEl) subEl.textContent = `₹${sub}`;
+
+  const discRow = document.getElementById('cartDiscountRow');
+  const discAmt = document.getElementById('cartDiscountAmt');
+  const discLbl = document.getElementById('cartDiscountLabel');
+  if (discRow) {
+    discRow.style.display = (disc > 0) ? 'flex' : 'none';
+    if (discAmt) discAmt.textContent = `−₹${disc}`;
+    if (discLbl && _appliedCoupon) discLbl.textContent = `Discount (${_appliedCoupon.code})`;
+  }
+
+  // Sync location label in cart top bar
+  const locEl = document.getElementById('cartLocLabel');
+  if (locEl) {
+    const loc = (typeof getCurrentLocation === 'function') ? getCurrentLocation() : null;
+    locEl.textContent = loc?.shortName || 'Set delivery location';
+  }
+
   renderCartItems();
 }
 
@@ -409,27 +537,53 @@ function renderCartItems() {
   const container = document.querySelector('.cart-items');
   if (!container) return;
   if (cart.length === 0) {
-    container.innerHTML = `<div class="empty-cart">
-      <div class="empty-icon">🛒</div>
-      <p>Your cart is empty</p>
-      <a href="/menu" class="btn btn-primary btn-sm" style="display:inline-flex;margin-top:12px;">Browse Menu</a>
-    </div>`;
+    container.innerHTML = `
+      <div class="empty-cart">
+        <div class="empty-icon">🛒</div>
+        <p style="margin:8px 0 4px;font-weight:700;color:var(--text-dark);">Your plate is empty!</p>
+        <p style="font-size:13px;color:var(--text-light);margin-bottom:16px;">Add some delicious dishes to get started</p>
+        <button class="btn btn-primary btn-sm" onclick="closeCart();document.getElementById('menu')?.scrollIntoView({behavior:'smooth'})">
+          Browse Menu 🍽️
+        </button>
+      </div>`;
     return;
   }
-  container.innerHTML = cart.map(item => `
-    <div class="cart-item">
-      <span style="font-size:24px">${item.emoji}</span>
-      <div class="cart-item-info">
+
+  container.innerHTML = cart.map(item => {
+    const addonsExtra = (item.selectedAddons || []).reduce((s, a) => s + (a.price || 0), 0);
+    const lineTotal   = getItemLineTotal(item);
+    const addonsLabel = item.selectedAddons?.length
+      ? item.selectedAddons.map(a => a.name).join(', ')
+      : null;
+    // Check if this menu item has addons available
+    const menuItem  = MENU_DATA.find(m => m.id === item.id);
+    const hasAddons = menuItem?.addons?.length > 0;
+    return `
+    <div class="cart-item" id="cart-item-${item.id}">
+      <div class="cart-item-img">
+        ${item.image_url
+          ? `<img src="${item.image_url}" alt="${item.name}" loading="lazy" decoding="async" style="width:100%;height:100%;object-fit:cover;border-radius:8px;"/>`
+          : `<span style="font-size:26px;">${item.emoji}</span>`}
+      </div>
+      <div class="cart-item-body">
         <div class="cart-item-name">${item.name}</div>
-        <div class="cart-item-price">₹${item.price} × ${item.qty} = ₹${item.price * item.qty}</div>
+        ${hasAddons ? `<button class="cart-customize-btn" onclick="openAddonModal(${item.id})">
+          ${addonsLabel ? `✏️ ${addonsLabel}` : '+ Customize'}
+        </button>` : ''}
+        <div class="cart-item-price-row">
+          <div class="qty-control">
+            <button class="qty-btn" onclick="updateQty(${item.id}, -1)">−</button>
+            <span class="qty-num">${item.qty}</span>
+            <button class="qty-btn" onclick="updateQty(${item.id}, 1)">+</button>
+          </div>
+          <div class="cart-item-total">₹${lineTotal}</div>
+        </div>
       </div>
-      <div class="qty-control">
-        <button class="qty-btn" onclick="updateQty(${item.id}, -1)">−</button>
-        <span class="qty-num">${item.qty}</span>
-        <button class="qty-btn" onclick="updateQty(${item.id}, 1)">+</button>
-      </div>
-    </div>
-  `).join('');
+    </div>`;
+  }).join('') +
+  `<button class="cart-add-more-btn" onclick="closeCart();setTimeout(()=>document.getElementById('menu')?.scrollIntoView({behavior:'smooth'}),300)">
+    + Add more items
+  </button>`;
 }
 
 // Toast
@@ -445,19 +599,158 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// Cart sheet toggle
+// Cart: navigate directly to checkout page
 function openCart() {
-  document.querySelector('.cart-overlay')?.classList.add('open');
-  document.querySelector('.cart-sheet')?.classList.add('open');
-  renderCartItems();
+  window.location.href = '/checkout';
 }
 function closeCart() {
-  document.querySelector('.cart-overlay')?.classList.remove('open');
-  document.querySelector('.cart-sheet')?.classList.remove('open');
+  // no-op — kept for compatibility
+}
+
+// ── Add-ons customize modal ───────────────────────────────────────────────────
+let _addonModalItemId = null;
+
+function openAddonModal(itemId) {
+  const menuItem = MENU_DATA.find(m => m.id === itemId);
+  const cartItem = cart.find(c => c.id === itemId);
+  if (!menuItem || !cartItem) return;
+  _addonModalItemId = itemId;
+
+  document.getElementById('addonModalTitle').textContent = menuItem.name;
+  const addons = Array.isArray(menuItem.addons) ? menuItem.addons.filter(a => a.name) : [];
+  const selected = cartItem.selectedAddons || [];
+
+  document.getElementById('addonModalItems').innerHTML = addons.length
+    ? addons.map((a, i) => {
+        const checked = selected.some(s => s.name === a.name);
+        return `<label class="addon-modal-row">
+          <div class="addon-modal-row-left">
+            <input type="checkbox" id="am-addon-${i}" ${checked ? 'checked' : ''}
+              onchange="_updateAddonModalTotal()" style="width:18px;height:18px;accent-color:var(--rust);flex-shrink:0;"/>
+            <span>${a.name}</span>
+          </div>
+          <span class="addon-modal-price">+₹${a.price || 0}</span>
+        </label>`;
+      }).join('')
+    : '<p style="padding:16px;color:var(--text-light);font-size:13px;text-align:center;">No add-ons available</p>';
+
+  _updateAddonModalTotal();
+  document.getElementById('addonModalOverlay').classList.add('open');
+  document.getElementById('addonModal').classList.add('open');
+}
+
+function _updateAddonModalTotal() {
+  const menuItem = MENU_DATA.find(m => m.id === _addonModalItemId);
+  const cartItem = cart.find(c => c.id === _addonModalItemId);
+  if (!menuItem || !cartItem) return;
+  const addons = Array.isArray(menuItem.addons) ? menuItem.addons.filter(a => a.name) : [];
+  let extra = 0;
+  addons.forEach((a, i) => {
+    if (document.getElementById(`am-addon-${i}`)?.checked) extra += (a.price || 0);
+  });
+  const el = document.getElementById('addonModalTotal');
+  if (el) el.textContent = `₹${(menuItem.price + extra) * cartItem.qty}`;
+}
+
+function confirmAddonModal() {
+  const menuItem = MENU_DATA.find(m => m.id === _addonModalItemId);
+  const cartItem = cart.find(c => c.id === _addonModalItemId);
+  if (!menuItem || !cartItem) return;
+  const addons = Array.isArray(menuItem.addons) ? menuItem.addons.filter(a => a.name) : [];
+  cartItem.selectedAddons = addons.filter((a, i) => document.getElementById(`am-addon-${i}`)?.checked);
+  saveCart();
+  closeAddonModal();
+}
+
+function closeAddonModal() {
+  document.getElementById('addonModalOverlay')?.classList.remove('open');
+  document.getElementById('addonModal')?.classList.remove('open');
+  _addonModalItemId = null;
+}
+
+// ── Coupon / Offers sheet ─────────────────────────────────────────────────────
+async function applyCoupon() {
+  const code = document.getElementById('couponInput')?.value.trim().toUpperCase();
+  const msg  = document.getElementById('couponMsg');
+  if (!code) { if (msg) msg.innerHTML = '<span style="color:#C62828;">Enter a coupon code first.</span>'; return; }
+  try {
+    const { offers } = await fetch('/api/offers').then(r => r.json());
+    const offer = offers.find(o => o.code === code);
+    if (!offer) {
+      _appliedCoupon = null;
+      if (msg) msg.innerHTML = `<span style="color:#C62828;">❌ "${code}" is not a valid coupon.</span>`;
+    } else {
+      const sub = getCartSubtotal();
+      if (sub < (offer.min_order || 0)) {
+        if (msg) msg.innerHTML = `<span style="color:#C62828;">❌ Minimum order ₹${offer.min_order} required.</span>`;
+        return;
+      }
+      _appliedCoupon = offer;
+      updateCartUI();
+      if (msg) msg.innerHTML = `<span style="color:#2E7D32;">✅ "${code}" applied!</span>`;
+    }
+  } catch {
+    if (msg) msg.innerHTML = `<span style="color:#C62828;">Could not validate coupon. Try again.</span>`;
+  }
+}
+
+async function openOffersSheet() {
+  document.getElementById('offersSheetOverlay')?.classList.add('open');
+  document.getElementById('offersSheetPanel')?.classList.add('open');
+  const list = document.getElementById('offersSheetList');
+  if (!list) return;
+  list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px;">Loading offers…</div>';
+  try {
+    const { offers } = await fetch('/api/offers').then(r => r.json());
+    if (!offers.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-light);font-size:13px;">No offers available right now.</div>';
+      return;
+    }
+    list.innerHTML = offers.map(o => {
+      const discText = o.discount_type === 'flat' ? `₹${o.discount_value} off` : `${o.discount_value}% off`;
+      const minText  = o.min_order ? ` on orders above ₹${o.min_order}` : '';
+      return `<div class="offer-list-card">
+        <div class="offer-list-card-top">
+          <span class="offer-list-code">${o.code}</span>
+          <button class="offer-list-apply-btn" onclick="applyOfferCode('${o.code}')">Apply</button>
+        </div>
+        <div class="offer-list-title">${o.title}</div>
+        <div class="offer-list-desc">${discText}${minText}${o.max_discount ? ` (max ₹${o.max_discount})` : ''}</div>
+      </div>`;
+    }).join('');
+  } catch {
+    list.innerHTML = '<div style="padding:20px;text-align:center;color:#C62828;font-size:13px;">Failed to load offers.</div>';
+  }
+}
+
+function applyOfferCode(code) {
+  const input = document.getElementById('couponInput');
+  if (input) input.value = code;
+  closeOffersSheet();
+  applyCoupon();
+}
+
+function closeOffersSheet() {
+  document.getElementById('offersSheetOverlay')?.classList.remove('open');
+  document.getElementById('offersSheetPanel')?.classList.remove('open');
+}
+
+// ── Proceed to checkout (auth-gated) ─────────────────────────────────────────
+function proceedToCheckout() {
+  if (cart.length === 0) { showToast('Add items to your cart first!'); return; }
+  if (typeof isLoggedIn === 'function' && !isLoggedIn()) {
+    closeCart();
+    showToast('Please sign in to place your order');
+    setTimeout(() => { if (typeof openAuthSheet === 'function') openAuthSheet(); }, 300);
+    return;
+  }
+  window.location.href = '/checkout';
 }
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
   updateCartUI();
   document.querySelector('.cart-overlay')?.addEventListener('click', closeCart);
+  // Load live menu from DB via API
+  _loadMenuFromAPI();
 });
