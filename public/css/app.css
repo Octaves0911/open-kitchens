@@ -487,6 +487,9 @@ input, select, textarea { font-family: inherit; outline: none; }
 .menu-card-footer {
   display: flex; align-items: center; justify-content: space-between; gap: 6px;
 }
+.menu-card-footer--prelaunch {
+  justify-content: flex-start;
+}
 .menu-card-price {
   font-size: 15px; font-weight: 800; color: var(--brown-dark);
 }
@@ -690,8 +693,10 @@ input, select, textarea { font-family: inherit; outline: none; }
 .footer-links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 20px; }
 .footer-links a { font-size: 13px; color: rgba(255,255,255,.65); }
 .footer-links a:hover { color: var(--amber); }
-.footer-social { display: flex; gap: 12px; margin-bottom: 20px; }
+.footer-social { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
 .social-btn { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,.1); display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; transition: all .2s; }
+a.social-btn { text-decoration: none; color: rgba(255,255,255,.92); }
+a.social-btn svg { display: block; flex-shrink: 0; }
 .social-btn:hover { background: var(--rust); transform: translateY(-2px); }
 .footer-bottom { border-top: 1px solid rgba(255,255,255,.1); padding-top: 14px; text-align: center; font-size: 12px; color: rgba(255,255,255,.5); }
 

@@ -9,7 +9,9 @@ const fs      = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const multer  = require('multer');
 const sharp   = require('sharp');
-const db      = require('../db/database');
+const db         = require('../db/database');
+const hls        = require('../lib/hls-transcoder');
+const liveAccess = require('../lib/live-stream-access');
 const { requireAuth, signToken } = require('../middleware/auth');
 
 // ── Image upload helpers — memory storage + WebP conversion via sharp ─────────
@@ -344,7 +346,9 @@ router.get('/config/:key', requireRestaurant, (req, res) => {
 
 // PUT /api/restaurant/config/:key
 router.put('/config/:key', requireRestaurant, (req, res) => {
-  const { value } = req.body;
+  let { value } = req.body || {};
+  if (value === undefined || value === null) value = '';
+  else if (typeof value !== 'string') value = JSON.stringify(value);
   db.prepare(`INSERT INTO restaurant_config (key,value) VALUES (?,?)
               ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP`)
     .run(req.params.key, value);
@@ -354,6 +358,76 @@ router.put('/config/:key', requireRestaurant, (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // LIVE STREAMING
 // ═══════════════════════════════════════════════════════════════════════════════
+
+function tryStopTranscoderIfIdle() {
+  db.prepare(`DELETE FROM live_public_sessions WHERE expires_at < datetime('now')`).run();
+  const liveN = db.prepare(`SELECT COUNT(*) AS n FROM live_streams WHERE status='active'`).get().n;
+  const pubN  = db.prepare(
+    `SELECT COUNT(*) AS n FROM live_public_sessions WHERE expires_at >= datetime('now')`
+  ).get().n;
+  const prevN = liveAccess.activePreviewCount();
+  if (liveN === 0 && pubN === 0 && prevN === 0) hls.stop();
+}
+
+function serveHlsFile(req, res, filename) {
+  const token = req.params.token;
+  const v     = liveAccess.validatePlayback(db, token);
+  if (!v.ok) {
+    return res.status(403).type('text/plain').send('Forbidden');
+  }
+  const rtsp = liveAccess.getRtspUrl(db);
+  try {
+    hls.ensureRunning(rtsp);
+  } catch (e) {
+    return res.status(503).type('text/plain').send(e.message || 'Stream unavailable');
+  }
+  const dir  = hls.getOutputDir();
+  const safe = path.basename(filename);
+  if (safe !== 'index.m3u8' && !/^seg_\d+\.ts$/.test(safe)) {
+    return res.status(400).end();
+  }
+  const filePath = path.join(dir, safe);
+  if (!fs.existsSync(filePath)) {
+    return res.status(503).type('text/plain').send('Playlist not ready — try again in a few seconds');
+  }
+  if (safe.endsWith('.m3u8')) res.type('application/vnd.apple.mpegurl');
+  else res.type('video/mp2t');
+  res.sendFile(filePath);
+}
+
+// GET /api/restaurant/stream/hls/:token/index.m3u8
+router.get('/stream/hls/:token/index.m3u8', (req, res) => {
+  serveHlsFile(req, res, 'index.m3u8');
+});
+
+// GET /api/restaurant/stream/hls/:token/:segment
+router.get('/stream/hls/:token/:segment', (req, res) => {
+  serveHlsFile(req, res, req.params.segment);
+});
+
+// POST /api/restaurant/stream/preview/start — restaurant-only preview token + HLS
+router.post('/stream/preview/start', requireRestaurant, (req, res) => {
+  const rtsp = liveAccess.getRtspUrl(db);
+  try {
+    hls.ensureRunning(rtsp);
+  } catch (e) {
+    return res.status(400).json({ error: e.message || 'Could not start transcoder' });
+  }
+  const token = liveAccess.issuePreviewToken();
+  res.json({
+    success: true,
+    token,
+    hlsUrl: `/api/restaurant/stream/hls/${token}/index.m3u8`,
+  });
+});
+
+// POST /api/restaurant/stream/preview/stop
+router.post('/stream/preview/stop', requireRestaurant, (req, res) => {
+  const { token } = req.body || {};
+  if (token) liveAccess.revokePreviewToken(token);
+  tryStopTranscoderIfIdle();
+  res.json({ success: true });
+});
 
 // POST /api/restaurant/stream/start/:orderId — start stream for an order
 router.post('/stream/start/:orderId', requireRestaurant, (req, res) => {
@@ -398,23 +472,39 @@ router.post('/stream/stop/:orderId', requireRestaurant, (req, res) => {
     orderId: req.params.orderId
   });
 
+  tryStopTranscoderIfIdle();
   res.json({ success: true });
 });
 
 // GET /api/restaurant/stream/token/:token — validate stream token (customer side)
 router.get('/stream/token/:token', (req, res) => {
-  const stream = db.prepare(`
-    SELECT ls.*, rc.value as rtsp_url
-    FROM live_streams ls
-    LEFT JOIN restaurant_config rc ON rc.key='rtsp_url'
-    WHERE ls.token=? AND ls.status='active'`).get(req.params.token);
-  if (!stream) return res.status(404).json({ error: 'Stream not found or already stopped' });
-  // Return the HLS proxy URL (or direct RTSP info for debugging)
+  const token = req.params.token;
+  const v     = liveAccess.validatePlayback(db, token);
+
+  if (!v.ok) {
+    if (v.reason === 'disabled') {
+      return res.json({
+        valid: false,
+        reason: 'disabled',
+        error: 'Live stream is currently disabled.',
+      });
+    }
+    if (v.reason === 'not_allowed') {
+      return res.json({
+        valid: false,
+        reason: 'not_allowed',
+        error: 'This order is no longer authorized for live view.',
+      });
+    }
+    return res.status(404).json({ error: 'Stream not found or already stopped' });
+  }
+
+  const orderLabel = v.orderId != null ? v.orderId : '—';
   res.json({
     valid: true,
-    orderId: stream.order_id,
-    rtspUrl: stream.rtsp_url || null,
-    hlsUrl: `/api/restaurant/stream/hls/${req.params.token}/index.m3u8`
+    orderId: v.orderId,
+    hlsUrl: `/api/restaurant/stream/hls/${token}/index.m3u8`,
+    orderLabel,
   });
 });
 

@@ -47,10 +47,16 @@ async function apiFetch(path, { method = 'GET', body = null, form = null } = {})
     opts.body = JSON.stringify(body);
   }
   const res = await fetch('/api/restaurant' + path, opts);
-  const data = await res.json();
+  const text = await res.text();
+  let data = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { error: text ? text.slice(0, 120) : 'Invalid response' };
+  }
   if (!res.ok) {
     if (res.status === 403) { secret = ''; localStorage.removeItem(SECRET_KEY); showAuthModal(); }
-    throw new Error(data.error || 'Request failed');
+    throw new Error(data.error || `Request failed (${res.status})`);
   }
   return data;
 }
@@ -560,13 +566,173 @@ async function saveOffer() {
 // ════════════════════════════════════════════════════════════════════════════════
 // LIVE PREP TAB
 // ════════════════════════════════════════════════════════════════════════════════
+let livePublicOrderIds   = [];
+let previewHlsInstance   = null;
+let previewSessionToken  = null;
+
+function normalizeOrderIdInput(input) {
+  if (input == null) return null;
+  let s = String(input).trim().replace(/^#/, '');
+  const m = s.match(/^ok0*(\d+)$/i);
+  if (m) return parseInt(m[1], 10);
+  const digits = s.replace(/\D/g, '');
+  const n = parseInt(digits || s, 10);
+  return Number.isNaN(n) ? null : n;
+}
+
 async function loadLivePrep() {
-  // Load saved RTSP URL
   try {
     const { value } = await API('/config/rtsp_url');
     if (value) document.getElementById('rtspInput').value = value;
   } catch {}
+  try {
+    const bc = await API('/config/live_broadcast_enabled');
+    const raw = bc.value;
+    const on = raw !== '0' && String(raw).toLowerCase() !== 'false';
+    const el = document.getElementById('liveBroadcastToggle');
+    if (el) el.checked = on;
+  } catch {}
+  try {
+    const { value } = await API('/config/live_public_order_ids');
+    livePublicOrderIds = [];
+    if (value) {
+      const arr = JSON.parse(value);
+      if (Array.isArray(arr)) {
+        livePublicOrderIds = arr.map((n) => parseInt(String(n), 10)).filter((n) => !Number.isNaN(n));
+      }
+    }
+    renderPublicOrderIds();
+  } catch {}
   loadAcceptedOrders();
+}
+
+async function onLiveBroadcastToggle() {
+  const el = document.getElementById('liveBroadcastToggle');
+  const on = el.checked;
+  try {
+    await API('/config/live_broadcast_enabled', { method: 'PUT', body: { value: on ? '1' : '0' } });
+    showToast(on ? 'Customer live stream enabled' : 'Customer live stream disabled');
+  } catch (e) {
+    showToast(e.message, 'error');
+    el.checked = !on;
+  }
+}
+
+function renderPublicOrderIds() {
+  const box = document.getElementById('liveOrderIdChips');
+  if (!box) return;
+  box.innerHTML = livePublicOrderIds.map((id) => `
+    <span class="rp-order-chip">#OK${String(id).padStart(6, '0')}
+      <button type="button" class="rp-order-chip-x" onclick="removePublicOrderId(${id})" aria-label="Remove">×</button>
+    </span>
+  `).join('');
+}
+
+async function savePublicOrderIdsToServer() {
+  await API('/config/live_public_order_ids', {
+    method: 'PUT',
+    body: { value: JSON.stringify(livePublicOrderIds) },
+  });
+}
+
+async function addPublicOrderId() {
+  const input = document.getElementById('liveOrderIdInput');
+  const id = normalizeOrderIdInput(input.value);
+  if (id == null) { showToast('Invalid order ID', 'error'); return; }
+  if (livePublicOrderIds.includes(id)) { showToast('Already in list', 'error'); return; }
+  livePublicOrderIds.push(id);
+  input.value = '';
+  renderPublicOrderIds();
+  try {
+    await savePublicOrderIdsToServer();
+    showToast('Order ID saved for live access');
+  } catch (e) {
+    livePublicOrderIds.pop();
+    renderPublicOrderIds();
+    showToast(e.message, 'error');
+  }
+}
+
+async function removePublicOrderId(id) {
+  livePublicOrderIds = livePublicOrderIds.filter((x) => x !== id);
+  renderPublicOrderIds();
+  try {
+    await savePublicOrderIdsToServer();
+  } catch (e) {
+    showToast(e.message, 'error');
+  }
+}
+
+async function openRtspPreview() {
+  if (previewSessionToken) {
+    const t = previewSessionToken;
+    previewSessionToken = null;
+    closeRtspPreviewQuiet();
+    await API('/stream/preview/stop', { method: 'POST', body: { token: t } }).catch(() => {});
+  }
+  const modal = document.getElementById('rtspPreviewModal');
+  const status = document.getElementById('rtspPreviewStatus');
+  const video = document.getElementById('rtspPreviewVideo');
+  if (!modal || !video) return;
+  closeRtspPreviewQuiet();
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  status.textContent = 'Starting transcoder…';
+  try {
+    const data = await API('/stream/preview/start', { method: 'POST' });
+    previewSessionToken = data.token;
+    const hlsUrl = data.hlsUrl.startsWith('http') ? data.hlsUrl : `${location.origin}${data.hlsUrl}`;
+    status.textContent = 'Loading HLS…';
+    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+      previewHlsInstance = new Hls({ lowLatencyMode: true });
+      previewHlsInstance.loadSource(hlsUrl);
+      previewHlsInstance.attachMedia(video);
+      previewHlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+        status.textContent = '';
+        video.play().catch(() => {});
+      });
+      previewHlsInstance.on(Hls.Events.ERROR, (_, errData) => {
+        if (errData.fatal) status.textContent = 'Playback failed — check RTSP URL, ffmpeg, and camera.';
+      });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = hlsUrl;
+      video.addEventListener('loadedmetadata', () => {
+        status.textContent = '';
+        video.play().catch(() => {});
+      }, { once: true });
+    } else {
+      status.textContent = 'HLS not supported in this browser.';
+    }
+  } catch (e) {
+    status.textContent = e.message || 'Could not start preview';
+    previewSessionToken = null;
+  }
+}
+
+function closeRtspPreviewQuiet() {
+  const video = document.getElementById('rtspPreviewVideo');
+  if (previewHlsInstance) {
+    previewHlsInstance.destroy();
+    previewHlsInstance = null;
+  }
+  if (video) {
+    video.removeAttribute('src');
+    video.load();
+  }
+}
+
+function closeRtspPreview() {
+  const modal = document.getElementById('rtspPreviewModal');
+  const token = previewSessionToken;
+  previewSessionToken = null;
+  closeRtspPreviewQuiet();
+  if (modal) {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  }
+  if (token) {
+    API('/stream/preview/stop', { method: 'POST', body: { token } }).catch(() => {});
+  }
 }
 
 async function saveRtspUrl() {

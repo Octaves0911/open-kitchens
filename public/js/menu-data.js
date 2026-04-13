@@ -7,6 +7,8 @@ let MENU_DATA = [];
 // Normalise a DB item → legacy shape used by renderMenu() / addToCart()
 function _normaliseItem(i) {
   const meta = (typeof i.metadata === 'object' ? i.metadata : {});
+  const prepRaw = meta.prep_minutes ?? meta.prepTime ?? meta.prep_time;
+  const prepMinutes = prepRaw != null && prepRaw !== '' ? Number(prepRaw) : null;
   return {
     id:           i.id,
     category:     i.category  || 'Other',
@@ -21,6 +23,7 @@ function _normaliseItem(i) {
     fanFavourite: !!i.is_fan_favourite,
     image_url:    i.image_url   || null,
     addons:       i.addons      || [],
+    prepMinutes:  Number.isFinite(prepMinutes) ? prepMinutes : null,
   };
 }
 
@@ -44,9 +47,8 @@ function loadFanFavourites() {
       <div style="padding:0 12px 14px;">
         <div style="font-size:14px;font-weight:700;color:var(--brown-dark);">${item.name}</div>
         <div style="font-size:12px;color:var(--text-light);margin-top:2px;">${item.desc.slice(0,40)}${item.desc.length>40?'…':''}</div>
-        <div style="margin-top:6px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="margin-top:8px;">
           <span style="font-size:15px;font-weight:800;color:var(--rust);">&#8377;${item.price}</span>
-          <span style="background:var(--rust);color:#fff;font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;">ADD</span>
         </div>
       </div>
     </div>`).join('');

@@ -151,6 +151,14 @@ db.exec(`
     FOREIGN KEY (order_id) REFERENCES orders(id),
     FOREIGN KEY (user_id)  REFERENCES users(id)
   );
+
+  -- Public live access (order ID gate, no user FK)
+  CREATE TABLE IF NOT EXISTS live_public_sessions (
+    token      TEXT PRIMARY KEY,
+    order_id   INTEGER NOT NULL,
+    expires_at TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // ── Migrations: add restaurant_id to existing tables if missing ───────────────
@@ -217,6 +225,7 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_menu_restaurant      ON menu_items(restaurant_id);
   CREATE INDEX IF NOT EXISTS idx_offers_restaurant    ON offers(restaurant_id);
   CREATE INDEX IF NOT EXISTS idx_cart_user_restaurant ON cart_items(user_id, restaurant_id);
+  CREATE INDEX IF NOT EXISTS idx_live_public_expires ON live_public_sessions(expires_at);
 `);
 
 console.log(`[DB] SQLite ready → ${DB_FILE}`);

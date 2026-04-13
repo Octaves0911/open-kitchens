@@ -24,14 +24,7 @@
       <a href="/">Home</a>
       <a href="/menu" class="active">Menu</a>
       <a href="/why-us">Why Us</a>
-      <a href="/rider">Ride With Us</a>
     </nav>
-    <div class="header-actions">
-      <button class="cart-btn" onclick="openCart()">
-        🛒 Cart
-        <span class="cart-count" style="display:none;">0</span>
-      </button>
-    </div>
   </div>
 </header>
 
@@ -189,7 +182,6 @@
 <script>
 let currentFilter = 'all';
 let currentSlide = 0;
-let selectedItem = null;
 
 // ─── Render category bar ─────────────────────────────────────────────────────
 function renderCategoryBar() {
@@ -240,10 +232,8 @@ function renderMenu() {
     html += `<div class="menu-section" id="cat-${cat.replace(/\s/g,'')}">
       <div class="menu-section-title">${catIcons[cat] || '🍽️'} ${cat} <span style="font-size:12px;color:var(--text-light);font-weight:400;">(${catItems.length} items)</span></div>`;
     catItems.forEach(item => {
-      const cartItem = cart.find(c => c.id === item.id);
-      const qty = cartItem ? cartItem.qty : 0;
       html += `
-      <div class="menu-item">
+      <div class="menu-item" onclick="openItemModal(${item.id})" style="cursor:pointer;">
         <span class="item-veg-icon">${item.veg ? '🟢' : '🔴'}</span>
         <div class="item-info">
           <div class="item-name">${item.name}</div>
@@ -255,14 +245,6 @@ function renderMenu() {
         </div>
         <div class="item-right">
           <div class="item-price">₹${item.price}</div>
-          ${qty > 0
-            ? `<div class="qty-control">
-                <button class="qty-btn" onclick="event.stopPropagation();updateQty(${item.id},-1);renderMenu()">−</button>
-                <span class="qty-num">${qty}</span>
-                <button class="qty-btn" onclick="event.stopPropagation();updateQty(${item.id},1);renderMenu()">+</button>
-               </div>`
-            : `<button class="add-btn" onclick="openItemModal(${item.id})">ADD</button>`
-          }
         </div>
       </div>`;
     });
@@ -304,17 +286,21 @@ function setupCategoryObserver() {
 function openItemModal(itemId) {
   const item = MENU_DATA.find(i => i.id === itemId);
   if (!item) return;
-  selectedItem = item;
 
-  const addons = [
-    { name: 'Extra Pickle', price: 10 },
-    { name: 'Extra Butter', price: 15 },
-    { name: 'Extra Roti', price: 15 },
-    { name: 'Extra Gravy', price: 20 }
-  ];
+  const addons = Array.isArray(item.addons) ? item.addons.filter(a => a.name) : [];
+  const addonsHTML = addons.length
+    ? `<div style="margin-bottom:20px;">
+        <div style="font-size:14px;font-weight:700;color:var(--brown-dark);margin-bottom:10px;">Optional add-ons</div>
+        <ul style="font-size:13px;color:var(--text-mid);margin:0;padding-left:18px;line-height:1.65;">
+          ${addons.map(a => `<li>${a.name} <span style="color:var(--text-light);">(+₹${a.price || 0})</span></li>`).join('')}
+        </ul>
+      </div>`
+    : '';
 
   document.getElementById('modalContent').innerHTML = `
-    <div class="modal-img-placeholder">${item.emoji}</div>
+    ${item.image_url
+      ? `<div class="modal-img-placeholder" style="padding:0;overflow:hidden;"><img src="${item.image_url}" alt="${item.name}" decoding="async" style="width:100%;height:100%;object-fit:cover;display:block;"/></div>`
+      : `<div class="modal-img-placeholder">${item.emoji}</div>`}
     <div class="modal-body">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
         <span>${item.veg ? '🟢' : '🔴'}</span>
@@ -325,30 +311,10 @@ function openItemModal(itemId) {
         ${item.bestSeller ? '<span class="badge badge-best">⭐ Best Seller</span>' : ''}
         ${item.spicy ? '<span class="badge badge-spicy">🌶️ Spicy</span>' : ''}
       </div>
-
       <div style="font-size:22px;font-weight:800;color:var(--brown-dark);margin-bottom:16px;">₹${item.price}</div>
-
-      <div style="margin-bottom:20px;">
-        <div style="font-size:14px;font-weight:700;color:var(--brown-dark);margin-bottom:10px;">Add-ons (Optional)</div>
-        ${addons.map((a,i) => `
-          <label style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;">
-            <div style="display:flex;align-items:center;gap:10px;">
-              <input type="checkbox" id="addon-${i}" style="width:18px;height:18px;accent-color:var(--rust);" onchange="updateModalTotal()"/>
-              <span style="font-size:14px;">${a.name}</span>
-            </div>
-            <span style="font-size:14px;font-weight:600;color:var(--text-mid);">+₹${a.price}</span>
-          </label>
-        `).join('')}
-      </div>
-
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-        <span style="font-size:15px;font-weight:700;color:var(--text-mid);">Total</span>
-        <span id="modalTotal" style="font-size:22px;font-weight:800;color:var(--rust);">₹${item.price}</span>
-      </div>
-
-      <button class="btn btn-primary btn-full" onclick="addToCartFromModal(${item.id})" style="font-size:16px;padding:14px;">
-        Add to Cart
-      </button>
+      ${addonsHTML}
+      <p style="font-size:12px;color:var(--text-light);margin:-8px 0 16px;">Ordering opens after launch — this menu is for preview only.</p>
+      <button type="button" class="btn btn-secondary btn-full" onclick="closeModal()" style="font-size:16px;padding:14px;">Close</button>
     </div>
   `;
 
@@ -357,23 +323,6 @@ function openItemModal(itemId) {
 
 function closeModal() {
   document.getElementById('foodModal').classList.remove('open');
-  selectedItem = null;
-}
-
-function updateModalTotal() {
-  if (!selectedItem) return;
-  const addonPrices = [10, 15, 15, 20];
-  let extra = 0;
-  addonPrices.forEach((p, i) => {
-    if (document.getElementById('addon-' + i)?.checked) extra += p;
-  });
-  document.getElementById('modalTotal').textContent = `₹${selectedItem.price + extra}`;
-}
-
-function addToCartFromModal(itemId) {
-  addToCart(itemId);
-  closeModal();
-  renderMenu();
 }
 
 document.getElementById('foodModal')?.addEventListener('click', function(e) {

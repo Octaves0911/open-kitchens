@@ -280,7 +280,33 @@ button,input,select,textarea{font-family:inherit;}
   background:#fff;border-radius:12px;padding:16px;margin-bottom:16px;
   box-shadow:var(--shadow-sm);
 }
+.rp-broadcast-row{margin-top:16px;padding-top:16px;border-top:1px solid var(--border);}
+.rp-broadcast-row label.rp-broadcast-label{
+  display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-dark);
+}
+.rp-order-chip-wrap{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.rp-order-chip{
+  display:inline-flex;align-items:center;gap:6px;background:var(--cream-dark);
+  padding:6px 10px;border-radius:50px;font-size:12px;font-weight:700;color:var(--brown-dark);
+}
+.rp-order-chip-x{
+  border:none;background:transparent;color:var(--rust);cursor:pointer;font-size:16px;line-height:1;padding:0 2px;
+}
+.rp-modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;
+  display:none;align-items:center;justify-content:center;padding:16px;
+}
+.rp-modal-overlay[style*="flex"]{display:flex!important;}
+.rp-modal-card{
+  background:#fff;border-radius:16px;padding:18px;max-width:720px;width:100%;
+  box-shadow:0 20px 50px rgba(0,0,0,.25);
+}
+.rp-modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.rp-modal-hdr span{font-size:16px;font-weight:800;color:var(--brown-dark);}
+.rp-preview-status{font-size:13px;color:var(--text-mid);min-height:1.25em;margin-bottom:8px;}
+#rtspPreviewVideo{width:100%;max-height:min(50vh,360px);background:#111;border-radius:10px;}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 </head>
 <body>
 
@@ -585,8 +611,34 @@ button,input,select,textarea{font-family:inherit;}
              placeholder="rtsp://user:pass@ip:554/stream" style="flex:1;"/>
       <button class="rp-btn rp-btn-outline rp-btn-sm" onclick="toggleRtspVisibility()" title="Show/Hide">👁</button>
     </div>
-    <div style="margin-top:10px;">
-      <button class="rp-btn rp-btn-primary" onclick="saveRtspUrl()">💾 Save URL</button>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button type="button" class="rp-btn rp-btn-primary" onclick="saveRtspUrl()">💾 Save URL</button>
+      <button type="button" class="rp-btn rp-btn-outline" onclick="openRtspPreview()">▶ Preview stream</button>
+    </div>
+    <p style="font-size:11px;color:var(--text-light);margin-top:8px;">Requires <strong>ffmpeg</strong> on the server. Save the URL before preview.</p>
+
+    <div class="rp-broadcast-row">
+      <label class="rp-broadcast-label">
+        <input type="checkbox" id="liveBroadcastToggle" checked onchange="onLiveBroadcastToggle()"/>
+        Customer live stream enabled
+      </label>
+      <p style="font-size:12px;color:var(--text-light);margin:8px 0 0 24px;">
+        When off, customers cannot watch live. Portal preview still works.
+      </p>
+    </div>
+
+    <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="rp-section-title" style="font-size:14px;">Order IDs for customer “Live” entry</div>
+      <p style="font-size:12px;color:var(--text-light);margin:6px 0 10px;">
+        Add numeric IDs (same as orders list, e.g. <code>#OK000042</code> → <strong>42</strong>).
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+        <input id="liveOrderIdInput" class="rp-input" type="text" inputmode="numeric"
+               placeholder="e.g. 42 or OK000042" style="flex:1;min-width:160px;"
+               onkeydown="if(event.key==='Enter'){event.preventDefault();addPublicOrderId();}"/>
+        <button type="button" class="rp-btn rp-btn-outline rp-btn-sm" onclick="addPublicOrderId()">+ Add ID</button>
+      </div>
+      <div id="liveOrderIdChips" class="rp-order-chip-wrap"></div>
     </div>
   </div>
 
@@ -600,6 +652,19 @@ button,input,select,textarea{font-family:inherit;}
   </div>
 
 </div><!-- /#tab-liveprep -->
+
+<!-- RTSP preview modal -->
+<div id="rtspPreviewModal" class="rp-modal-overlay" aria-hidden="true"
+     onclick="if(event.target===this)closeRtspPreview()">
+  <div class="rp-modal-card" role="dialog" aria-labelledby="rtspPreviewTitle" onclick="event.stopPropagation()">
+    <div class="rp-modal-hdr">
+      <span id="rtspPreviewTitle">RTSP preview</span>
+      <button type="button" class="rp-btn rp-btn-sm rp-btn-outline" onclick="closeRtspPreview()">Close</button>
+    </div>
+    <div id="rtspPreviewStatus" class="rp-preview-status"></div>
+    <video id="rtspPreviewVideo" controls playsinline></video>
+  </div>
+</div>
 
 <!-- ══ Settings Tab ═══════════════════════════════════════════════════════ -->
 <div class="rp-tab-panel" id="tab-settings">

@@ -98,15 +98,20 @@ a.back-link:hover{color:#fff;}
 
   // Validate token with backend
   try {
-    const res  = await fetch(`/api/restaurant/stream/token/${token}`);
+    const res  = await fetch(`/api/restaurant/stream/token/${encodeURIComponent(token)}`);
     const data = await res.json();
-    if (!res.ok || !data.valid) {
+    if (!res.ok) {
       showError('Stream not found or has ended.', data.error || 'The restaurant may have stopped the stream.');
+      return;
+    }
+    if (!data.valid) {
+      showError(data.error || 'Stream unavailable.', '');
       return;
     }
 
     // Token valid — load HLS player
-    titleEl.textContent = `Live Kitchen Preparation — Order #${data.orderId}`;
+    const oid   = data.orderId != null ? data.orderId : 'Live';
+    titleEl.textContent = `Live Kitchen Preparation — Order #${oid}`;
     liveInfo.style.display = 'block';
     infoEl.textContent = 'You are watching your food being prepared live 🍳';
 
@@ -136,13 +141,16 @@ a.back-link:hover{color:#fff;}
     // Poll for stream status every 10s
     const poll = setInterval(async () => {
       try {
-        const r = await fetch(`/api/restaurant/stream/token/${token}`);
-        if (!r.ok) {
+        const r = await fetch(`/api/restaurant/stream/token/${encodeURIComponent(token)}`);
+        const d = await r.json();
+        if (!r.ok || !d.valid) {
           clearInterval(poll);
           overlay.style.display = 'flex';
           overlay.querySelector('.overlay-icon').textContent = '✅';
-          overlayMsg.textContent = 'Stream has ended.';
-          overlaySub.textContent = 'Your order is on its way!';
+          overlayMsg.textContent = d.reason === 'disabled'
+            ? 'Live stream is currently disabled.'
+            : 'Stream has ended.';
+          overlaySub.textContent = d.reason === 'disabled' ? '' : 'Your order is on its way!';
           titleEl.textContent = 'Stream ended';
           liveInfo.style.display = 'none';
         }

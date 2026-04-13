@@ -98,6 +98,7 @@ open-kitchens/
 - **Node.js** v18 or higher — [Download](https://nodejs.org)
 - **npm** v9 or higher (comes with Node.js)
 - **Git**
+- **ffmpeg** on your `PATH` — required for **live kitchen HLS** (RTSP → browser playback). Install via `brew install ffmpeg` (macOS), `apt install ffmpeg` (Debian/Ubuntu), or [ffmpeg.org](https://ffmpeg.org/download.html). Without ffmpeg, restaurant **Preview** and customer **Live** streams will not play (APIs may still respond).
 
 ### Steps
 
@@ -127,6 +128,12 @@ The app will be available at:
 | `http://localhost:3000/restaurant` | Restaurant Portal |
 | `http://localhost:3000/rider` | Rider Portal |
 | `http://localhost:3000/health` | Health Check (JSON) |
+
+### Live streaming (restaurant + customer)
+
+- **Restaurant portal → Live Prep:** save the RTSP URL, use **Preview stream** to verify ffmpeg and the camera, toggle **Customer live stream enabled**, and add **order IDs** customers may use from the site **Live** entry.
+- **Customer site:** header / mobile nav **Live** opens a dialog; after a valid order ID and enabled broadcast, the app opens `/stream?token=…` (HLS via `/api/restaurant/stream/hls/...`).
+- Segments are written under `tmp/hls/restaurant-1/` (gitignored). Ensure the server process can reach the RTSP URL (network/firewall).
 
 ---
 

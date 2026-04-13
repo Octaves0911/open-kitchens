@@ -28,22 +28,7 @@ app.use((req, res, next) => {
 app.use(compression({ level: 6 }));
 app.use(express.json());
 
-// Long-term cache for images (filenames are timestamped so safe to cache 1 year)
-app.use('/images', express.static(path.join(__dirname, 'public', 'images'), {
-  maxAge: '1y',
-  immutable: true,
-  index: false,
-}));
-
-// Serve other static assets (CSS, JS, fonts) with 1-day cache
-app.use(express.static(path.join(__dirname, 'public'), {
-  index: false,
-  maxAge: '1d',
-  etag: true,
-  lastModified: true,
-}));
-
-// ── Database ──────────────────────────────────────────────────────────────────
+// ── Database (before API routers) ─────────────────────────────────────────────
 require('./db/database');
 
 // ── WebSocket Server ──────────────────────────────────────────────────────────
@@ -106,6 +91,7 @@ app.use('/api/auth',       require('./routes/auth'));
 app.use('/api/addresses',  require('./routes/addresses'));
 app.use('/api/cart',       require('./routes/cart'));
 app.use('/api/restaurant', require('./routes/restaurant'));
+app.use('/api/public/live', require('./routes/public-live'));
 
 // ── Public Menu & Offers API (restaurant_id=1) ───────────────────────────────
 const db = require('./db/database');
@@ -185,6 +171,19 @@ app.post('/api/order', (req, res) => {
   res.json({ success: true, orderId, estimatedTime: 30 });
 });
 
+// ── Static assets (after all /api/* routes) ───────────────────────────────────
+app.use('/images', express.static(path.join(__dirname, 'public', 'images'), {
+  maxAge: '1y',
+  immutable: true,
+  index: false,
+}));
+app.use(express.static(path.join(__dirname, 'public'), {
+  index: false,
+  maxAge: '1d',
+  etag: true,
+  lastModified: true,
+}));
+
 // ── Page Routes ───────────────────────────────────────────────────────────────
 const MAPBOX_TOKEN   = process.env.MAPBOX_TOKEN || '';
 
@@ -203,7 +202,7 @@ app.get('/tracking',   (req, res) => res.sendFile(path.join(__dirname, 'public',
 app.get('/restaurant', (req, res) => res.sendFile(path.join(__dirname, 'public', 'restaurant.html')));
 app.get('/stream',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'stream.html')));
 app.get('/rider',      (req, res) => res.sendFile(path.join(__dirname, 'public', 'rider.html')));
-app.get('/why-us',     (req, res) => res.sendFile(path.join(__dirname, 'public', 'why-us.html')));
+app.get('/why-us', (req, res) => res.sendFile(path.join(__dirname, 'public', 'why-us.html')));
 
 // ── Health ────────────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok', app: 'Open Kitchens', version: '1.2.0' }));
