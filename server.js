@@ -1,3 +1,7 @@
+// Load env vars from .env for local development
+// override=true so local .env wins over inherited shell variables.
+require('dotenv').config({ override: true });
+
 const express     = require('express');
 const path        = require('path');
 const fs          = require('fs');

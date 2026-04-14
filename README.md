@@ -2,7 +2,7 @@
 
 > India's first cloud kitchen with **live kitchen streaming** — watch your food being prepared in real-time, from order placement to doorstep delivery.
 
-![Open Kitchens Logo](public/images/logo.png)
+Open Kitchens Logo
 
 ---
 
@@ -42,25 +42,29 @@
 
 ## Features
 
-| Module | Features |
-|---|---|
-| **Customer App** | Pincode-based delivery check, menu browse & search, veg/non-veg filter, cart management, coupon codes, checkout, live order tracking, kitchen video stream, rider tracking map, order rating |
-| **Restaurant Portal** | Order accept/reject/manage, live prep timer, menu item toggle (available/unavailable), RTSP stream configuration, rider fleet view |
-| **Rider Portal** | Online/offline toggle, active delivery navigation, delivery history, earnings tracker, rider registration |
+
+| Module                | Features                                                                                                                                                                                     |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Customer App**      | Pincode-based delivery check, menu browse & search, veg/non-veg filter, cart management, coupon codes, checkout, live order tracking, kitchen video stream, rider tracking map, order rating |
+| **Restaurant Portal** | Order accept/reject/manage, live prep timer, menu item toggle (available/unavailable), RTSP stream configuration, rider fleet view                                                           |
+| **Rider Portal**      | Online/offline toggle, active delivery navigation, delivery history, earnings tracker, rider registration                                                                                    |
+
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Runtime** | Node.js 18+ |
-| **Server** | Express.js 4.x |
-| **Frontend** | Vanilla HTML5 / CSS3 / JavaScript (ES6+) |
-| **Styling** | Custom CSS with brand design tokens |
-| **Data** | Menu data embedded as JS module (from Excel source) |
-| **Logging** | JSON structured logs via `fs.appendFileSync` |
-| **Process** | `nohup` / PM2 for production |
+
+| Layer        | Technology                                          |
+| ------------ | --------------------------------------------------- |
+| **Runtime**  | Node.js 18+                                         |
+| **Server**   | Express.js 4.x                                      |
+| **Frontend** | Vanilla HTML5 / CSS3 / JavaScript (ES6+)            |
+| **Styling**  | Custom CSS with brand design tokens                 |
+| **Data**     | Menu data embedded as JS module (from Excel source) |
+| **Logging**  | JSON structured logs via `fs.appendFileSync`        |
+| **Process**  | `nohup` / PM2 for production                        |
+
 
 > **Architecture Decision:** Per ADR-20260323-R-001, the production roadmap targets **Next.js 14 (App Router)** + React as the frontend framework. This prototype uses vanilla HTML/CSS/JS for rapid deployment — it is designed to be migrated to Next.js in the next sprint.
 
@@ -119,15 +123,17 @@ npm start
 
 The app will be available at:
 
-| URL | Page |
-|---|---|
-| `http://localhost:3000` | Customer Landing Page |
-| `http://localhost:3000/menu` | Full Menu |
-| `http://localhost:3000/checkout` | Checkout |
-| `http://localhost:3000/tracking` | Order Tracking |
-| `http://localhost:3000/restaurant` | Restaurant Portal |
-| `http://localhost:3000/rider` | Rider Portal |
-| `http://localhost:3000/health` | Health Check (JSON) |
+
+| URL                                | Page                  |
+| ---------------------------------- | --------------------- |
+| `http://localhost:3000`            | Customer Landing Page |
+| `http://localhost:3000/menu`       | Full Menu             |
+| `http://localhost:3000/checkout`   | Checkout              |
+| `http://localhost:3000/tracking`   | Order Tracking        |
+| `http://localhost:3000/restaurant` | Restaurant Portal     |
+| `http://localhost:3000/rider`      | Rider Portal          |
+| `http://localhost:3000/health`     | Health Check (JSON)   |
+
 
 ### Live streaming (restaurant + customer)
 
@@ -146,22 +152,18 @@ Railway is the fastest zero-config deployment for Node.js apps.
 **Steps:**
 
 1. **Create a Railway account** at [railway.app](https://railway.app)
-
 2. **Connect GitHub:**
-   - Click **New Project** → **Deploy from GitHub repo**
-   - Select `Octaves0911/open-kitchens`
-   - Railway auto-detects Node.js and runs `npm start`
-
+  - Click **New Project** → **Deploy from GitHub repo**
+  - Select `Octaves0911/open-kitchens`
+  - Railway auto-detects Node.js and runs `npm start`
 3. **Configure the port** (Railway uses `$PORT` automatically):
-   - The server already reads `process.env.PORT || 3000` ✅
-
+  - The server already reads `process.env.PORT || 3000` ✅
 4. **Set environment variables** (optional for prototype):
-   - Go to **Variables** tab in Railway dashboard
-   - Add any variables from the [Environment Variables](#environment-variables) section
-
+  - Go to **Variables** tab in Railway dashboard
+  - Add any variables from the [Environment Variables](#environment-variables) section
 5. **Deploy:**
-   - Railway builds and deploys automatically on every push to `main`
-   - Your app will be live at `https://open-kitchens-production.up.railway.app` (or similar)
+  - Railway builds and deploys automatically on every push to `main`
+  - Your app will be live at `https://open-kitchens-production.up.railway.app` (or similar)
 
 **Cost:** Free tier includes 500 hours/month — sufficient for prototype demos.
 
@@ -170,16 +172,13 @@ Railway is the fastest zero-config deployment for Node.js apps.
 ### Option 2: Render
 
 1. **Create account** at [render.com](https://render.com)
-
 2. **New Web Service:**
-   - Click **New** → **Web Service**
-   - Connect GitHub → select `open-kitchens` repo
-   - **Build Command:** `npm install`
-   - **Start Command:** `npm start`
-   - **Environment:** Node
-
+  - Click **New** → **Web Service**
+  - Connect GitHub → select `open-kitchens` repo
+  - **Build Command:** `npm install`
+  - **Start Command:** `npm start`
+  - **Environment:** Node
 3. **Select plan:** Free (spins down after 15 mins inactivity) or Starter ($7/mo for always-on)
-
 4. **Deploy** — Render provides a URL like `https://open-kitchens.onrender.com`
 
 ---
@@ -189,15 +188,18 @@ Railway is the fastest zero-config deployment for Node.js apps.
 For production-grade deployment on a VPS:
 
 #### a) Provision server
+
 - **AWS EC2:** `t3.micro` (Free Tier eligible) — Ubuntu 22.04 LTS
 - **DigitalOcean:** $6/mo Droplet — Ubuntu 22.04
 
 #### b) SSH into your server
+
 ```bash
 ssh ubuntu@YOUR_SERVER_IP
 ```
 
 #### c) Install Node.js
+
 ```bash
 curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
 sudo apt-get install -y nodejs
@@ -205,11 +207,13 @@ node --version   # should show v18.x
 ```
 
 #### d) Install PM2 (process manager)
+
 ```bash
 sudo npm install -g pm2
 ```
 
 #### e) Clone and setup the app
+
 ```bash
 # Clone the repo
 git clone https://github.com/Octaves0911/open-kitchens.git
@@ -225,6 +229,7 @@ pm2 save
 ```
 
 #### f) Configure Nginx reverse proxy
+
 ```bash
 sudo apt-get install -y nginx
 
@@ -232,6 +237,7 @@ sudo nano /etc/nginx/sites-available/open-kitchens
 ```
 
 Paste the following Nginx config:
+
 ```nginx
 server {
     listen 80;
@@ -256,6 +262,7 @@ sudo systemctl restart nginx
 ```
 
 #### g) Enable HTTPS with Certbot (SSL)
+
 ```bash
 sudo apt-get install -y certbot python3-certbot-nginx
 sudo certbot --nginx -d yourdomain.com
@@ -263,6 +270,7 @@ sudo certbot --nginx -d yourdomain.com
 ```
 
 #### h) Open firewall ports
+
 ```bash
 # AWS: Add inbound rules in Security Group for ports 80, 443
 # DigitalOcean:
@@ -290,6 +298,7 @@ CMD ["node", "server.js"]
 ```
 
 #### b) Create `.dockerignore`:
+
 ```
 node_modules
 logs
@@ -298,6 +307,7 @@ logs
 ```
 
 #### c) Build and run:
+
 ```bash
 # Build image
 docker build -t open-kitchens .
@@ -310,6 +320,7 @@ docker logs open-kitchens
 ```
 
 #### d) Deploy to any cloud with Docker support:
+
 - **AWS ECS / Fargate** — push to ECR and create a service
 - **Google Cloud Run** — `gcloud run deploy`
 - **Azure Container Apps** — `az containerapp create`
@@ -322,8 +333,8 @@ docker logs open-kitchens
 Since the app is mostly static with a lightweight Express server:
 
 1. Install Vercel CLI: `npm i -g vercel`
-
 2. Create `vercel.json` in project root:
+
 ```json
 {
   "version": 2,
@@ -332,7 +343,8 @@ Since the app is mostly static with a lightweight Express server:
 }
 ```
 
-3. Deploy:
+1. Deploy:
+
 ```bash
 vercel --prod
 ```
@@ -372,31 +384,59 @@ TWILIO_ACCOUNT_SID=ACxxxxxxxxxxxxxxxxxx
 TWILIO_AUTH_TOKEN=your_auth_token
 TWILIO_PHONE=+1xxxxxxxxxx
 
-# Future: AWS S3 (food images)
-AWS_ACCESS_KEY_ID=AKIAIOSFODNN7EXAMPLE
-AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
+# AWS S3 (menu + offer images)
+AWS_ACCESS_KEY_ID=your_aws_access_key_id
+AWS_SECRET_ACCESS_KEY=your_aws_secret_access_key
 AWS_REGION=ap-south-1
 S3_BUCKET=open-kitchens-media
+# Base URL used to build public image URLs stored in DB:
+# - If using S3 direct: https://<bucket>.s3.<region>.amazonaws.com
+# - If using CloudFront: https://<your-distribution-domain>
+S3_PUBLIC_BASE_URL=https://open-kitchens-media.s3.ap-south-1.amazonaws.com
 ```
 
 > **⚠️ Never commit `.env` to Git.** Add it to `.gitignore`.
+
+### S3 image storage
+
+- **What changes when S3 is configured**: restaurant uploads for menu items and offers are uploaded to S3 and the DB `image_url` fields store a full `https://...` URL.
+- **Fallback**: if S3 env vars are not set, uploads continue to be saved locally under `public/images/menu` and `public/images/offers` (legacy behaviour).
+- **Key prefixes used**:
+  - `menu/`
+  - `offers/`
+
+#### One-time migration (optional)
+
+If you already have local images stored under `public/images/menu` and `public/images/offers`, you can upload them to S3 and rewrite DB URLs:
+
+```bash
+AWS_REGION=ap-south-1 \
+AWS_ACCESS_KEY_ID=... \
+AWS_SECRET_ACCESS_KEY=... \
+S3_BUCKET=open-kitchens-media \
+S3_PUBLIC_BASE_URL=https://open-kitchens-media.s3.ap-south-1.amazonaws.com \
+node scripts/migrate-images-to-s3.js
+```
 
 ---
 
 ## Portals
 
 ### 👤 Customer Portal
+
 - URL: `/` and `/menu`
 - No login required for browsing
 - OTP login required for placing orders (mocked in prototype)
 - Test coupon codes: `FIRST50` (₹50 off), `WELCOME10` (10% off)
 
 ### 🍳 Restaurant Portal
+
 - URL: `/restaurant`
 - Access: Kitchen staff login (admin credentials required in production)
 - Features: Order management, menu control, camera stream config
 
 ### 🛵 Rider Portal
+
 - URL: `/rider`
 - Access: Approved riders only (registration → admin approval flow)
 - Features: Online/offline, delivery tracking, earnings
@@ -407,45 +447,51 @@ S3_BUCKET=open-kitchens-media
 
 All 64 menu items are sourced from `cloud_kitchen_pricing.xlsx` and embedded in `public/js/menu-data.js`.
 
-| Category | Items | Price Range |
-|---|---|---|
-| Breakfast | 8 items | ₹59 – ₹149 |
-| Maggi | 4 items | ₹89 – ₹129 |
-| Main Course | 16 items | ₹129 – ₹229 |
-| Rice & Breads | 11 items | ₹15 – ₹149 |
-| Parathas | 6 items | ₹59 – ₹159 |
-| Combos | 9 items | ₹139 – ₹229 |
-| Snacks | 5 items | ₹69 – ₹139 |
-| Sides | 4 items | ₹49 – ₹79 |
+
+| Category      | Items    | Price Range |
+| ------------- | -------- | ----------- |
+| Breakfast     | 8 items  | ₹59 – ₹149  |
+| Maggi         | 4 items  | ₹89 – ₹129  |
+| Main Course   | 16 items | ₹129 – ₹229 |
+| Rice & Breads | 11 items | ₹15 – ₹149  |
+| Parathas      | 6 items  | ₹59 – ₹159  |
+| Combos        | 9 items  | ₹139 – ₹229 |
+| Snacks        | 5 items  | ₹69 – ₹139  |
+| Sides         | 4 items  | ₹49 – ₹79   |
+
 
 ---
 
 ## Roadmap
 
 ### Phase 2 — Next.js Migration (Sprint 2)
-- [ ] Migrate to Next.js 14 App Router
-- [ ] Integrate Tailwind CSS
-- [ ] Add PWA manifest + service worker (`next-pwa`)
-- [ ] SSR for menu page (SEO)
+
+- Migrate to Next.js 14 App Router
+- Integrate Tailwind CSS
+- Add PWA manifest + service worker (`next-pwa`)
+- SSR for menu page (SEO)
 
 ### Phase 3 — Backend Integration
-- [ ] MongoDB Atlas / PostgreSQL database
-- [ ] REST API with Node.js / Express
-- [ ] WebSocket for real-time order status
-- [ ] Razorpay payment gateway
-- [ ] Twilio OTP authentication
+
+- MongoDB Atlas / PostgreSQL database
+- REST API with Node.js / Express
+- WebSocket for real-time order status
+- Razorpay payment gateway
+- Twilio OTP authentication
 
 ### Phase 4 — Live Streaming
-- [ ] RTSP → HLS transcoding (FFmpeg)
-- [ ] HLS.js player in customer app
-- [ ] Per-order stream tokens
-- [ ] WebRTC fallback
+
+- RTSP → HLS transcoding (FFmpeg)
+- HLS.js player in customer app
+- Per-order stream tokens
+- WebRTC fallback
 
 ### Phase 5 — Maps & Logistics
-- [ ] Google Maps API integration
-- [ ] Live rider GPS via WebSocket
-- [ ] Route optimization for multiple deliveries
-- [ ] Geofence for delivery zones
+
+- Google Maps API integration
+- Live rider GPS via WebSocket
+- Route optimization for multiple deliveries
+- Geofence for delivery zones
 
 ---
 

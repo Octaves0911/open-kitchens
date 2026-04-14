@@ -1,0 +1,64 @@
+Item name,Category,Item price,Dietary Tag (veg/non veg/egg),Item Type (Goods / Services),Serving Size,Subcategory,Item description,Variant,Variant Price,Add Ons,Add on Prices
+Indori Poha,Breakfast,119,veg,Goods,1 plate,Breakfast,"Indori Poha made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Veg Sandwich,Breakfast,109,veg,Goods,1 plate,Breakfast,"Veg Sandwich made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Veg Cheese Sandwich,Breakfast,129,veg,Goods,1 plate,Breakfast,"Veg Cheese Sandwich made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Grilled Veg Cheese Sandwich,Breakfast,149,veg,Goods,1 plate,Breakfast,"Grilled Veg Cheese Sandwich made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Poori Sabzi,Breakfast,139,veg,Goods,1 plate,Breakfast,"Poori Sabzi made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Bread Butter,Breakfast,59,veg,Goods,1 plate,Breakfast,"Bread Butter made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Bread Omelette,Breakfast,89,veg,Goods,1 plate,Breakfast,"Bread Omelette made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Bread Jam,Breakfast,59,veg,Goods,1 plate,Breakfast,"Bread Jam made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Plain Maggi,Maggi,89,veg,Goods,1 plate,Maggi,"Plain Maggi made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Cheese Maggi,Maggi,129,veg,Goods,1 plate,Maggi,"Cheese Maggi made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Veg Maggi,Maggi,119,veg,Goods,1 plate,Maggi,"Veg Maggi made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Egg Maggi,Maggi,129,veg,Goods,1 plate,Maggi,"Egg Maggi made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Rajma,Main Course,169,veg,Goods,1 plate,Main Course,"Rajma made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Chole,Main Course,159,veg,Goods,1 plate,Main Course,"Chole made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Dal Tadka,Main Course,149,veg,Goods,1 plate,Main Course,"Dal Tadka made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Dal Fry,Main Course,139,veg,Goods,1 plate,Main Course,"Dal Fry made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Kala Chana,Main Course,149,veg,Goods,1 plate,Main Course,"Kala Chana made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Paneer Butter Masala,Main Course,219,veg,Goods,1 plate,Main Course,"Paneer Butter Masala made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Kadhai Paneer,Main Course,219,veg,Goods,1 plate,Main Course,"Kadhai Paneer made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Shahi Paneer,Main Course,229,veg,Goods,1 plate,Main Course,"Shahi Paneer made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Palak Paneer,Main Course,209,veg,Goods,1 plate,Main Course,"Palak Paneer made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Palak Corn,Main Course,189,veg,Goods,1 plate,Main Course,"Palak Corn made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Mushroom Masala,Main Course,199,veg,Goods,1 plate,Main Course,"Mushroom Masala made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Jeera Aloo,Main Course,139,veg,Goods,1 plate,Main Course,"Jeera Aloo made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Aloo Bhujiya,Main Course,129,veg,Goods,1 plate,Main Course,"Aloo Bhujiya made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Egg Curry,Main Course,169,veg,Goods,1 plate,Main Course,"Egg Curry made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Egg Bhurji,Main Course,129,veg,Goods,1 plate,Main Course,"Egg Bhurji made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Paneer Bhurji,Main Course,199,veg,Goods,1 plate,Main Course,"Paneer Bhurji made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Plain Rice,Rice & Breads,99,veg,Goods,1 plate,Rice & Breads,"Plain Rice made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Jeera Rice,Rice & Breads,119,veg,Goods,1 plate,Rice & Breads,"Jeera Rice made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Veg Fried Rice,Rice & Breads,139,veg,Goods,1 plate,Rice & Breads,"Veg Fried Rice made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Veg Pulao,Rice & Breads,129,veg,Goods,1 plate,Rice & Breads,"Veg Pulao made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Schezwan Fried Rice,Rice & Breads,149,veg,Goods,1 plate,Rice & Breads,"Schezwan Fried Rice made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Dal Khichdi,Rice & Breads,139,veg,Goods,1 plate,Rice & Breads,"Dal Khichdi made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Egg Fried Rice,Rice & Breads,149,veg,Goods,1 plate,Rice & Breads,"Egg Fried Rice made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Fulka Roti (per pc),Rice & Breads,15,veg,Goods,1 plate,Rice & Breads,"Fulka Roti (per pc) made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Butter Roti (per pc),Rice & Breads,20,veg,Goods,1 plate,Rice & Breads,"Butter Roti (per pc) made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Poori (4 pcs),Rice & Breads,89,veg,Goods,1 plate,Rice & Breads,"Poori (4 pcs) made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Ajwain Poori,Rice & Breads,99,veg,Goods,1 plate,Rice & Breads,"Ajwain Poori made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Plain Paratha,Parathas,59,veg,Goods,1 plate,Parathas,"Plain Paratha made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Paneer Paratha,Parathas,139,veg,Goods,1 plate,Parathas,"Paneer Paratha made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Aloo Paratha (2 pcs + curd),Parathas,159,veg,Goods,1 plate,Parathas,"Aloo Paratha (2 pcs + curd) made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Sattu Paratha (2 pcs),Parathas,149,veg,Goods,1 plate,Parathas,"Sattu Paratha (2 pcs) made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Aloo Pyaaz Paratha,Parathas,129,veg,Goods,1 plate,Parathas,"Aloo Pyaaz Paratha made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Onion Paratha,Parathas,109,veg,Goods,1 plate,Parathas,"Onion Paratha made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Litti Chokha,Combos,169,veg,Goods,1 plate,Combos,"Litti Chokha made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Sattu Kachori + Sabzi,Combos,149,veg,Goods,1 plate,Combos,"Sattu Kachori + Sabzi made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Veg Thali,Combos,229,veg,Goods,1 plate,Combos,"Veg Thali made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Egg Curry + Rice,Combos,169,veg,Goods,1 plate,Combos,"Egg Curry + Rice made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Egg Curry + Roti,Combos,159,veg,Goods,1 plate,Combos,"Egg Curry + Roti made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Kadhi Pakoda + Rice,Combos,149,veg,Goods,1 plate,Combos,"Kadhi Pakoda + Rice made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Rajma Meal,Combos,169,veg,Goods,1 plate,Combos,"Rajma Meal made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Chole Meal,Combos,159,veg,Goods,1 plate,Combos,"Chole Meal made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Dal Chawal + Aloo Bhujiya,Combos,139,veg,Goods,1 plate,Combos,"Dal Chawal + Aloo Bhujiya made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Bread Pakoda,Snacks,69,veg,Goods,1 plate,Snacks,"Bread Pakoda made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Bread Cutlet,Snacks,79,veg,Goods,1 plate,Snacks,"Bread Cutlet made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Dal Kachori,Snacks,79,veg,Goods,1 plate,Snacks,"Dal Kachori made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Mix Veg Pakoda,Snacks,109,veg,Goods,1 plate,Snacks,"Mix Veg Pakoda made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Paneer Pakoda,Snacks,139,veg,Goods,1 plate,Snacks,"Paneer Pakoda made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Boondi Raita,Sides,79,veg,Goods,1 plate,Sides,"Boondi Raita made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Onion Raita,Sides,69,veg,Goods,1 plate,Sides,"Onion Raita made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Chaas,Sides,49,veg,Goods,1 plate,Sides,"Chaas made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-
+Lassi,Sides,79,veg,Goods,1 plate,Sides,"Lassi made with fresh ingredients, bursting with authentic flavors. A must-try for a satisfying and delicious experience!",-,-,-,-

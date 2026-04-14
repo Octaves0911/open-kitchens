@@ -9,10 +9,37 @@ const fs      = require('fs');
 const { v4: uuidv4 } = require('uuid');
 const multer  = require('multer');
 const sharp   = require('sharp');
+const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const db         = require('../db/database');
 const hls        = require('../lib/hls-transcoder');
 const liveAccess = require('../lib/live-stream-access');
 const { requireAuth, signToken } = require('../middleware/auth');
+
+// ── Optional S3 media storage ────────────────────────────────────────────────
+const S3_BUCKET = process.env.S3_BUCKET || '';
+const S3_PUBLIC_BASE_URL = process.env.S3_PUBLIC_BASE_URL || '';
+const AWS_REGION = process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || '';
+const S3_ENABLED = Boolean(S3_BUCKET && S3_PUBLIC_BASE_URL && AWS_REGION);
+
+const s3 = S3_ENABLED ? new S3Client({ region: AWS_REGION }) : null;
+
+function joinUrl(base, key) {
+  const b = String(base || '').replace(/\/+$/, '');
+  const k = String(key || '').replace(/^\/+/, '');
+  return `${b}/${k}`;
+}
+
+async function uploadWebpToS3({ key, bodyBuffer }) {
+  if (!s3) throw new Error('S3 is not configured');
+  await s3.send(new PutObjectCommand({
+    Bucket: S3_BUCKET,
+    Key: key,
+    Body: bodyBuffer,
+    ContentType: 'image/webp',
+    CacheControl: 'public, max-age=31536000, immutable',
+  }));
+  return joinUrl(S3_PUBLIC_BASE_URL, key);
+}
 
 // ── Image upload helpers — memory storage + WebP conversion via sharp ─────────
 // All uploads are converted to WebP (much smaller) before being saved to disk.
@@ -35,20 +62,31 @@ function makeUploader(subdir, prefix) {
     },
   });
 
-  // Express middleware that runs after multer: converts buffer → WebP and saves
+  // Express middleware that runs after multer: converts buffer → WebP and
+  // either uploads to S3 (if configured) or saves to disk.
   async function processImage(req, res, next) {
     if (!req.file) return next();
     try {
       const filename = `${prefix}_${Date.now()}.webp`;
-      const destPath = path.join(dir, filename);
       const dims     = RESIZE[subdir];
       let pipeline   = sharp(req.file.buffer);
       if (dims) pipeline = pipeline.resize(dims.width, dims.height, { fit: 'cover' });
-      await pipeline.webp({ quality: 78, effort: 4 }).toFile(destPath);
-      // Patch req.file so downstream handlers can read filename / path
+      const webpBuffer = await pipeline.webp({ quality: 78, effort: 4 }).toBuffer();
+
+      // Patch req.file so downstream handlers can read filename / URL
       req.file.filename = filename;
-      req.file.path     = destPath;
       req.file.mimetype = 'image/webp';
+      req.file.buffer   = webpBuffer;
+
+      if (S3_ENABLED) {
+        const key = `${subdir}/${filename}`;
+        req.file.publicUrl = await uploadWebpToS3({ key, bodyBuffer: webpBuffer });
+        return next();
+      }
+
+      const destPath = path.join(dir, filename);
+      await fs.promises.writeFile(destPath, webpBuffer);
+      req.file.path = destPath;
       next();
     } catch (err) {
       next(err);
@@ -136,7 +174,9 @@ router.post('/menu', requireRestaurant, ...upload.single('image'), (req, res) =>
     addons = '[]', metadata = '{}'
   } = req.body;
   if (!name || !price) return res.status(400).json({ error: 'name and price required' });
-  const image_url = req.file ? `/images/menu/${req.file.filename}` : (req.body.image_url || null);
+  const image_url = req.file
+    ? (req.file.publicUrl || `/images/menu/${req.file.filename}`)
+    : (req.body.image_url || null);
   const info = db.prepare(`
     INSERT INTO menu_items
       (restaurant_id, name, category, description, price, image_url,
@@ -159,7 +199,7 @@ router.put('/menu/:id', requireRestaurant, ...upload.single('image'), (req, res)
     is_veg, is_available, is_bestseller, is_spicy, is_fan_favourite, addons, metadata, sort_order
   } = req.body;
   const image_url = req.file
-    ? `/images/menu/${req.file.filename}`
+    ? (req.file.publicUrl || `/images/menu/${req.file.filename}`)
     : (req.body.image_url !== undefined ? req.body.image_url : existing.image_url);
   db.prepare(`
     UPDATE menu_items SET
@@ -216,7 +256,7 @@ router.post('/offers', requireRestaurant, ...uploadOffer.single('image'), (req, 
   const dup = db.prepare('SELECT id FROM offers WHERE restaurant_id=? AND code=?')
                 .get(RESTAURANT_ID, code.toUpperCase());
   if (dup) return res.status(409).json({ error: 'Offer code already exists' });
-  const image_url = req.file ? `/images/offers/${req.file.filename}` : null;
+  const image_url = req.file ? (req.file.publicUrl || `/images/offers/${req.file.filename}`) : null;
   const info = db.prepare(`
     INSERT INTO offers
       (restaurant_id, code, title, description, discount_type, discount_value,
@@ -245,7 +285,7 @@ router.put('/offers/:id', requireRestaurant, ...uploadOffer.single('image'), (re
           min_order, max_discount, is_active, valid_from, valid_until, usage_limit,
           badge, emoji, old_price } = req.body;
   const image_url = req.file
-    ? `/images/offers/${req.file.filename}`
+    ? (req.file.publicUrl || `/images/offers/${req.file.filename}`)
     : (req.body.image_url !== undefined ? (req.body.image_url || null) : existing.image_url);
   db.prepare(`
     UPDATE offers SET code=?,title=?,description=?,discount_type=?,discount_value=?,
