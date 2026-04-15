@@ -305,6 +305,13 @@ button,input,select,textarea{font-family:inherit;}
 .rp-modal-hdr span{font-size:16px;font-weight:800;color:var(--brown-dark);}
 .rp-preview-status{font-size:13px;color:var(--text-mid);min-height:1.25em;margin-bottom:8px;}
 #rtspPreviewVideo{width:100%;max-height:min(50vh,360px);background:#111;border-radius:10px;}
+#webrtcPreviewFrame{
+  width:100%;
+  height:min(60vh,420px);
+  border:0;
+  border-radius:10px;
+  background:#111;
+}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
 </head>
@@ -642,6 +649,23 @@ button,input,select,textarea{font-family:inherit;}
     </div>
   </div>
 
+  <!-- WebRTC Config (Cloudflare Tunnel / Player URL) -->
+  <div class="rp-rtsp-section">
+    <div class="rp-section-hdr" style="margin-bottom:10px;">
+      <div class="rp-section-title">🌐 WebRTC Stream (Cloudflare)</div>
+    </div>
+    <label class="rp-label">WebRTC / Player URL</label>
+    <input id="webrtcInput" class="rp-input" type="url"
+           placeholder="https://<your-cloudflare-tunnel-or-player-url>" />
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button type="button" class="rp-btn rp-btn-primary" onclick="saveWebrtcUrl()">💾 Save URL</button>
+      <button type="button" class="rp-btn rp-btn-outline" onclick="openWebrtcPreview()">▶ View stream</button>
+    </div>
+    <p style="font-size:11px;color:var(--text-light);margin-top:8px;">
+      Tip: if the provider blocks embedding (X-Frame-Options), use “Open in new tab” inside the viewer.
+    </p>
+  </div>
+
   <!-- Accepted orders list -->
   <div class="rp-section-hdr">
     <div class="rp-section-title">Accepted Orders — Live Prep</div>
@@ -663,6 +687,22 @@ button,input,select,textarea{font-family:inherit;}
     </div>
     <div id="rtspPreviewStatus" class="rp-preview-status"></div>
     <video id="rtspPreviewVideo" controls playsinline></video>
+  </div>
+</div>
+
+<!-- WebRTC preview modal -->
+<div id="webrtcPreviewModal" class="rp-modal-overlay" aria-hidden="true"
+     onclick="if(event.target===this)closeWebrtcPreview()">
+  <div class="rp-modal-card" role="dialog" aria-labelledby="webrtcPreviewTitle" onclick="event.stopPropagation()">
+    <div class="rp-modal-hdr">
+      <span id="webrtcPreviewTitle">WebRTC viewer</span>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <a id="webrtcOpenNewTab" class="rp-btn rp-btn-sm rp-btn-outline" href="#" target="_blank" rel="noopener">Open in new tab</a>
+        <button type="button" class="rp-btn rp-btn-sm rp-btn-outline" onclick="closeWebrtcPreview()">Close</button>
+      </div>
+    </div>
+    <div id="webrtcPreviewStatus" class="rp-preview-status"></div>
+    <iframe id="webrtcPreviewFrame" title="WebRTC stream viewer" referrerpolicy="no-referrer"></iframe>
   </div>
 </div>
 

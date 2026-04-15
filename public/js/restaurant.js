@@ -569,6 +569,7 @@ async function saveOffer() {
 let livePublicOrderIds   = [];
 let previewHlsInstance   = null;
 let previewSessionToken  = null;
+let webrtcUrl            = '';
 
 function normalizeOrderIdInput(input) {
   if (input == null) return null;
@@ -584,6 +585,12 @@ async function loadLivePrep() {
   try {
     const { value } = await API('/config/rtsp_url');
     if (value) document.getElementById('rtspInput').value = value;
+  } catch {}
+  try {
+    const { value } = await API('/config/webrtc_url');
+    webrtcUrl = value || '';
+    const el = document.getElementById('webrtcInput');
+    if (el && webrtcUrl) el.value = webrtcUrl;
   } catch {}
   try {
     const bc = await API('/config/live_broadcast_enabled');
@@ -747,6 +754,62 @@ async function saveRtspUrl() {
 function toggleRtspVisibility() {
   const input = document.getElementById('rtspInput');
   input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+async function saveWebrtcUrl() {
+  const input = document.getElementById('webrtcInput');
+  const url = (input?.value || '').trim();
+  if (!url) { showToast('Enter a WebRTC/player URL first', 'error'); return; }
+  try {
+    await API('/config/webrtc_url', { method: 'PUT', body: { value: url } });
+    webrtcUrl = url;
+    showToast('WebRTC URL saved ✅');
+  } catch (e) { showToast(e.message, 'error'); }
+}
+
+function openWebrtcPreview() {
+  const input = document.getElementById('webrtcInput');
+  const url = (input?.value || webrtcUrl || '').trim();
+  if (!url) { showToast('Enter a WebRTC/player URL first', 'error'); return; }
+
+  const modal  = document.getElementById('webrtcPreviewModal');
+  const status = document.getElementById('webrtcPreviewStatus');
+  const frame  = document.getElementById('webrtcPreviewFrame');
+  const openInNewTab = document.getElementById('webrtcOpenNewTab');
+  if (!modal || !frame) return;
+
+  // Reset
+  status.textContent = 'Loading…';
+  frame.removeAttribute('src');
+  frame.src = url;
+  if (openInNewTab) openInNewTab.href = url;
+
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+
+  const onLoad = () => {
+    status.textContent = '';
+    frame.removeEventListener('load', onLoad);
+  };
+  frame.addEventListener('load', onLoad);
+
+  // If embedding is blocked, user will see a browser error inside iframe.
+  // Provide an explicit hint in the status line.
+  setTimeout(() => {
+    if (status.textContent) status.textContent = 'If the stream does not appear, click “Open in new tab”.';
+  }, 1200);
+}
+
+function closeWebrtcPreview() {
+  const modal  = document.getElementById('webrtcPreviewModal');
+  const status = document.getElementById('webrtcPreviewStatus');
+  const frame  = document.getElementById('webrtcPreviewFrame');
+  if (frame) frame.removeAttribute('src');
+  if (status) status.textContent = '';
+  if (modal) {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  }
 }
 
 async function loadAcceptedOrders() {

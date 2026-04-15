@@ -540,10 +540,12 @@ router.get('/stream/token/:token', (req, res) => {
   }
 
   const orderLabel = v.orderId != null ? v.orderId : '—';
+  const webrtcUrl  = liveAccess.getWebrtcUrl(db) || '';
   res.json({
     valid: true,
     orderId: v.orderId,
     hlsUrl: `/api/restaurant/stream/hls/${token}/index.m3u8`,
+    webrtcUrl,
     orderLabel,
   });
 });

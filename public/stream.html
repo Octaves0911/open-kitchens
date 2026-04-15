@@ -6,6 +6,7 @@
   <meta name="theme-color" content="#1a0a00"/>
   <title>Live Kitchen Stream — Open Kitchens</title>
   <link rel="icon" href="/images/logo.png" type="image/png"/>
+  <link rel="stylesheet" href="/css/app.css"/>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{--rust:#C0392B;}
@@ -28,6 +29,7 @@ body{background:#0d0703;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;m
   overflow:hidden;position:relative;margin-bottom:16px;
 }
 #videoWrapper video{width:100%;height:100%;object-fit:cover;}
+#videoWrapper iframe{width:100%;height:100%;border:0;display:block;background:#000;}
 #streamOverlay{
   position:absolute;inset:0;display:flex;flex-direction:column;
   align-items:center;justify-content:center;gap:12px;
@@ -42,31 +44,145 @@ a.back-link{
   font-size:12px;text-decoration:none;
 }
 a.back-link:hover{color:#fff;}
+
+/* ── Stream canvas UI (site-compatible) ─────────────────────────────────── */
+body{display:block;background:var(--cream);color:var(--text-dark);min-height:100vh;overflow-x:hidden;}
+.stream-page{min-height:100vh;display:flex;flex-direction:column;}
+.stream-topbar{position:sticky;top:0;z-index:50;background:rgba(45,27,18,.95);border-bottom:1px solid rgba(0,0,0,.08);backdrop-filter:blur(10px);}
+.stream-topbar-inner{max-width:920px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.stream-brand{display:flex;align-items:center;gap:10px;min-width:0;}
+.stream-logo{width:36px;height:36px;border-radius:10px;border:2px solid rgba(229,177,67,.65);background:#fcfaf2;}
+.stream-brand-text{display:flex;flex-direction:column;line-height:1.1;min-width:0;}
+.stream-brand-text strong{font-family:Georgia,'Times New Roman',serif;font-size:14px;letter-spacing:.02em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stream-brand-text span{font-size:11px;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stream-back{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:9999px;border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;flex-shrink:0;}
+.stream-back:hover{background:rgba(255,255,255,.10);color:#fff;}
+.stream-main{flex:1;width:100%;max-width:920px;margin:0 auto;padding:18px 16px 28px;}
+.stream-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.stream-kicker{
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.12em;
+  text-transform:uppercase;
+  color:var(--rust);
+  margin:0 0 6px;
+}
+.stream-h1{
+  margin:0 0 6px;
+  font-family:Georgia,'Times New Roman',serif;
+  font-size:clamp(22px,3.2vw,32px);
+  line-height:1.15;
+  color:var(--brown-dark);
+}
+.stream-subtitle{
+  margin:0;
+  font-size:13px;
+  color:var(--text-light);
+  line-height:1.55;
+  max-width:46rem;
+}
+.stream-title{margin:10px 0 0;font-size:13px;color:var(--text-mid);}
+.stream-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:14px;box-shadow:var(--shadow-sm);}
+#videoWrapper{margin-bottom:0;}
+.stream-info{margin-top:10px;color:var(--text-light);}
+.live-badge{background:linear-gradient(135deg,var(--brown-dark),var(--rust));border:1px solid rgba(0,0,0,.06);}
+.live-dot{background:var(--amber);}
+
+.stream-meta-grid{
+  margin-top:14px;
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+@media (min-width: 768px){
+  .stream-meta-grid{grid-template-columns:1.1fr .9fr;}
+}
+.stream-meta-card{
+  background:var(--cream);
+  border:1px solid var(--border);
+  border-radius:14px;
+  padding:12px 12px;
+}
+.stream-meta-card h3{
+  margin:0 0 6px;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  color:var(--brown-dark);
+}
+.stream-meta-card p{
+  margin:0;
+  font-size:13px;
+  color:var(--text-mid);
+  line-height:1.55;
+}
+.stream-tip-list{margin:8px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px;}
+.stream-tip-list li{display:flex;gap:8px;align-items:flex-start;font-size:13px;color:var(--text-mid);line-height:1.45;}
+.stream-tip-ico{width:22px;height:22px;border-radius:9999px;display:inline-flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--border);flex-shrink:0;}
 </style>
 </head>
 <body>
-<div class="stream-container">
-  <div class="stream-header">
-    <img src="/images/logo.png" alt="Open Kitchens" class="stream-logo"/>
-    <span class="stream-brand">Open Kitchens</span>
-  </div>
-
-  <div id="liveInfo" style="display:none;">
-    <div class="live-badge"><span class="live-dot"></span> LIVE KITCHEN</div>
-  </div>
-  <div class="stream-title" id="streamTitle">Connecting to live stream…</div>
-
-  <div id="videoWrapper">
-    <video id="hlsVideo" controls playsinline></video>
-    <div id="streamOverlay">
-      <div class="overlay-icon">🎥</div>
-      <div class="overlay-msg" id="overlayMsg">Validating your stream access…</div>
-      <div class="overlay-sub" id="overlaySub">Please wait</div>
+<div class="stream-page">
+  <div class="stream-topbar">
+    <div class="stream-topbar-inner">
+      <div class="stream-brand">
+        <img src="/images/logo.png" alt="Open Kitchens" class="stream-logo"/>
+        <div class="stream-brand-text">
+          <strong>Open Kitchens</strong>
+          <span>See what you eat — live prep</span>
+        </div>
+      </div>
+      <a class="stream-back" href="/">← Back</a>
     </div>
   </div>
 
-  <div class="stream-info" id="streamInfo"></div>
-  <a href="/" class="back-link">← Back to Open Kitchens</a>
+  <main class="stream-main">
+    <div class="stream-hero">
+      <div>
+        <p class="stream-kicker">Live transparency</p>
+        <h1 class="stream-h1">Watch your meal being cooked.</h1>
+        <p class="stream-subtitle">
+          This stream is only available while your order is authorized by the kitchen. If the kitchen removes access or ends the session, this page will close the stream automatically.
+        </p>
+        <p class="stream-title" id="streamTitle">Connecting to live stream…</p>
+      </div>
+      <div id="liveInfo" style="display:none;">
+        <div class="live-badge"><span class="live-dot"></span> Live kitchen</div>
+      </div>
+    </div>
+
+    <section class="stream-card" aria-label="Live stream player">
+      <div id="videoWrapper">
+        <video id="hlsVideo" controls playsinline></video>
+        <iframe id="webrtcFrame" title="Live kitchen stream" referrerpolicy="no-referrer" style="display:none;"></iframe>
+        <div id="streamOverlay">
+          <div class="overlay-icon">🎥</div>
+          <div class="overlay-msg" id="overlayMsg">Validating your stream access…</div>
+          <div class="overlay-sub" id="overlaySub">Please wait</div>
+        </div>
+      </div>
+
+      <div class="stream-info" id="streamInfo"></div>
+
+      <div class="stream-meta-grid" aria-label="Stream information">
+        <div class="stream-meta-card">
+          <h3>What you’re seeing</h3>
+          <p>
+            Your dish prep in real time — no stock footage. We show the kitchen as-is so you can trust hygiene, ingredients, and handling.
+          </p>
+        </div>
+        <div class="stream-meta-card">
+          <h3>Quick tips</h3>
+          <ul class="stream-tip-list">
+            <li><span class="stream-tip-ico">🔊</span><span>Audio may be muted on purpose — focus stays on prep.</span></li>
+            <li><span class="stream-tip-ico">📶</span><span>If it stutters, switch to a stronger network and refresh.</span></li>
+            <li><span class="stream-tip-ico">🧾</span><span>Access ends automatically when your order is no longer allowed.</span></li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
 </div>
 
 <!-- HLS.js for non-Safari browsers -->
@@ -79,6 +195,7 @@ a.back-link:hover{color:#fff;}
   const overlayMsg = document.getElementById('overlayMsg');
   const overlaySub = document.getElementById('overlaySub');
   const video      = document.getElementById('hlsVideo');
+  const webrtcFrame = document.getElementById('webrtcFrame');
   const titleEl    = document.getElementById('streamTitle');
   const infoEl     = document.getElementById('streamInfo');
   const liveInfo   = document.getElementById('liveInfo');
@@ -109,13 +226,23 @@ a.back-link:hover{color:#fff;}
       return;
     }
 
-    // Token valid — load HLS player
+    // Token valid — prefer WebRTC URL if configured, else use HLS
     const oid   = data.orderId != null ? data.orderId : 'Live';
     titleEl.textContent = `Live Kitchen Preparation — Order #${oid}`;
     liveInfo.style.display = 'block';
     infoEl.textContent = 'You are watching your food being prepared live 🍳';
 
-    const hlsUrl = data.hlsUrl;
+    const webrtcUrl = (data.webrtcUrl || '').trim();
+    if (webrtcUrl) {
+      // Show WebRTC viewer page (e.g. go2rtc stream.html via Cloudflare Tunnel)
+      video.style.display = 'none';
+      if (webrtcFrame) {
+        webrtcFrame.style.display = 'block';
+        webrtcFrame.src = webrtcUrl;
+      }
+      overlay.style.display = 'none';
+    } else {
+      const hlsUrl = data.hlsUrl;
     if (Hls.isSupported()) {
       const hls = new Hls({ lowLatencyMode: true });
       hls.loadSource(hlsUrl);
@@ -137,6 +264,7 @@ a.back-link:hover{color:#fff;}
     } else {
       showError('Your browser does not support HLS streams.', 'Try opening this link in Chrome or Safari.');
     }
+    }
 
     // Poll for stream status every 10s
     const poll = setInterval(async () => {
@@ -153,6 +281,10 @@ a.back-link:hover{color:#fff;}
           overlaySub.textContent = d.reason === 'disabled' ? '' : 'Your order is on its way!';
           titleEl.textContent = 'Stream ended';
           liveInfo.style.display = 'none';
+          if (webrtcFrame) {
+            webrtcFrame.removeAttribute('src');
+            webrtcFrame.style.display = 'none';
+          }
         }
       } catch {}
     }, 10000);
