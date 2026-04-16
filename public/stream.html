@@ -45,73 +45,242 @@ a.back-link{
 }
 a.back-link:hover{color:#fff;}
 
-/* ── Stream canvas UI (site-compatible) ─────────────────────────────────── */
-body{display:block;background:var(--cream);color:var(--text-dark);min-height:100vh;overflow-x:hidden;}
+/* ── Stream canvas UI (match stream-canvas) ─────────────────────────────── */
+body{
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  background:#FCFAF2;
+  color:#3E2312;
+  overflow-x:hidden;
+  font-family:'Segoe UI',system-ui,-apple-system,sans-serif;
+}
 .stream-page{min-height:100vh;display:flex;flex-direction:column;}
-.stream-topbar{position:sticky;top:0;z-index:50;background:rgba(45,27,18,.95);border-bottom:1px solid rgba(0,0,0,.08);backdrop-filter:blur(10px);}
-.stream-topbar-inner{max-width:920px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
-.stream-brand{display:flex;align-items:center;gap:10px;min-width:0;}
-.stream-logo{width:36px;height:36px;border-radius:10px;border:2px solid rgba(229,177,67,.65);background:#fcfaf2;}
-.stream-brand-text{display:flex;flex-direction:column;line-height:1.1;min-width:0;}
-.stream-brand-text strong{font-family:Georgia,'Times New Roman',serif;font-size:14px;letter-spacing:.02em;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.stream-brand-text span{font-size:11px;color:rgba(255,255,255,.65);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.stream-back{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:9999px;border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.85);background:rgba(255,255,255,.06);font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;flex-shrink:0;}
-.stream-back:hover{background:rgba(255,255,255,.10);color:#fff;}
-.stream-main{flex:1;width:100%;max-width:920px;margin:0 auto;padding:18px 16px 28px;}
-.stream-hero{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:14px;}
-.stream-kicker{
+
+/* Navbar */
+.stream-topbar{
+  position:fixed;
+  top:0;left:0;right:0;
+  z-index:50;
+  background:rgba(45,27,18,.95);
+  border-bottom:1px solid #4A2E1B;
+  backdrop-filter:blur(12px);
+  box-shadow:0 2px 12px rgba(0,0,0,.16);
+}
+.stream-topbar-inner{
+  max-width:1200px;
+  margin:0 auto;
+  padding:0 16px;
+  height:80px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+.stream-brand{display:flex;align-items:center;gap:12px;min-width:0;cursor:pointer;}
+.stream-logo{
+  width:56px;height:56px;border-radius:9999px;
+  background:#FCFAF2;border:2px solid #E5B143;
+  object-fit:cover;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06);
+}
+.stream-brand-text{display:flex;flex-direction:column;min-width:0;}
+.stream-brand-text strong{
+  color:#FCFAF2;
+  font-family:Georgia,'Times New Roman',serif;
+  font-weight:800;
+  font-size:22px;
+  line-height:1.05;
+  letter-spacing:.02em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.stream-brand-text span{
+  color:#E5B143;
+  font-size:10px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.22em;
+  margin-top:6px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.stream-nav{display:none;align-items:center;gap:28px;}
+@media (min-width: 768px){ .stream-nav{display:flex;} }
+.stream-nav a{
+  color:#D7CCC8;
+  text-decoration:none;
+  font-size:12px;
+  font-weight:800;
+  text-transform:uppercase;
+  letter-spacing:.12em;
+}
+.stream-nav a:hover{color:#E5B143;}
+.stream-nav a.active{
+  color:#E5B143;
+  border-bottom:2px solid #E5B143;
+  padding-bottom:6px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+.nav-live-dot{
+  width:8px;height:8px;border-radius:9999px;background:#ef4444;
+  animation:pulse 1.2s infinite;
+}
+@keyframes pulse{0%,100%{transform:scale(1);opacity:1;}50%{transform:scale(.92);opacity:.6;}}
+
+/* Layout */
+.stream-main{
+  flex:1;
+  width:100%;
+  max-width:1200px;
+  margin:0 auto;
+  padding:24px 16px 48px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+.stream-hero{
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  border-bottom:1px solid #E8E3D2;
+  padding-bottom:18px;
+}
+@media (min-width: 768px){ .stream-hero{flex-direction:row;align-items:flex-end;justify-content:space-between;} }
+.stream-broadcast-pill{
+  display:inline-flex;align-items:center;gap:10px;
+  background:#fee2e2;color:#b91c1c;
+  border:1px solid #fecaca;
+  border-radius:9999px;
+  padding:8px 12px;
   font-size:11px;
   font-weight:900;
-  letter-spacing:.12em;
   text-transform:uppercase;
-  color:var(--rust);
-  margin:0 0 6px;
+  letter-spacing:.10em;
+  width:fit-content;
+}
+.stream-broadcast-pill .dot{width:8px;height:8px;border-radius:9999px;background:#dc2626;animation:pulse 1.2s infinite;}
+.stream-hero-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  width:100%;
+}
+.stream-back-btn{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
+  background:#fee2e2;
+  color:#b91c1c;
+  border:1px solid #fecaca;
+  border-radius:9999px;
+  padding:8px 12px;
+  font-size:15px;
+  font-weight:900;
+  text-transform:uppercase;
+  letter-spacing:.10em;
+  text-decoration:none;
+}
+.stream-back-btn:hover{background:#fecaca;}
+.stream-back-ico{
+  width:18px;
+  height:18px;
+  border-radius:9999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  border:1px solid rgba(185,28,28,.25);
+  background:rgba(255,255,255,.6);
+  flex-shrink:0;
 }
 .stream-h1{
-  margin:0 0 6px;
+  margin:8px 0 0;
   font-family:Georgia,'Times New Roman',serif;
-  font-size:clamp(22px,3.2vw,32px);
-  line-height:1.15;
-  color:var(--brown-dark);
+  font-size:clamp(26px,3.3vw,40px);
+  font-weight:900;
+  color:#3E2312;
 }
-.stream-subtitle{
-  margin:0;
-  font-size:13px;
-  color:var(--text-light);
-  line-height:1.55;
-  max-width:46rem;
+.stream-subtitle{margin:8px 0 0;color:#6D4C41;font-size:14px;line-height:1.55;}
+.stream-title{margin:10px 0 0;color:#6D4C41;font-size:13px;font-weight:700;}
+.stream-status-card{
+  display:inline-flex;align-items:center;gap:10px;
+  background:#fff;border:1px solid #E8E3D2;border-radius:14px;
+  padding:10px 12px;box-shadow:0 1px 3px rgba(62,35,18,.08);
+  font-size:12px;font-weight:900;color:#D35400;white-space:nowrap;
 }
 .stream-title{margin:10px 0 0;font-size:13px;color:var(--text-mid);}
-.stream-card{background:#fff;border:1px solid var(--border);border-radius:18px;padding:14px;box-shadow:var(--shadow-sm);}
-#videoWrapper{margin-bottom:0;}
-.stream-info{margin-top:10px;color:var(--text-light);}
-.live-badge{background:linear-gradient(135deg,var(--brown-dark),var(--rust));border:1px solid rgba(0,0,0,.06);}
-.live-dot{background:var(--amber);}
+.stream-card{
+  background:#2D1B12;
+  border:4px solid #E8E3D2;
+  border-radius:32px;
+  padding:0;
+  overflow:hidden;
+  box-shadow:0 20px 50px rgba(0,0,0,.22);
+}
+#videoWrapper{margin-bottom:0;border-radius:28px;background:#2D1B12;}
+.stream-info{margin-top:12px;color:#6D4C41;font-size:13px;line-height:1.5;}
+.stream-info:empty{display:none;}
+.live-badge{background:rgba(220,38,38,.92);border:1px solid rgba(255,255,255,.12);margin-bottom:0;}
+.live-dot{background:#fff;}
 
-.stream-meta-grid{
+.player-fullscreen{
+  position:absolute;
+  right:14px;
+  bottom:14px;
+  z-index:2;
+  width:40px;
+  height:40px;
+  border-radius:9999px;
+  background: rgba(0,0,0,.55);
+  border: 1px solid rgba(255,255,255,.16);
+  color:#fff;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  backdrop-filter: blur(8px);
+}
+.player-fullscreen:hover{ background: rgba(0,0,0,.68); }
+
+
+/* Player card should span container width */
+.stream-card{ width: 100%; }
+
+/* Remove the "Live kitchen" badge above player */
+#liveInfo{ display:none !important; }
+
+.stream-below-stack{
+  width:100%;
   margin-top:14px;
-  display:grid;
-  grid-template-columns:1fr;
-  gap:10px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
 }
 @media (min-width: 768px){
-  .stream-meta-grid{grid-template-columns:1.1fr .9fr;}
+  .stream-below-stack{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    align-items:start;
+  }
 }
-.stream-meta-card{
-  background:var(--cream);
-  border:1px solid var(--border);
-  border-radius:14px;
-  padding:12px 12px;
+.stream-content-card{
+  background:#fff;
+  border:1px solid #E8E3D2;
+  border-radius:18px;
+  padding:16px 18px;
+  box-shadow:0 1px 3px rgba(62,35,18,.08);
 }
-.stream-meta-card h3{
-  margin:0 0 6px;
+.stream-content-card h3{
+  margin:0 0 8px;
   font-size:12px;
   font-weight:900;
   letter-spacing:.08em;
   text-transform:uppercase;
   color:var(--brown-dark);
 }
-.stream-meta-card p{
+.stream-content-card p{
   margin:0;
   font-size:13px;
   color:var(--text-mid);
@@ -123,30 +292,18 @@ body{display:block;background:var(--cream);color:var(--text-dark);min-height:100
 </style>
 </head>
 <body>
-<div class="stream-page">
-  <div class="stream-topbar">
-    <div class="stream-topbar-inner">
-      <div class="stream-brand">
-        <img src="/images/logo.png" alt="Open Kitchens" class="stream-logo"/>
-        <div class="stream-brand-text">
-          <strong>Open Kitchens</strong>
-          <span>See what you eat — live prep</span>
-        </div>
-      </div>
-      <a class="stream-back" href="/">← Back</a>
-    </div>
-  </div>
 
-  <main class="stream-main">
+<main class="stream-main">
     <div class="stream-hero">
       <div>
-        <p class="stream-kicker">Live transparency</p>
-        <h1 class="stream-h1">Watch your meal being cooked.</h1>
-        <p class="stream-subtitle">
-          This stream is only available while your order is authorized by the kitchen. If the kitchen removes access or ends the session, this page will close the stream automatically.
-        </p>
+        <div class="stream-hero-row">
+          <a class="stream-back-btn" href="/"><span class="stream-back-ico" aria-hidden="true">←</span>Back</a>
+        </div>
+        <h1 class="stream-h1">Inside Our Kitchen</h1>
+        <p class="stream-subtitle">Hebbal Branch • 100% Radical Transparency</p>
         <p class="stream-title" id="streamTitle">Connecting to live stream…</p>
       </div>
+      <div class="stream-status-card">📶 Stream Status: Excellent</div>
       <div id="liveInfo" style="display:none;">
         <div class="live-badge"><span class="live-dot"></span> Live kitchen</div>
       </div>
@@ -161,29 +318,30 @@ body{display:block;background:var(--cream);color:var(--text-dark);min-height:100
           <div class="overlay-msg" id="overlayMsg">Validating your stream access…</div>
           <div class="overlay-sub" id="overlaySub">Please wait</div>
         </div>
-      </div>
-
-      <div class="stream-info" id="streamInfo"></div>
-
-      <div class="stream-meta-grid" aria-label="Stream information">
-        <div class="stream-meta-card">
-          <h3>What you’re seeing</h3>
-          <p>
-            Your dish prep in real time — no stock footage. We show the kitchen as-is so you can trust hygiene, ingredients, and handling.
-          </p>
-        </div>
-        <div class="stream-meta-card">
-          <h3>Quick tips</h3>
-          <ul class="stream-tip-list">
-            <li><span class="stream-tip-ico">🔊</span><span>Audio may be muted on purpose — focus stays on prep.</span></li>
-            <li><span class="stream-tip-ico">📶</span><span>If it stutters, switch to a stronger network and refresh.</span></li>
-            <li><span class="stream-tip-ico">🧾</span><span>Access ends automatically when your order is no longer allowed.</span></li>
-          </ul>
-        </div>
+        <button class="player-fullscreen" type="button" title="Fullscreen"
+                onclick="(document.getElementById('videoWrapper')?.requestFullscreen||document.getElementById('videoWrapper')?.webkitRequestFullscreen)?.call(document.getElementById('videoWrapper'))">⛶</button>
       </div>
     </section>
+
+    <div class="stream-info" id="streamInfo"></div>
+
+    <div class="stream-below-stack">
+      <article class="stream-content-card" aria-labelledby="stream-about-heading">
+        <h3 id="stream-about-heading">What you're watching</h3>
+        <p>
+          A real feed from our kitchen — not stock footage. You're seeing prep as it happens for orders we've opened for live view.
+        </p>
+      </article>
+      <article class="stream-content-card" aria-labelledby="stream-tips-heading">
+        <h3 id="stream-tips-heading">Quick tips</h3>
+        <ul class="stream-tip-list">
+          <li><span class="stream-tip-ico">📶</span><span>If the video stutters, switch to Wi-Fi and refresh the page.</span></li>
+          <li><span class="stream-tip-ico">🔇</span><span>Audio may be muted on purpose so the focus stays on prep.</span></li>
+          <li><span class="stream-tip-ico">🔒</span><span>Access can end when the kitchen removes your order from live view.</span></li>
+        </ul>
+      </article>
+    </div>
   </main>
-</div>
 
 <!-- HLS.js for non-Safari browsers -->
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.min.js"></script>
@@ -230,7 +388,7 @@ body{display:block;background:var(--cream);color:var(--text-dark);min-height:100
     const oid   = data.orderId != null ? data.orderId : 'Live';
     titleEl.textContent = `Live Kitchen Preparation — Order #${oid}`;
     liveInfo.style.display = 'block';
-    infoEl.textContent = 'You are watching your food being prepared live 🍳';
+    infoEl.textContent = '';
 
     const webrtcUrl = (data.webrtcUrl || '').trim();
     if (webrtcUrl) {
