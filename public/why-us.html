@@ -306,6 +306,26 @@
   </div>
 </footer>
 
+<!-- ── Floating Bottom Nav (mobile only; matches index) ─────────────────── -->
+<nav class="mobile-bottom-nav" id="mobileBottomNav" aria-label="Main">
+  <a href="/" class="mbn-item">
+    <span class="mbn-icon">🏠</span>
+    <span class="mbn-label">Home</span>
+  </a>
+  <a href="/#menu" class="mbn-item">
+    <span class="mbn-icon">🍽️</span>
+    <span class="mbn-label">Menu</span>
+  </a>
+  <a href="/why-us" class="mbn-item active">
+    <span class="mbn-icon">✨</span>
+    <span class="mbn-label">Why Us</span>
+  </a>
+  <a href="#" class="mbn-item" onclick="event.preventDefault(); openLiveEntryDialog();">
+    <span class="mbn-icon mbn-live-wrap"><span class="live-dot-nav" aria-hidden="true"></span></span>
+    <span class="mbn-label">Live</span>
+  </a>
+</nav>
+
 <!-- Live stream entry (order ID) -->
 <div class="offers-sheet-overlay" id="liveEntryOverlay" onclick="closeLiveEntryDialog()"></div>
 <div class="offers-sheet-panel" id="liveEntryPanel">

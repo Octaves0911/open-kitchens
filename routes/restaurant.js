@@ -29,6 +29,16 @@ function joinUrl(base, key) {
   return `${b}/${k}`;
 }
 
+/** Escape for double-quoted HTML attribute values (e.g. iframe src). */
+function escapeHtmlAttr(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 async function uploadWebpToS3({ key, bodyBuffer }) {
   if (!s3) throw new Error('S3 is not configured');
   await s3.send(new PutObjectCommand({
@@ -445,6 +455,38 @@ router.get('/stream/hls/:token/:segment', (req, res) => {
   serveHlsFile(req, res, req.params.segment);
 });
 
+/**
+ * GET /api/restaurant/stream/webrtc/:token
+ * Same-origin HTML shell that embeds the configured WebRTC viewer URL.
+ * Validates the stream token on every request (unlike exposing a static embed URL in JSON).
+ * The underlying viewer URL is not returned from GET /stream/token/:token.
+ */
+router.get('/stream/webrtc/:token', (req, res) => {
+  const token = req.params.token;
+  const v = liveAccess.validatePlayback(db, token);
+  if (!v.ok) {
+    res.set('Cache-Control', 'no-store');
+    return res.status(403).type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stream</title></head>
+<body style="margin:0;background:#1a0a00;color:#ccc;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;">Access denied or stream ended.</body></html>`);
+  }
+  const raw = (liveAccess.getWebrtcUrl(db) || '').trim();
+  if (!raw) {
+    res.set('Cache-Control', 'no-store');
+    return res.status(503).type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Stream</title></head>
+<body style="margin:0;background:#1a0a00;color:#ccc;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;">Live viewer is not configured.</body></html>`);
+  }
+  const src = escapeHtmlAttr(raw);
+  res.set('Cache-Control', 'no-store');
+  res.type('html').send(`<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Live stream</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#000}iframe{border:0;width:100%;height:100%;display:block}</style>
+</head><body>
+<iframe src="${src}" title="Live kitchen stream" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="no-referrer"></iframe>
+</body></html>`);
+});
+
 // POST /api/restaurant/stream/preview/start — restaurant-only preview token + HLS
 router.post('/stream/preview/start', requireRestaurant, (req, res) => {
   const rtsp = liveAccess.getRtspUrl(db);
@@ -540,12 +582,13 @@ router.get('/stream/token/:token', (req, res) => {
   }
 
   const orderLabel = v.orderId != null ? v.orderId : '—';
-  const webrtcUrl  = liveAccess.getWebrtcUrl(db) || '';
+  const webrtcConfigured = Boolean((liveAccess.getWebrtcUrl(db) || '').trim());
   res.json({
     valid: true,
     orderId: v.orderId,
     hlsUrl: `/api/restaurant/stream/hls/${token}/index.m3u8`,
-    webrtcUrl,
+    /** When true, load WebRTC via same-origin shell (token checked per request); raw URL is not in this response. */
+    useWebrtc: webrtcConfigured,
     orderLabel,
   });
 });

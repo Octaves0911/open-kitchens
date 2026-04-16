@@ -390,13 +390,12 @@ body{
     liveInfo.style.display = 'block';
     infoEl.textContent = '';
 
-    const webrtcUrl = (data.webrtcUrl || '').trim();
-    if (webrtcUrl) {
-      // Show WebRTC viewer page (e.g. go2rtc stream.html via Cloudflare Tunnel)
+    if (data.useWebrtc) {
+      // Same-origin shell validates token server-side; raw viewer URL is not exposed in /stream/token JSON.
       video.style.display = 'none';
       if (webrtcFrame) {
         webrtcFrame.style.display = 'block';
-        webrtcFrame.src = webrtcUrl;
+        webrtcFrame.src = `/api/restaurant/stream/webrtc/${encodeURIComponent(token)}`;
       }
       overlay.style.display = 'none';
     } else {
