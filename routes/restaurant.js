@@ -13,6 +13,11 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const db         = require('../db/database');
 const hls        = require('../lib/hls-transcoder');
 const liveAccess = require('../lib/live-stream-access');
+
+/** ES2019 nullish coalescing equivalent (Node older than 14 has no `??`). */
+function nullish(x, fallback) {
+  return (x !== undefined && x !== null) ? x : fallback;
+}
 const { requireAuth, signToken } = require('../middleware/auth');
 
 // ── Optional S3 media storage ────────────────────────────────────────────────
@@ -217,9 +222,9 @@ router.put('/menu/:id', requireRestaurant, ...upload.single('image'), (req, res)
       is_veg=?, is_available=?, is_bestseller=?, is_spicy=?, is_fan_favourite=?,
       addons_json=?, metadata_json=?, sort_order=?, updated_at=CURRENT_TIMESTAMP
     WHERE id=? AND restaurant_id=?`).run(
-    name        ?? existing.name,
-    category    ?? existing.category,
-    description ?? existing.description,
+    nullish(name, existing.name),
+    nullish(category, existing.category),
+    nullish(description, existing.description),
     price       !== undefined ? parseFloat(price) : existing.price,
     image_url,
     is_veg           !== undefined ? Number(is_veg)           : existing.is_veg,
@@ -227,8 +232,8 @@ router.put('/menu/:id', requireRestaurant, ...upload.single('image'), (req, res)
     is_bestseller    !== undefined ? Number(is_bestseller)    : existing.is_bestseller,
     is_spicy         !== undefined ? Number(is_spicy)         : existing.is_spicy,
     is_fan_favourite !== undefined ? Number(is_fan_favourite) : (existing.is_fan_favourite || 0),
-    addons    ?? existing.addons_json,
-    metadata  ?? existing.metadata_json,
+    nullish(addons, existing.addons_json),
+    nullish(metadata, existing.metadata_json),
     sort_order !== undefined ? Number(sort_order) : existing.sort_order,
     req.params.id, RESTAURANT_ID
   );
@@ -303,15 +308,15 @@ router.put('/offers/:id', requireRestaurant, ...uploadOffer.single('image'), (re
       badge=?,emoji=?,old_price=?,image_url=?
     WHERE id=? AND restaurant_id=?`).run(
     (code || existing.code).toUpperCase(),
-    title       ?? existing.title,
-    description ?? existing.description,
-    discount_type ?? existing.discount_type,
+    nullish(title, existing.title),
+    nullish(description, existing.description),
+    nullish(discount_type, existing.discount_type),
     discount_value !== undefined ? parseFloat(discount_value) : existing.discount_value,
     min_order    !== undefined ? parseFloat(min_order)    : existing.min_order,
     max_discount !== undefined ? parseFloat(max_discount) : existing.max_discount,
     is_active    !== undefined ? Number(is_active)        : existing.is_active,
-    (valid_from  || null) ?? existing.valid_from,
-    (valid_until || null) ?? existing.valid_until,
+    nullish(valid_from || null, existing.valid_from),
+    nullish(valid_until || null, existing.valid_until),
     usage_limit !== undefined ? parseInt(usage_limit) : existing.usage_limit,
     badge     !== undefined ? (badge     || null) : existing.badge,
     emoji     !== undefined ? (emoji     || null) : existing.emoji,
@@ -337,8 +342,12 @@ router.delete('/offers/:id', requireRestaurant, (req, res) => {
 
 // GET /api/restaurant/location — get current restaurant GPS + delivery radius
 router.get('/location', requireRestaurant, (req, res) => {
-  const r = db.prepare(`SELECT lat, lng, max_delivery_km FROM restaurants WHERE id=1`).get();
-  res.json({ lat: r?.lat ?? null, lng: r?.lng ?? null, max_delivery_km: r?.max_delivery_km ?? 50 });
+  const r = db.prepare(`SELECT lat, lng, max_delivery_km FROM restaurants WHERE id=1`).get() || {};
+  res.json({
+    lat: r.lat == null ? null : r.lat,
+    lng: r.lng == null ? null : r.lng,
+    max_delivery_km: r.max_delivery_km == null ? 50 : r.max_delivery_km,
+  });
 });
 
 // PUT /api/restaurant/location — update restaurant GPS + delivery radius
@@ -380,8 +389,10 @@ router.put('/settings', requireRestaurant, (req, res) => {
     // Coerce numeric fields
     if (['delivery_fee','min_order_amount','tax_percent','packaging_charge','lat','lng','max_delivery_km'].includes(f))
       return parseFloat(v) || 0;
-    if (['prep_time_minutes','is_accepting_orders'].includes(f))
-      return parseInt(v) ?? 0;
+    if (['prep_time_minutes','is_accepting_orders'].includes(f)) {
+      const n = parseInt(v, 10);
+      return Number.isNaN(n) ? 0 : n;
+    }
     return v;
   });
   db.prepare(`UPDATE restaurants SET ${set} WHERE id=1`).run(...values);

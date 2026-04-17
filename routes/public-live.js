@@ -10,7 +10,7 @@ const liveAccess = require('../lib/live-stream-access');
 // POST /api/public/live/session  { orderId }
 router.post('/session', (req, res) => {
   try {
-    const orderId = liveAccess.normalizeOrderId(req.body?.orderId);
+    const orderId = liveAccess.normalizeOrderId(req.body && req.body.orderId);
     if (orderId == null) {
       return res.json({
         ok: false,

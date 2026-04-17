@@ -110,23 +110,24 @@ app.get('/api/restaurant-info', (req, res) => {
            opening_time, closing_time, is_accepting_orders
     FROM restaurants WHERE id=?
   `).get(RESTAURANT_ID);
+  const row = r || {};
   res.json({
-    name:              r?.name               || 'Open Kitchens',
-    address:           r?.address            || 'Bengaluru, Karnataka',
-    tagline:           r?.tagline            || null,
-    cuisine_type:      r?.cuisine_type       || null,
-    phone:             r?.phone              || null,
-    lat:               r?.lat               ?? null,
-    lng:               r?.lng               ?? null,
-    max_delivery_km:   r?.max_delivery_km   ?? 50,
-    prep_minutes:      r?.prep_time_minutes ?? 20,
-    delivery_fee:      r?.delivery_fee      ?? 0,
-    min_order_amount:  r?.min_order_amount  ?? 0,
-    tax_percent:       r?.tax_percent       ?? 5,
-    packaging_charge:  r?.packaging_charge  ?? 20,
-    opening_time:      r?.opening_time      || '09:00',
-    closing_time:      r?.closing_time      || '22:00',
-    is_accepting_orders: r?.is_accepting_orders ?? 1,
+    name:              row.name               || 'Open Kitchens',
+    address:           row.address            || 'Bengaluru, Karnataka',
+    tagline:           row.tagline            || null,
+    cuisine_type:      row.cuisine_type       || null,
+    phone:             row.phone              || null,
+    lat:               row.lat == null ? null : row.lat,
+    lng:               row.lng == null ? null : row.lng,
+    max_delivery_km:   row.max_delivery_km == null ? 50 : row.max_delivery_km,
+    prep_minutes:      row.prep_time_minutes == null ? 20 : row.prep_time_minutes,
+    delivery_fee:      row.delivery_fee == null ? 0 : row.delivery_fee,
+    min_order_amount:  row.min_order_amount == null ? 0 : row.min_order_amount,
+    tax_percent:       row.tax_percent == null ? 5 : row.tax_percent,
+    packaging_charge:  row.packaging_charge == null ? 20 : row.packaging_charge,
+    opening_time:      row.opening_time      || '09:00',
+    closing_time:      row.closing_time      || '22:00',
+    is_accepting_orders: row.is_accepting_orders == null ? 1 : row.is_accepting_orders,
   });
 });
 
