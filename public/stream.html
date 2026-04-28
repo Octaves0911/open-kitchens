@@ -25,10 +25,17 @@ body{background:#0d0703;color:#fff;font-family:'Segoe UI',system-ui,sans-serif;m
 .live-dot{width:8px;height:8px;border-radius:50%;background:#fff;animation:blink 1s infinite;}
 @keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
 #videoWrapper{
-  width:100%;aspect-ratio:16/9;background:#1a0a00;border-radius:12px;
-  overflow:hidden;position:relative;margin-bottom:16px;
+  width:100%;
+  aspect-ratio:16/9;
+  /* Fit within viewport (accounts for fixed topbar + headings on small screens) */
+  max-height:calc(100svh - 240px);
+  background:#1a0a00;
+  border-radius:12px;
+  overflow:hidden;
+  position:relative;
+  margin-bottom:16px;
 }
-#videoWrapper video{width:100%;height:100%;object-fit:cover;}
+#videoWrapper video{width:100%;height:100%;object-fit:contain;background:#000;}
 #videoWrapper iframe{width:100%;height:100%;border:0;display:block;background:#000;}
 #streamOverlay{
   position:absolute;inset:0;display:flex;flex-direction:column;
@@ -209,6 +216,25 @@ body{
   padding:10px 12px;box-shadow:0 1px 3px rgba(62,35,18,.08);
   font-size:12px;font-weight:900;color:#D35400;white-space:nowrap;
 }
+.stream-status-card .viewer-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:9999px;
+  background:#FFF7ED;
+  border:1px solid #FDBA74;
+  color:#9A3412;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.stream-status-card .viewer-pill strong{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+  font-size:12px;
+  letter-spacing:0;
+}
 .stream-title{margin:10px 0 0;font-size:13px;color:var(--text-mid);}
 .stream-card{
   background:#2D1B12;
@@ -303,7 +329,10 @@ body{
         <p class="stream-subtitle">Hebbal Branch • 100% Radical Transparency</p>
         <p class="stream-title" id="streamTitle">Connecting to live stream…</p>
       </div>
-      <div class="stream-status-card">📶 Stream Status: Excellent</div>
+      <div class="stream-status-card">
+        📶 <span id="netStatusText">Stream Status: Connecting…</span>
+        <span class="viewer-pill">Live viewers <strong id="liveViewerCount">—</strong></span>
+      </div>
       <div id="liveInfo" style="display:none;">
         <div class="live-badge"><span class="live-dot"></span> Live kitchen</div>
       </div>
@@ -357,6 +386,8 @@ body{
   const titleEl    = document.getElementById('streamTitle');
   const infoEl     = document.getElementById('streamInfo');
   const liveInfo   = document.getElementById('liveInfo');
+  const viewerCountEl = document.getElementById('liveViewerCount');
+  const netStatusEl = document.getElementById('netStatusText');
 
   function showError(msg, sub = '') {
     overlay.style.display = 'flex';
@@ -364,12 +395,55 @@ body{
     overlayMsg.textContent = msg;
     overlaySub.textContent = sub;
     titleEl.textContent = 'Stream unavailable';
+    try { infoEl.textContent = sub || msg || ''; } catch {}
+  }
+
+  function makeLowLatencyHls() {
+    return new Hls({
+      lowLatencyMode: true,
+      liveSyncDurationCount: 3,
+      liveMaxLatencyDurationCount: 5,
+      maxBufferLength: 15,
+      backBufferLength: 10,
+      fragLoadingTimeOut: 20000,
+      manifestLoadingTimeOut: 20000,
+    });
   }
 
   if (!token) {
     showError('No stream token provided.', 'Please use the link sent to you.');
     return;
   }
+
+  // Live viewer counter via WS (best-effort)
+  try {
+    const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+    const ws = new WebSocket(`${proto}://${location.host}`);
+    let lastCountAt = 0;
+    ws.addEventListener('open', () => {
+      ws.send(JSON.stringify({ type: 'stream_view', token }));
+      try { if (infoEl && !infoEl.textContent) infoEl.textContent = 'Connecting live viewers…'; } catch {}
+    });
+    ws.addEventListener('message', (ev) => {
+      try {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'viewer_total' && viewerCountEl) {
+          viewerCountEl.textContent = String(msg.count);
+          lastCountAt = Date.now();
+          try { infoEl.textContent = ''; } catch {}
+        }
+      } catch {}
+    });
+    ws.addEventListener('error', () => {
+      try { if (infoEl) infoEl.textContent = 'Viewer counter unavailable.'; } catch {}
+    });
+    ws.addEventListener('close', () => {
+      // Only blank out if we previously had a valid count (avoid flicker on initial load)
+      if (viewerCountEl && viewerCountEl.textContent !== '—' && (Date.now() - lastCountAt) > 500) {
+        viewerCountEl.textContent = '—';
+      }
+    });
+  } catch {}
 
   // Validate token with backend
   try {
@@ -389,19 +463,24 @@ body{
     titleEl.textContent = `Live Kitchen Preparation — Order #${oid}`;
     liveInfo.style.display = 'block';
     infoEl.textContent = '';
+    if (netStatusEl) netStatusEl.textContent = 'Stream Status: Live';
 
-    if (data.useWebrtc) {
-      // Same-origin shell validates token server-side; raw viewer URL is not exposed in /stream/token JSON.
-      video.style.display = 'none';
-      if (webrtcFrame) {
-        webrtcFrame.style.display = 'block';
-        webrtcFrame.src = `/api/restaurant/stream/webrtc/${encodeURIComponent(token)}`;
-      }
-      overlay.style.display = 'none';
-    } else {
-      const hlsUrl = data.hlsUrl;
+    // HLS playback
+    const hlsUrl = data.hlsUrl;
+    if (!hlsUrl) {
+      showError('Stream URL missing.', 'Restaurant has not configured the HLS URL yet.');
+      return;
+    }
+    if (webrtcFrame) {
+      webrtcFrame.removeAttribute('src');
+      webrtcFrame.style.display = 'none';
+    }
+    video.style.display = 'block';
+
     if (Hls.isSupported()) {
-      const hls = new Hls({ lowLatencyMode: true });
+      const hls = makeLowLatencyHls();
+      // BunnyCDN / some origins rely on redirects + cookies. Let XHR carry them if present.
+      hls.config.xhrSetup = function (xhr) { xhr.withCredentials = true; };
       hls.loadSource(hlsUrl);
       hls.attachMedia(video);
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -409,7 +488,17 @@ body{
         video.play().catch(() => {});
       });
       hls.on(Hls.Events.ERROR, (_, errData) => {
-        if (errData.fatal) showError('Stream failed to load.', 'Please refresh the page.');
+        // Surface useful diagnostics to the user (and console) instead of silently failing.
+        try { console.error('[HLS ERROR]', errData); } catch {}
+        const details = errData?.details || errData?.type || 'unknown_error';
+        const respCode = errData?.response?.code;
+        const respText = errData?.response?.text;
+        const more = [
+          respCode ? `HTTP ${respCode}` : '',
+          details ? String(details) : '',
+          respText ? String(respText).slice(0, 140) : '',
+        ].filter(Boolean).join(' · ');
+        if (errData.fatal) showError('Stream failed to load.', more || 'Please refresh the page.');
       });
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
       // Safari native HLS
@@ -420,7 +509,6 @@ body{
       });
     } else {
       showError('Your browser does not support HLS streams.', 'Try opening this link in Chrome or Safari.');
-    }
     }
 
     // Poll for stream status every 10s
@@ -448,6 +536,7 @@ body{
 
   } catch (e) {
     showError('Could not connect to the server.', 'Please check your connection and try again.');
+    if (netStatusEl) netStatusEl.textContent = 'Stream Status: Offline';
   }
 })();
 </script>

@@ -567,9 +567,8 @@ async function saveOffer() {
 // LIVE PREP TAB
 // ════════════════════════════════════════════════════════════════════════════════
 let livePublicOrderIds   = [];
-let previewHlsInstance   = null;
-let previewSessionToken  = null;
-let webrtcUrl            = '';
+let portalHlsInstance    = null;
+let hlsUrl               = '';
 
 function normalizeOrderIdInput(input) {
   if (input == null) return null;
@@ -583,14 +582,10 @@ function normalizeOrderIdInput(input) {
 
 async function loadLivePrep() {
   try {
-    const { value } = await API('/config/rtsp_url');
-    if (value) document.getElementById('rtspInput').value = value;
-  } catch {}
-  try {
-    const { value } = await API('/config/webrtc_url');
-    webrtcUrl = value || '';
-    const el = document.getElementById('webrtcInput');
-    if (el && webrtcUrl) el.value = webrtcUrl;
+    const { value } = await API('/config/hls_url');
+    hlsUrl = value || '';
+    const el = document.getElementById('hlsInput');
+    if (el) el.value = hlsUrl;
   } catch {}
   try {
     const bc = await API('/config/live_broadcast_enabled');
@@ -623,6 +618,18 @@ async function onLiveBroadcastToggle() {
     showToast(e.message, 'error');
     el.checked = !on;
   }
+}
+
+function makeLowLatencyHls() {
+  return new Hls({
+    lowLatencyMode: true,
+    liveSyncDurationCount: 3,
+    liveMaxLatencyDurationCount: 5,
+    maxBufferLength: 15,
+    backBufferLength: 10,
+    fragLoadingTimeOut: 20000,
+    manifestLoadingTimeOut: 20000,
+  });
 }
 
 function renderPublicOrderIds() {
@@ -670,57 +677,50 @@ async function removePublicOrderId(id) {
   }
 }
 
-async function openRtspPreview() {
-  if (previewSessionToken) {
-    const t = previewSessionToken;
-    previewSessionToken = null;
-    closeRtspPreviewQuiet();
-    await API('/stream/preview/stop', { method: 'POST', body: { token: t } }).catch(() => {});
-  }
-  const modal = document.getElementById('rtspPreviewModal');
-  const status = document.getElementById('rtspPreviewStatus');
-  const video = document.getElementById('rtspPreviewVideo');
+async function openHlsPreview() {
+  const input = document.getElementById('hlsInput');
+  const url = (input?.value || hlsUrl || '').trim();
+  if (!url) { showToast('Enter an HLS (.m3u8) URL first', 'error'); return; }
+
+  const modal = document.getElementById('hlsPreviewModal');
+  const status = document.getElementById('hlsPreviewStatus');
+  const video = document.getElementById('hlsPreviewVideo');
   if (!modal || !video) return;
-  closeRtspPreviewQuiet();
+  closeHlsPreviewQuiet();
   modal.style.display = 'flex';
   modal.setAttribute('aria-hidden', 'false');
-  status.textContent = 'Starting transcoder…';
-  try {
-    const data = await API('/stream/preview/start', { method: 'POST' });
-    previewSessionToken = data.token;
-    const hlsUrl = data.hlsUrl.startsWith('http') ? data.hlsUrl : `${location.origin}${data.hlsUrl}`;
-    status.textContent = 'Loading HLS…';
-    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
-      previewHlsInstance = new Hls({ lowLatencyMode: true });
-      previewHlsInstance.loadSource(hlsUrl);
-      previewHlsInstance.attachMedia(video);
-      previewHlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-        status.textContent = '';
-        video.play().catch(() => {});
-      });
-      previewHlsInstance.on(Hls.Events.ERROR, (_, errData) => {
-        if (errData.fatal) status.textContent = 'Playback failed — check RTSP URL, ffmpeg, and camera.';
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = hlsUrl;
-      video.addEventListener('loadedmetadata', () => {
-        status.textContent = '';
-        video.play().catch(() => {});
-      }, { once: true });
-    } else {
-      status.textContent = 'HLS not supported in this browser.';
-    }
-  } catch (e) {
-    status.textContent = e.message || 'Could not start preview';
-    previewSessionToken = null;
+  status.textContent = 'Loading HLS…';
+
+  if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+    portalHlsInstance = makeLowLatencyHls();
+    // Match customer behavior (some CDNs rely on redirects/cookies)
+    portalHlsInstance.config.xhrSetup = function (xhr) { xhr.withCredentials = true; };
+    portalHlsInstance.loadSource(url);
+    portalHlsInstance.attachMedia(video);
+    portalHlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+      status.textContent = '';
+      video.play().catch(() => {});
+    });
+    portalHlsInstance.on(Hls.Events.ERROR, (_, errData) => {
+      if (errData.fatal) status.textContent = 'Playback failed — check HLS URL and CDN CORS.';
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari native HLS
+    video.src = url;
+    video.addEventListener('loadedmetadata', () => {
+      status.textContent = '';
+      video.play().catch(() => {});
+    }, { once: true });
+  } else {
+    status.textContent = 'HLS not supported in this browser.';
   }
 }
 
-function closeRtspPreviewQuiet() {
-  const video = document.getElementById('rtspPreviewVideo');
-  if (previewHlsInstance) {
-    previewHlsInstance.destroy();
-    previewHlsInstance = null;
+function closeHlsPreviewQuiet() {
+  const video = document.getElementById('hlsPreviewVideo');
+  if (portalHlsInstance) {
+    portalHlsInstance.destroy();
+    portalHlsInstance = null;
   }
   if (video) {
     video.removeAttribute('src');
@@ -728,88 +728,24 @@ function closeRtspPreviewQuiet() {
   }
 }
 
-function closeRtspPreview() {
-  const modal = document.getElementById('rtspPreviewModal');
-  const token = previewSessionToken;
-  previewSessionToken = null;
-  closeRtspPreviewQuiet();
+function closeHlsPreview() {
+  const modal = document.getElementById('hlsPreviewModal');
+  closeHlsPreviewQuiet();
   if (modal) {
     modal.style.display = 'none';
     modal.setAttribute('aria-hidden', 'true');
   }
-  if (token) {
-    API('/stream/preview/stop', { method: 'POST', body: { token } }).catch(() => {});
-  }
 }
 
-async function saveRtspUrl() {
-  const url = document.getElementById('rtspInput').value.trim();
-  if (!url) { showToast('Enter an RTSP URL first', 'error'); return; }
-  try {
-    await API('/config/rtsp_url', { method: 'PUT', body: { value: url } });
-    showToast('RTSP URL saved ✅');
-  } catch (e) { showToast(e.message, 'error'); }
-}
-
-function toggleRtspVisibility() {
-  const input = document.getElementById('rtspInput');
-  input.type = input.type === 'password' ? 'text' : 'password';
-}
-
-async function saveWebrtcUrl() {
-  const input = document.getElementById('webrtcInput');
+async function saveHlsUrl() {
+  const input = document.getElementById('hlsInput');
   const url = (input?.value || '').trim();
-  if (!url) { showToast('Enter a WebRTC/player URL first', 'error'); return; }
+  if (!url) { showToast('Enter an HLS (.m3u8) URL first', 'error'); return; }
   try {
-    await API('/config/webrtc_url', { method: 'PUT', body: { value: url } });
-    webrtcUrl = url;
-    showToast('WebRTC URL saved ✅');
+    await API('/config/hls_url', { method: 'PUT', body: { value: url } });
+    hlsUrl = url;
+    showToast('HLS URL saved ✅');
   } catch (e) { showToast(e.message, 'error'); }
-}
-
-function openWebrtcPreview() {
-  const input = document.getElementById('webrtcInput');
-  const url = (input?.value || webrtcUrl || '').trim();
-  if (!url) { showToast('Enter a WebRTC/player URL first', 'error'); return; }
-
-  const modal  = document.getElementById('webrtcPreviewModal');
-  const status = document.getElementById('webrtcPreviewStatus');
-  const frame  = document.getElementById('webrtcPreviewFrame');
-  const openInNewTab = document.getElementById('webrtcOpenNewTab');
-  if (!modal || !frame) return;
-
-  // Reset
-  status.textContent = 'Loading…';
-  frame.removeAttribute('src');
-  frame.src = url;
-  if (openInNewTab) openInNewTab.href = url;
-
-  modal.style.display = 'flex';
-  modal.setAttribute('aria-hidden', 'false');
-
-  const onLoad = () => {
-    status.textContent = '';
-    frame.removeEventListener('load', onLoad);
-  };
-  frame.addEventListener('load', onLoad);
-
-  // If embedding is blocked, user will see a browser error inside iframe.
-  // Provide an explicit hint in the status line.
-  setTimeout(() => {
-    if (status.textContent) status.textContent = 'If the stream does not appear, click “Open in new tab”.';
-  }, 1200);
-}
-
-function closeWebrtcPreview() {
-  const modal  = document.getElementById('webrtcPreviewModal');
-  const status = document.getElementById('webrtcPreviewStatus');
-  const frame  = document.getElementById('webrtcPreviewFrame');
-  if (frame) frame.removeAttribute('src');
-  if (status) status.textContent = '';
-  if (modal) {
-    modal.style.display = 'none';
-    modal.setAttribute('aria-hidden', 'true');
-  }
 }
 
 async function loadAcceptedOrders() {

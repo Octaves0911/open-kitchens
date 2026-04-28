@@ -294,17 +294,31 @@ button,input,select,textarea{font-family:inherit;}
 }
 .rp-modal-overlay{
   position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;
-  display:none;align-items:center;justify-content:center;padding:16px;
+  display:none;align-items:flex-start;justify-content:center;padding:16px;
+  overflow:auto;
 }
 .rp-modal-overlay[style*="flex"]{display:flex!important;}
 .rp-modal-card{
   background:#fff;border-radius:16px;padding:18px;max-width:720px;width:100%;
   box-shadow:0 20px 50px rgba(0,0,0,.25);
+  max-height:calc(100svh - 32px);
+  overflow:auto;
+  display:flex;
+  flex-direction:column;
 }
 .rp-modal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .rp-modal-hdr span{font-size:16px;font-weight:800;color:var(--brown-dark);}
 .rp-preview-status{font-size:13px;color:var(--text-mid);min-height:1.25em;margin-bottom:8px;}
 #rtspPreviewVideo{width:100%;max-height:min(50vh,360px);background:#111;border-radius:10px;}
+#hlsPreviewVideo{
+  width:100%;
+  aspect-ratio:16/9;
+  /* Cap to viewport so it never spills off-screen (header + paddings accounted) */
+  max-height:calc(100svh - 220px);
+  background:#111;
+  border-radius:10px;
+  object-fit:contain;
+}
 #webrtcPreviewFrame{
   width:100%;
   height:min(60vh,420px);
@@ -607,22 +621,21 @@ button,input,select,textarea{font-family:inherit;}
 ══════════════════════════════════════════════════════════════════════ -->
 <div class="rp-tab-panel" id="tab-liveprep">
 
-  <!-- RTSP Config -->
+  <!-- HLS Config -->
   <div class="rp-rtsp-section">
     <div class="rp-section-hdr" style="margin-bottom:10px;">
-      <div class="rp-section-title">📷 RTSP Camera Config</div>
+      <div class="rp-section-title">📺 HLS Live Stream</div>
     </div>
-    <label class="rp-label">RTSP Stream URL</label>
-    <div style="display:flex;gap:8px;">
-      <input id="rtspInput" class="rp-input" type="password"
-             placeholder="rtsp://user:pass@ip:554/stream" style="flex:1;"/>
-      <button class="rp-btn rp-btn-outline rp-btn-sm" onclick="toggleRtspVisibility()" title="Show/Hide">👁</button>
-    </div>
+    <label class="rp-label">HLS Playlist URL (.m3u8)</label>
+    <input id="hlsInput" class="rp-input" type="url"
+           placeholder="https://<your-cdn>/live/index.m3u8" />
     <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <button type="button" class="rp-btn rp-btn-primary" onclick="saveRtspUrl()">💾 Save URL</button>
-      <button type="button" class="rp-btn rp-btn-outline" onclick="openRtspPreview()">▶ Preview stream</button>
+      <button type="button" class="rp-btn rp-btn-primary" onclick="saveHlsUrl()">💾 Save URL</button>
+      <button type="button" class="rp-btn rp-btn-outline" onclick="openHlsPreview()">▶ Preview stream</button>
     </div>
-    <p style="font-size:11px;color:var(--text-light);margin-top:8px;">Requires <strong>ffmpeg</strong> on the server. Save the URL before preview.</p>
+    <p style="font-size:11px;color:var(--text-light);margin-top:8px;">
+      Provide your CDN HLS <code>.m3u8</code> URL. Preview works in Chrome/Safari.
+    </p>
 
     <div class="rp-broadcast-row">
       <label class="rp-broadcast-label">
@@ -649,23 +662,6 @@ button,input,select,textarea{font-family:inherit;}
     </div>
   </div>
 
-  <!-- WebRTC Config (Cloudflare Tunnel / Player URL) -->
-  <div class="rp-rtsp-section">
-    <div class="rp-section-hdr" style="margin-bottom:10px;">
-      <div class="rp-section-title">🌐 WebRTC Stream (Cloudflare)</div>
-    </div>
-    <label class="rp-label">WebRTC / Player URL</label>
-    <input id="webrtcInput" class="rp-input" type="url"
-           placeholder="https://<your-cloudflare-tunnel-or-player-url>" />
-    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-      <button type="button" class="rp-btn rp-btn-primary" onclick="saveWebrtcUrl()">💾 Save URL</button>
-      <button type="button" class="rp-btn rp-btn-outline" onclick="openWebrtcPreview()">▶ View stream</button>
-    </div>
-    <p style="font-size:11px;color:var(--text-light);margin-top:8px;">
-      Tip: if the provider blocks embedding (X-Frame-Options), use “Open in new tab” inside the viewer.
-    </p>
-  </div>
-
   <!-- Accepted orders list -->
   <div class="rp-section-hdr">
     <div class="rp-section-title">Accepted Orders — Live Prep</div>
@@ -677,32 +673,16 @@ button,input,select,textarea{font-family:inherit;}
 
 </div><!-- /#tab-liveprep -->
 
-<!-- RTSP preview modal -->
-<div id="rtspPreviewModal" class="rp-modal-overlay" aria-hidden="true"
-     onclick="if(event.target===this)closeRtspPreview()">
-  <div class="rp-modal-card" role="dialog" aria-labelledby="rtspPreviewTitle" onclick="event.stopPropagation()">
+<!-- HLS preview modal -->
+<div id="hlsPreviewModal" class="rp-modal-overlay" aria-hidden="true"
+     onclick="if(event.target===this)closeHlsPreview()">
+  <div class="rp-modal-card" role="dialog" aria-labelledby="hlsPreviewTitle" onclick="event.stopPropagation()">
     <div class="rp-modal-hdr">
-      <span id="rtspPreviewTitle">RTSP preview</span>
-      <button type="button" class="rp-btn rp-btn-sm rp-btn-outline" onclick="closeRtspPreview()">Close</button>
+      <span id="hlsPreviewTitle">HLS preview</span>
+      <button type="button" class="rp-btn rp-btn-sm rp-btn-outline" onclick="closeHlsPreview()">Close</button>
     </div>
-    <div id="rtspPreviewStatus" class="rp-preview-status"></div>
-    <video id="rtspPreviewVideo" controls playsinline></video>
-  </div>
-</div>
-
-<!-- WebRTC preview modal -->
-<div id="webrtcPreviewModal" class="rp-modal-overlay" aria-hidden="true"
-     onclick="if(event.target===this)closeWebrtcPreview()">
-  <div class="rp-modal-card" role="dialog" aria-labelledby="webrtcPreviewTitle" onclick="event.stopPropagation()">
-    <div class="rp-modal-hdr">
-      <span id="webrtcPreviewTitle">WebRTC viewer</span>
-      <div style="display:flex;gap:8px;align-items:center;">
-        <a id="webrtcOpenNewTab" class="rp-btn rp-btn-sm rp-btn-outline" href="#" target="_blank" rel="noopener">Open in new tab</a>
-        <button type="button" class="rp-btn rp-btn-sm rp-btn-outline" onclick="closeWebrtcPreview()">Close</button>
-      </div>
-    </div>
-    <div id="webrtcPreviewStatus" class="rp-preview-status"></div>
-    <iframe id="webrtcPreviewFrame" title="WebRTC stream viewer" referrerpolicy="no-referrer"></iframe>
+    <div id="hlsPreviewStatus" class="rp-preview-status"></div>
+    <video id="hlsPreviewVideo" controls playsinline></video>
   </div>
 </div>
 

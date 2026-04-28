@@ -41,21 +41,71 @@ const wss = new WebSocketServer({ server });
 // Map userId (string) → Set of live WebSocket connections
 const userSockets = new Map();
 
+// Map streamToken (string) → Set of viewer sockets (live viewers)
+const streamViewers = new Map();
+
+function broadcastViewerCount(streamToken) {
+  const token = String(streamToken || '');
+  if (!token) return;
+  const set = streamViewers.get(token);
+  const count = set ? set.size : 0;
+  const msg = JSON.stringify({ type: 'viewer_count', token, count });
+  if (!set) return;
+  set.forEach((ws) => { if (ws.readyState === 1) ws.send(msg); });
+}
+
+function getTotalLiveViewers() {
+  let total = 0;
+  for (const set of streamViewers.values()) total += set.size;
+  return total;
+}
+
+function broadcastTotalViewerCount() {
+  const count = getTotalLiveViewers();
+  const msg = JSON.stringify({ type: 'viewer_total', count });
+  // Send to all currently watching sockets (across tokens)
+  for (const set of streamViewers.values()) {
+    set.forEach((ws) => { if (ws.readyState === 1) ws.send(msg); });
+  }
+}
+
 wss.on('connection', (ws) => {
   let userId = null;
+  let viewerToken = null;
   ws.isAlive = true;
 
   ws.on('pong', () => { ws.isAlive = true; });
 
   ws.on('message', (raw) => {
     try {
-      const msg = JSON.parse(raw);
+      const text = (typeof raw === 'string') ? raw : raw.toString();
+      const msg = JSON.parse(text);
       // Client registers: { type:'register', userId }
       if (msg.type === 'register' && msg.userId) {
         userId = String(msg.userId);
         if (!userSockets.has(userId)) userSockets.set(userId, new Set());
         userSockets.get(userId).add(ws);
         ws.send(JSON.stringify({ type: 'registered', userId }));
+      }
+
+      // Stream viewer presence: { type:'stream_view', token }
+      if (msg.type === 'stream_view' && msg.token) {
+        const t = String(msg.token);
+        // Remove from old token bucket if switching
+        if (viewerToken && viewerToken !== t && streamViewers.has(viewerToken)) {
+          streamViewers.get(viewerToken).delete(ws);
+          if (streamViewers.get(viewerToken).size === 0) streamViewers.delete(viewerToken);
+          broadcastViewerCount(viewerToken);
+          broadcastTotalViewerCount();
+        }
+        viewerToken = t;
+        if (!streamViewers.has(viewerToken)) streamViewers.set(viewerToken, new Set());
+        streamViewers.get(viewerToken).add(ws);
+        broadcastViewerCount(viewerToken);
+        broadcastTotalViewerCount();
+        // Acknowledge (and send current count)
+        ws.send(JSON.stringify({ type: 'viewer_count', token: viewerToken, count: streamViewers.get(viewerToken).size }));
+        ws.send(JSON.stringify({ type: 'viewer_total', count: getTotalLiveViewers() }));
       }
     } catch {}
   });
@@ -64,6 +114,12 @@ wss.on('connection', (ws) => {
     if (userId && userSockets.has(userId)) {
       userSockets.get(userId).delete(ws);
       if (userSockets.get(userId).size === 0) userSockets.delete(userId);
+    }
+    if (viewerToken && streamViewers.has(viewerToken)) {
+      streamViewers.get(viewerToken).delete(ws);
+      if (streamViewers.get(viewerToken).size === 0) streamViewers.delete(viewerToken);
+      broadcastViewerCount(viewerToken);
+      broadcastTotalViewerCount();
     }
   });
 });

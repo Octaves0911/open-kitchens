@@ -420,6 +420,108 @@ router.put('/config/:key', requireRestaurant, (req, res) => {
 // LIVE STREAMING
 // ═══════════════════════════════════════════════════════════════════════════════
 
+function isProbablyHlsPlaylistResponse(contentType) {
+  return /application\/vnd\.apple\.mpegurl|application\/x-mpegurl|audio\/mpegurl|audio\/x-mpegurl/i.test(String(contentType || ''));
+}
+
+function isProbablyMpegTsOrCmaf(contentType) {
+  return /video\/mp2t|application\/octet-stream|video\/mp4|application\/mp4/i.test(String(contentType || ''));
+}
+
+function absolutizeUrl(base, ref) {
+  try {
+    return new URL(ref, base).toString();
+  } catch {
+    return ref;
+  }
+}
+
+function rewritePlaylistToProxy({ playlistText, playlistUrl, proxyBaseUrl }) {
+  // Rewrites:
+  // - Any non-comment URI line
+  // - Any URI="..." attribute inside EXT-X-* tags (e.g. EXT-X-MAP, EXT-X-PART, EXT-X-KEY)
+  // so all follow-up requests stay same-origin (no CORS issues).
+  return String(playlistText || '')
+    .split('\n')
+    .map((line) => {
+      const rawLine = String(line || '');
+      const l = rawLine.trim();
+      if (!l) return rawLine;
+
+      // Rewrite tag attributes: URI="..."
+      if (l.startsWith('#')) {
+        return rawLine.replace(/URI="([^"]+)"/g, (_, uri) => {
+          const abs = absolutizeUrl(playlistUrl, uri);
+          return `URI="${proxyBaseUrl}?u=${encodeURIComponent(abs)}"`;
+        });
+      }
+
+      // Rewrite standalone URI line
+      const abs = absolutizeUrl(playlistUrl, l);
+      return `${proxyBaseUrl}?u=${encodeURIComponent(abs)}`;
+    })
+    .join('\n');
+}
+
+async function proxyRemoteHls(req, res, { configuredHlsUrl }) {
+  const token = req.params.token;
+  const v     = liveAccess.validatePlayback(db, token);
+  if (!v.ok) {
+    return res.status(403).type('text/plain').send('Forbidden');
+  }
+
+  const raw = String(configuredHlsUrl || '').trim();
+  if (!raw) return res.status(503).type('text/plain').send('HLS URL not configured');
+
+  // SSRF guard: only allow fetching from the same origin as the configured URL.
+  let allowedOrigin = '';
+  try { allowedOrigin = new URL(raw).origin; } catch {}
+  if (!allowedOrigin) return res.status(400).type('text/plain').send('Invalid HLS URL');
+
+  const target = String(req.query.u || '').trim() || raw;
+  let targetUrl;
+  try { targetUrl = new URL(target); } catch { return res.status(400).type('text/plain').send('Invalid URL'); }
+  if (targetUrl.origin !== allowedOrigin) {
+    return res.status(403).type('text/plain').send('Blocked origin');
+  }
+
+  // Fetch remote (follow redirects) and stream back.
+  let resp;
+  try {
+    resp = await fetch(targetUrl.toString(), { redirect: 'follow' });
+  } catch (e) {
+    return res.status(502).type('text/plain').send(e.message || 'Upstream fetch failed');
+  }
+
+  if (!resp.ok) {
+    const t = await resp.text().catch(() => '');
+    return res.status(resp.status).type('text/plain').send(t || `Upstream error (${resp.status})`);
+  }
+
+  const contentType = resp.headers.get('content-type') || '';
+  const cacheControl = resp.headers.get('cache-control') || 'no-store';
+  res.set('Cache-Control', cacheControl);
+
+  // If playlist: rewrite URIs to go back through this proxy.
+  if (isProbablyHlsPlaylistResponse(contentType) || targetUrl.pathname.endsWith('.m3u8')) {
+    const txt = await resp.text();
+    const proxyBaseUrl = `/api/restaurant/stream/cdn/${encodeURIComponent(token)}`;
+    const rewritten = rewritePlaylistToProxy({
+      playlistText: txt,
+      playlistUrl: targetUrl.toString(),
+      proxyBaseUrl,
+    });
+    res.type('application/vnd.apple.mpegurl');
+    return res.send(rewritten);
+  }
+
+  // Otherwise: pass through binary (segments)
+  if (isProbablyMpegTsOrCmaf(contentType)) res.type(contentType);
+  else res.type('application/octet-stream');
+  const buf = Buffer.from(await resp.arrayBuffer());
+  return res.send(buf);
+}
+
 function tryStopTranscoderIfIdle() {
   db.prepare(`DELETE FROM live_public_sessions WHERE expires_at < datetime('now')`).run();
   const liveN = db.prepare(`SELECT COUNT(*) AS n FROM live_streams WHERE status='active'`).get().n;
@@ -464,6 +566,12 @@ router.get('/stream/hls/:token/index.m3u8', (req, res) => {
 // GET /api/restaurant/stream/hls/:token/:segment
 router.get('/stream/hls/:token/:segment', (req, res) => {
   serveHlsFile(req, res, req.params.segment);
+});
+
+// GET /api/restaurant/stream/cdn/:token  (proxy for configured CDN HLS)
+router.get('/stream/cdn/:token', async (req, res) => {
+  const configuredHlsUrl = (liveAccess.getHlsUrl(db) || '').trim();
+  return proxyRemoteHls(req, res, { configuredHlsUrl });
 });
 
 /**
@@ -593,13 +701,16 @@ router.get('/stream/token/:token', (req, res) => {
   }
 
   const orderLabel = v.orderId != null ? v.orderId : '—';
-  const webrtcConfigured = Boolean((liveAccess.getWebrtcUrl(db) || '').trim());
+  const configuredHlsUrl = (liveAccess.getHlsUrl(db) || '').trim();
+  const fallbackHlsUrl = `/api/restaurant/stream/hls/${token}/index.m3u8`;
+  // If a CDN URL is configured, serve it via same-origin proxy to avoid CORS issues.
+  const hlsUrl = configuredHlsUrl
+    ? `/api/restaurant/stream/cdn/${encodeURIComponent(token)}`
+    : fallbackHlsUrl;
   res.json({
     valid: true,
     orderId: v.orderId,
-    hlsUrl: `/api/restaurant/stream/hls/${token}/index.m3u8`,
-    /** When true, load WebRTC via same-origin shell (token checked per request); raw URL is not in this response. */
-    useWebrtc: webrtcConfigured,
+    hlsUrl,
     orderLabel,
   });
 });
