@@ -327,6 +327,38 @@ async function loadMenu() {
   }
 }
 
+// ── CSV import (Final Menu.csv) ───────────────────────────────────────────────
+async function importMenuCsv() {
+  if (!checkAuth()) return;
+  const fileInput = document.getElementById('menuCsvFile');
+  const upsert = document.getElementById('menuCsvUpsert')?.checked !== false;
+  const msgEl = document.getElementById('menuCsvMsg');
+  if (msgEl) msgEl.textContent = '';
+  const file = fileInput && fileInput.files && fileInput.files[0];
+  if (!file) {
+    showToast('Please choose a CSV file', 'error');
+    return;
+  }
+  const form = new FormData();
+  form.append('csv', file, file.name);
+  form.append('mode', upsert ? 'upsert' : 'insert_only');
+
+  try {
+    if (msgEl) msgEl.textContent = 'Importing…';
+    const data = await API('/menu/import-csv', { method: 'POST', form });
+    const added = data.added || 0;
+    const updated = data.updated || 0;
+    const skipped = data.skipped || 0;
+    const failed = data.failed || 0;
+    showToast(`CSV import: +${added} added, ${updated} updated${skipped ? `, ${skipped} skipped` : ''}${failed ? `, ${failed} failed` : ''}`);
+    if (msgEl) msgEl.textContent = `Imported: +${added} / updated: ${updated}${skipped ? ` / skipped: ${skipped}` : ''}${failed ? ` / failed: ${failed}` : ''}`;
+    await loadMenu();
+  } catch (e) {
+    if (msgEl) msgEl.textContent = '';
+    showToast(e.message || 'CSV import failed', 'error');
+  }
+}
+
 function renderMenuList(items) {
   const container = document.getElementById('menuList');
   const search = (document.getElementById('menuSearch')?.value || '').toLowerCase();

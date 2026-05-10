@@ -17,7 +17,7 @@
   <title>Open Kitchens — See What You Eat</title>
   <link rel="icon" href="/images/logo.png" type="image/png"/>
   <link rel="stylesheet" href="/css/app.css"/>
-  <link rel="stylesheet" href="/css/home-landing.css"/>
+  <link rel="stylesheet" href="/css/home-landing.css?v=20260510"/>
   <!-- Mapbox GL JS v2.15.0 (stable LTS) -->
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
@@ -81,9 +81,10 @@
       </div>
       <p class="hl-live-quick-hint">Enter the last 4 digits of your order ID</p>
       <div class="hl-live-quick-row">
-        <input id="liveOrderIdHeroField" class="hl-live-quick-input rp-input" type="text" inputmode="numeric" maxlength="4" autocomplete="off"
+        <input id="liveOrderIdHeroField" class="hl-live-quick-input" type="text" inputmode="numeric" maxlength="4" autocomplete="off"
           aria-label="Last 4 digits of order ID"
           placeholder="e.g. 4612"
+          style="border:1.5px solid var(--border);border-radius:12px;background:#fff;color:var(--text-dark);"
           onkeydown="if(event.key==='Enter'){event.preventDefault();submitLiveEntryHero();}"/>
         <button type="button" class="hl-live-quick-btn hl-btn-primary" onclick="submitLiveEntryHero()">Watch live</button>
       </div>

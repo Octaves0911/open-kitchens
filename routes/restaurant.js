@@ -117,6 +117,51 @@ function makeUploader(subdir, prefix) {
 const upload      = makeUploader('menu',   'item');   // menu item images
 const uploadOffer = makeUploader('offers', 'offer');  // offer images
 
+// CSV upload (menu import)
+const uploadCsv = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 3 * 1024 * 1024 }, // 3 MB
+}).single('csv');
+
+function parseCsvLine(line) {
+  const out = [];
+  let cur = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') {
+      // double quote inside quoted field -> literal quote
+      if (inQuotes && line[i + 1] === '"') { cur += '"'; i++; continue; }
+      inQuotes = !inQuotes;
+      continue;
+    }
+    if (ch === ',' && !inQuotes) { out.push(cur); cur = ''; continue; }
+    cur += ch;
+  }
+  out.push(cur);
+  return out.map(s => String(s || '').trim());
+}
+
+function toBoolVeg(tag) {
+  const t = String(tag || '').toLowerCase().trim();
+  if (!t) return 1;
+  if (t === 'veg' || t === 'vegetarian') return 1;
+  return 0; // non veg / egg / anything else -> 0
+}
+
+function parseAddons(namesRaw, pricesRaw) {
+  const names = String(namesRaw || '').trim();
+  const prices = String(pricesRaw || '').trim();
+  if (!names || names === '-' || names.toLowerCase() === 'na') return '[]';
+  const nameParts = names.split(/[,|]/).map(s => s.trim()).filter(Boolean);
+  const priceParts = prices && prices !== '-' ? prices.split(/[,|]/).map(s => s.trim()) : [];
+  const arr = nameParts.map((n, idx) => ({
+    name: n,
+    price: Number(priceParts[idx] || 0) || 0,
+  }));
+  return JSON.stringify(arr);
+}
+
 // ── Simple restaurant auth guard (password from env or config) ────────────────
 // For now accepts a shared secret header; replace with proper RBAC if needed
 function requireRestaurant(req, res, next) {
@@ -246,6 +291,106 @@ router.post('/menu', requireRestaurant, ...upload.single('image'), (req, res) =>
     Number(is_veg), Number(is_available), Number(is_bestseller), Number(is_spicy), Number(is_fan_favourite),
     addons, metadata);
   res.json({ success: true, id: info.lastInsertRowid });
+});
+
+// POST /api/restaurant/menu/import-csv — import menu items from CSV (Final Menu.csv format)
+router.post('/menu/import-csv', requireRestaurant, uploadCsv, (req, res) => {
+  try {
+    if (!req.file || !req.file.buffer) return res.status(400).json({ error: 'CSV file is required.' });
+    const mode = String(req.body && req.body.mode || 'upsert');
+    const doUpsert = mode !== 'insert_only';
+
+    const text = req.file.buffer.toString('utf8');
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (!lines.length) return res.status(400).json({ error: 'CSV is empty.' });
+
+    const header = parseCsvLine(lines[0]).map(h => h.toLowerCase());
+    const idx = (name) => header.indexOf(String(name).toLowerCase());
+    const iName = idx('Item name');
+    const iCat = idx('Category');
+    const iPrice = idx('Item price');
+    const iDiet = idx('Dietary Tag (veg/non veg/egg)');
+    const iDesc = idx('Item description');
+    const iAddNames = idx('Add Ons');
+    const iAddPrices = idx('Add on Prices');
+
+    if (iName < 0 || iPrice < 0) {
+      return res.status(400).json({ error: 'CSV header missing required columns (Item name, Item price).' });
+    }
+
+    const selectExisting = db.prepare(
+      "SELECT id FROM menu_items WHERE restaurant_id=? AND name=? AND IFNULL(category,'')=IFNULL(?, '') LIMIT 1"
+    );
+    const insertItem = db.prepare(`
+      INSERT INTO menu_items
+        (restaurant_id, name, category, description, price, image_url,
+         is_veg, is_available, is_bestseller, is_spicy, is_fan_favourite, addons_json, metadata_json, sort_order)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+    `);
+    const updateItem = db.prepare(`
+      UPDATE menu_items SET
+        category=?,
+        description=?,
+        price=?,
+        is_veg=?,
+        addons_json=?,
+        updated_at=CURRENT_TIMESTAMP
+      WHERE id=? AND restaurant_id=?
+    `);
+
+    let added = 0, updated = 0, skipped = 0, failed = 0;
+
+    const tx = db.transaction(() => {
+      for (let li = 1; li < lines.length; li++) {
+        try {
+          const row = parseCsvLine(lines[li]);
+          const name = String(row[iName] || '').trim();
+          if (!name || name === '-') { skipped++; continue; }
+          const category = iCat >= 0 ? String(row[iCat] || '').trim() : '';
+          const price = Number(row[iPrice] || 0);
+          if (!Number.isFinite(price) || price <= 0) { skipped++; continue; }
+          const description = iDesc >= 0 ? String(row[iDesc] || '').trim() : '';
+          const isVeg = iDiet >= 0 ? toBoolVeg(row[iDiet]) : 1;
+          const addonsJson = (iAddNames >= 0 || iAddPrices >= 0)
+            ? parseAddons(row[iAddNames] || '', row[iAddPrices] || '')
+            : '[]';
+
+          const existing = selectExisting.get(RESTAURANT_ID, name, category);
+          if (existing && existing.id) {
+            if (!doUpsert) { skipped++; continue; }
+            updateItem.run(category || null, description || null, price, isVeg, addonsJson, existing.id, RESTAURANT_ID);
+            updated++;
+          } else {
+            insertItem.run(
+              RESTAURANT_ID,
+              name,
+              category || null,
+              description || null,
+              price,
+              null,          // image_url
+              isVeg,
+              1,             // is_available
+              0,             // is_bestseller
+              0,             // is_spicy
+              0,             // is_fan_favourite
+              addonsJson,
+              '{}',          // metadata_json
+              0              // sort_order
+            );
+            added++;
+          }
+        } catch (e) {
+          failed++;
+        }
+      }
+    });
+    tx();
+
+    res.json({ success: true, added, updated, skipped, failed });
+  } catch (e) {
+    console.error('[menu/import-csv]', e);
+    res.status(500).json({ error: 'Failed to import CSV.' });
+  }
 });
 
 // PUT /api/restaurant/menu/:id — update item
