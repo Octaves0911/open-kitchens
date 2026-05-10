@@ -723,10 +723,10 @@ function normalizeOrderIdInput(input) {
   return Number.isNaN(n) ? null : n;
 }
 
-/** Customer + portal display: OK + 6-digit zero-padded internal id (matches legacy confirmations). */
+/** Restaurant portal only: last 4 digits of internal id (matches hero “last 4” live entry). */
 function formatOrderShortLabel(id) {
   if (id == null || Number.isNaN(Number(id))) return '—';
-  return `OK${String(Number(id)).padStart(6, '0')}`;
+  return String(Number(id)).slice(-4);
 }
 
 async function loadLivePrep() {
