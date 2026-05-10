@@ -218,7 +218,10 @@
 
 <script src="/js/menu-data.js"></script>
 <script>
-const orderId = localStorage.getItem('ok_order_id') || Date.now().toString().slice(-4);
+const orderId = localStorage.getItem('ok_order_id') || (() => {
+  const n = Date.now() % 1000000;
+  return `OK${String(n).padStart(6, '0')}`;
+})();
 document.getElementById('orderIdDisplay').textContent = '#' + orderId;
 document.getElementById('headerOrderId').textContent = '#' + orderId;
 

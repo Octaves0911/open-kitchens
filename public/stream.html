@@ -558,7 +558,7 @@ body{
     const oid =
       data.orderLabel != null && data.orderLabel !== '—'
         ? data.orderLabel
-        : (data.orderId != null ? String(data.orderId).slice(-4) : 'Live');
+        : (data.orderId != null ? `OK${String(Number(data.orderId)).padStart(6, '0')}` : 'Live');
     titleEl.textContent = `Live Kitchen Preparation — Order #${oid}`;
     liveInfo.style.display = 'block';
     infoEl.textContent = '';

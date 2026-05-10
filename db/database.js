@@ -240,6 +240,24 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_live_public_expires ON live_public_sessions(expires_at);
 `);
 
+// Ensure stream_feedback exists on DBs created before this table was added to schema
+const _hasStreamFeedback = db.prepare(
+  "SELECT name FROM sqlite_master WHERE type='table' AND name='stream_feedback'"
+).get();
+if (!_hasStreamFeedback) {
+  db.exec(`
+    CREATE TABLE stream_feedback (
+      token        TEXT PRIMARY KEY,
+      order_id     INTEGER NOT NULL,
+      live_idea    INTEGER,
+      trust        INTEGER,
+      order_again  INTEGER,
+      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
+    CREATE INDEX IF NOT EXISTS idx_stream_feedback_order_id ON stream_feedback(order_id);
+  `);
+}
+
 console.log(`[DB] SQLite ready → ${DB_FILE}`);
 
 module.exports = db;

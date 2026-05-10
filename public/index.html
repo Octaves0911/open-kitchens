@@ -1601,7 +1601,12 @@ async function submitLiveEntryFromInput(raw, msgEl, closeDialog) {
     if (data.ok && data.streamUrl) {
       if (data.orderId != null && String(data.orderId).length) {
         try {
-          localStorage.setItem('ok_order_id', String(Number(data.orderId)).slice(-4));
+          localStorage.setItem(
+            'ok_order_id',
+            data.orderLabel != null && String(data.orderLabel).length
+              ? String(data.orderLabel)
+              : `OK${String(Number(data.orderId)).padStart(6, '0')}`
+          );
         } catch (e) {}
       }
       if (closeDialog) closeLiveEntryDialog();

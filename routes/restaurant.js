@@ -18,6 +18,12 @@ const liveAccess = require('../lib/live-stream-access');
 function nullish(x, fallback) {
   return (x !== undefined && x !== null) ? x : fallback;
 }
+
+/** Customer-facing order shorthand: OK + 6-digit padded id (matches legacy confirmations). */
+function formatOrderCustomerLabel(orderId) {
+  if (orderId == null || Number.isNaN(Number(orderId))) return '—';
+  return `OK${String(Number(orderId)).padStart(6, '0')}`;
+}
 const { requireAuth, signToken } = require('../middleware/auth');
 
 // ── Optional S3 media storage ────────────────────────────────────────────────
@@ -203,7 +209,7 @@ router.get('/ratings', requireRestaurant, (req, res) => {
       if (!byOrder.has(oid)) {
         byOrder.set(oid, {
           orderId: oid,
-          orderLabel: String(oid).slice(-4),
+          orderLabel: formatOrderCustomerLabel(oid),
           orderStatus: r.order_status || null,
           orderCreatedAt: r.order_created_at || null,
           feedback: [],
@@ -219,6 +225,7 @@ router.get('/ratings', requireRestaurant, (req, res) => {
 
     res.json({ orders: Array.from(byOrder.values()) });
   } catch (e) {
+    console.error('[ratings]', e);
     res.status(500).json({ error: 'Failed to load ratings' });
   }
 });
@@ -595,8 +602,7 @@ router.get('/config/:key', requireRestaurant, (req, res) => {
   res.json({ key: req.params.key, value: row ? row.value : null });
 });
 
-// PUT /api/restaurant/config/:key
-router.put('/config/:key', requireRestaurant, (req, res) => {
+function writeRestaurantConfig(req, res) {
   let { value } = req.body || {};
   if (value === undefined || value === null) value = '';
   else if (typeof value !== 'string') value = JSON.stringify(value);
@@ -604,7 +610,12 @@ router.put('/config/:key', requireRestaurant, (req, res) => {
               ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP`)
     .run(req.params.key, value);
   res.json({ success: true });
-});
+}
+
+// PUT /api/restaurant/config/:key (some proxies block PUT — keep POST duplicate below)
+router.put('/config/:key', requireRestaurant, writeRestaurantConfig);
+// POST /api/restaurant/config/:key — same as PUT for compatibility with restrictive nginx/CDN setups
+router.post('/config/:key', requireRestaurant, writeRestaurantConfig);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // LIVE STREAMING
@@ -894,7 +905,7 @@ router.get('/stream/token/:token', (req, res) => {
     return res.status(404).json({ error: 'Stream not found or already stopped' });
   }
 
-  const orderLabel = v.orderId != null ? String(v.orderId).slice(-4) : '—';
+  const orderLabel = v.orderId != null ? formatOrderCustomerLabel(v.orderId) : '—';
   const webrtcViewer = (liveAccess.getWebrtcUrl(db) || '').trim();
   if (webrtcViewer) {
     return res.json({

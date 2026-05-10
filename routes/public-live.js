@@ -35,9 +35,11 @@ router.post('/session', (req, res) => {
       VALUES (?, ?, datetime('now', '+2 hours'))
     `).run(token, orderId);
 
+    const orderLabel = `OK${String(Number(orderId)).padStart(6, '0')}`;
     res.json({
       ok: true,
       orderId,
+      orderLabel,
       streamUrl: `/stream?token=${encodeURIComponent(token)}`,
     });
   } catch (err) {

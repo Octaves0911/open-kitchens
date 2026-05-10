@@ -696,7 +696,8 @@ function placeOrder() {
   btn.disabled = true;
   btn.innerHTML = '<span>⏳ Processing…</span>';
   setTimeout(() => {
-    const orderId = Date.now().toString().slice(-4);
+    const orderNum = Date.now() % 1000000;
+    const orderId = `OK${String(orderNum).padStart(6, '0')}`;
     localStorage.setItem('ok_order_id', orderId);
     cart = [];
     localStorage.setItem('ok_cart', '[]');

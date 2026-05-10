@@ -146,8 +146,10 @@ async function loadRatings() {
       const aTrust = avg(feedback.map(f => f.trust));
       const aAgain = avg(feedback.map(f => f.orderAgain));
       const aOverall = avg([aLive, aTrust, aAgain].filter(Boolean));
-      const orderLabel = o.orderLabel || String(o.orderId).slice(-4);
-      const detailsId = `ratings-details-${orderLabel}-${idx}`;
+      const orderLabel = o.orderLabel || (o.orderId != null
+        ? `OK${String(Number(o.orderId)).padStart(6, '0')}`
+        : '—');
+      const detailsId = `ratings-details-${String(o.orderId)}-${idx}`;
 
       const header = `
         <button type="button"
@@ -721,10 +723,10 @@ function normalizeOrderIdInput(input) {
   return Number.isNaN(n) ? null : n;
 }
 
-/** Customer + portal display: last 4 characters of numeric id (no OK / no zero-pad beyond slice). */
+/** Customer + portal display: OK + 6-digit zero-padded internal id (matches legacy confirmations). */
 function formatOrderShortLabel(id) {
   if (id == null || Number.isNaN(Number(id))) return '—';
-  return String(Number(id)).slice(-4);
+  return `OK${String(Number(id)).padStart(6, '0')}`;
 }
 
 async function loadLivePrep() {
@@ -765,7 +767,7 @@ async function onLiveBroadcastToggle() {
   const el = document.getElementById('liveBroadcastToggle');
   const on = el.checked;
   try {
-    await API('/config/live_broadcast_enabled', { method: 'PUT', body: { value: on ? '1' : '0' } });
+    await API('/config/live_broadcast_enabled', { method: 'POST', body: { value: on ? '1' : '0' } });
     showToast(on ? 'Customer live stream enabled' : 'Customer live stream disabled');
   } catch (e) {
     showToast(e.message, 'error');
@@ -797,7 +799,7 @@ function renderPublicOrderIds() {
 
 async function savePublicOrderIdsToServer() {
   await API('/config/live_public_order_ids', {
-    method: 'PUT',
+    method: 'POST',
     body: { value: JSON.stringify(livePublicOrderIds) },
   });
 }
@@ -894,7 +896,7 @@ async function saveWebrtcUrl() {
   const input = document.getElementById('webrtcInput');
   const url = (input?.value || '').trim();
   try {
-    await API('/config/webrtc_url', { method: 'PUT', body: { value: url } });
+    await API('/config/webrtc_url', { method: 'POST', body: { value: url } });
     webrtcViewerUrl = url;
     showToast(url ? 'WebRTC URL saved — customers will use WebRTC on /stream' : 'WebRTC cleared — customers use HLS');
   } catch (e) {
@@ -948,7 +950,7 @@ async function saveHlsUrl() {
   const url = (input?.value || '').trim();
   if (!url) { showToast('Enter an HLS (.m3u8) URL first', 'error'); return; }
   try {
-    await API('/config/hls_url', { method: 'PUT', body: { value: url } });
+    await API('/config/hls_url', { method: 'POST', body: { value: url } });
     hlsUrl = url;
     showToast('HLS URL saved ✅');
   } catch (e) { showToast(e.message, 'error'); }
