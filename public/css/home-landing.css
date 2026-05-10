@@ -131,6 +131,7 @@ body.home-landing {
   line-height: 1.12;
   letter-spacing: -0.02em;
   color: #3e2312;
+  margin-top: 0;
   margin-bottom: 1rem;
 }
 .hl-hero h1 .hl-accent {
@@ -158,6 +159,174 @@ body.home-landing {
   color: #3e2312;
   font-weight: 800;
 }
+
+/* ── Hero: quick live entry (above main headline · .hl-hero-copy) ─────────────── */
+/* Typography matches body: Segoe UI / system-ui (see app.css) */
+.home-landing .hl-live-quick {
+  position: relative;
+  isolation: isolate;
+  font-family: inherit;
+  width: 100%;
+  max-width: 26rem;
+  margin: 0.35rem auto 1.45rem;
+  padding: 1.15rem 1.15rem 1.2rem;
+  border-radius: 1.125rem;
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.94) 0%, rgba(252, 249, 242, 0.98) 48%, rgba(255, 251, 246, 0.92) 100%);
+  border: 1px solid rgba(62, 35, 18, 0.1);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.75) inset,
+    0 6px 28px rgba(45, 27, 18, 0.07),
+    0 2px 8px rgba(62, 35, 18, 0.04);
+  overflow: hidden;
+}
+.home-landing .hl-live-quick::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #9a3412, #d35400 45%, #e5b143 78%, #c1440e);
+  opacity: 0.9;
+  z-index: 0;
+}
+.home-landing .hl-live-quick > * {
+  position: relative;
+  z-index: 1;
+}
+@media (min-width: 1024px) {
+  .home-landing .hl-live-quick {
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+.home-landing .hl-live-quick-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-family: inherit;
+  font-size: clamp(0.95rem, 2.2vw, 1.05rem);
+  font-weight: 800;
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-mid);
+  line-height: 1.25;
+  margin: 0 0 0.5rem;
+}
+@media (min-width: 1024px) {
+  .home-landing .hl-live-quick-heading {
+    justify-content: flex-start;
+  }
+}
+.home-landing .hl-live-quick-heading .live-dot-nav {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  margin-right: 0;
+  box-shadow: 0 0 0 2px rgba(211, 84, 0, 0.2);
+}
+.home-landing .hl-live-quick-dot {
+  margin-right: 0;
+}
+.home-landing .hl-live-quick-hint {
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-style: normal;
+  line-height: 1.55;
+  letter-spacing: 0.01em;
+  color: var(--text-mid);
+  margin: 0 0 14px;
+  text-align: center;
+  max-width: 24em;
+  margin-left: auto;
+  margin-right: auto;
+}
+@media (min-width: 1024px) {
+  .home-landing .hl-live-quick-hint {
+    text-align: left;
+    margin-left: 0;
+    margin-right: 0;
+  }
+}
+.home-landing .hl-live-quick-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: 12px;
+}
+.home-landing .hl-live-quick-input {
+  flex: 1;
+  min-width: 0;
+  font-family: inherit;
+  text-align: center;
+  font-size: 1rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.16em;
+  padding: 13px 12px !important;
+  border-radius: var(--radius);
+  border: 1px solid var(--border) !important;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(92, 45, 14, 0.06) inset;
+  box-sizing: border-box;
+  color: var(--text-dark);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.home-landing .hl-live-quick-input:focus {
+  outline: none;
+  border-color: rgba(193, 68, 14, 0.5) !important;
+  box-shadow: 0 0 0 3px rgba(193, 68, 14, 0.12), var(--shadow-sm) inset;
+}
+@media (max-width: 374px) {
+  .home-landing .hl-live-quick .hl-live-quick-row {
+    flex-wrap: wrap;
+  }
+  .home-landing .hl-live-quick .hl-live-quick-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+.home-landing .hl-live-quick-input::placeholder {
+  font-family: inherit;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  color: var(--text-light);
+  opacity: 0.9;
+}
+.home-landing .hl-live-quick-btn {
+  flex-shrink: 0;
+  white-space: nowrap;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.8rem !important;
+  letter-spacing: 0.08em;
+  text-transform: none;
+  padding: 14px 18px !important;
+  border-radius: 9999px !important;
+  margin: 0;
+  border: none;
+  cursor: pointer;
+  align-self: center;
+  box-shadow: var(--shadow-md);
+}
+.home-landing .hl-live-quick-msg {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 12px 0 0;
+  min-height: 1.2em;
+  text-align: center;
+  letter-spacing: 0.01em;
+}
+@media (min-width: 1024px) {
+  .home-landing .hl-live-quick-msg {
+    text-align: left;
+  }
+}
+
 .hl-hero-actions {
   display: flex;
   flex-direction: column;

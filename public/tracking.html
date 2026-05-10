@@ -209,7 +209,7 @@
 
 <script src="/js/menu-data.js"></script>
 <script>
-const orderId = localStorage.getItem('ok_order_id') || 'OK' + Math.floor(Math.random()*999999);
+const orderId = localStorage.getItem('ok_order_id') || Date.now().toString().slice(-4);
 document.getElementById('orderIdDisplay').textContent = '#' + orderId;
 document.getElementById('headerOrderId').textContent = '#' + orderId;
 

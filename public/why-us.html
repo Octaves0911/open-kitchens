@@ -336,11 +336,11 @@
   </div>
   <div style="padding:16px 18px 24px;">
     <p style="font-size:13px;color:var(--text-mid);margin:0 0 12px;line-height:1.5;">
-      Enter your order ID to open the live stream (when the kitchen has enabled it).
+      Enter the last 4 digits on your confirmation (or your full internal order number) to open the live stream when the kitchen has enabled it.
     </p>
     <label for="liveOrderIdField" style="display:block;font-size:12px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Order ID</label>
     <input id="liveOrderIdField" class="rp-input" type="text" inputmode="numeric" autocomplete="off"
-           placeholder="e.g. 42 or OK000042"
+           placeholder="e.g. last 4 digits or full order number"
            style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-size:15px;box-sizing:border-box;"
            onkeydown="if(event.key==='Enter'){event.preventDefault();submitLiveEntry();}"/>
     <p id="liveEntryMsg" style="font-size:13px;margin:10px 0 0;min-height:1.2em;"></p>
@@ -383,6 +383,11 @@ async function submitLiveEntry() {
       return;
     }
     if (data.ok && data.streamUrl) {
+      if (data.orderId != null && String(data.orderId).length) {
+        try {
+          localStorage.setItem('ok_order_id', String(Number(data.orderId)).slice(-4));
+        } catch (e) {}
+      }
       closeLiveEntryDialog();
       window.location.href = data.streamUrl;
       return;

@@ -65,6 +65,21 @@
       <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>
       100% transparent kitchens
     </div>
+    <div class="hl-live-quick" aria-labelledby="hl-live-quick-title">
+      <div class="hl-live-quick-heading">
+        <span class="live-dot-nav hl-live-quick-dot" aria-hidden="true"></span>
+        <span id="hl-live-quick-title">Your kitchen stream awaits</span>
+      </div>
+      <p class="hl-live-quick-hint">Enter the last 4 digits of your order ID</p>
+      <div class="hl-live-quick-row">
+        <input id="liveOrderIdHeroField" class="hl-live-quick-input rp-input" type="text" inputmode="numeric" maxlength="4" autocomplete="off"
+          aria-label="Last 4 digits of order ID"
+          placeholder="e.g. 4612"
+          onkeydown="if(event.key==='Enter'){event.preventDefault();submitLiveEntryHero();}"/>
+        <button type="button" class="hl-live-quick-btn hl-btn-primary" onclick="submitLiveEntryHero()">Watch live</button>
+      </div>
+      <p id="liveEntryHeroMsg" class="hl-live-quick-msg" role="status"></p>
+    </div>
     <h1 id="hl-hero-heading">Authentic food.<br class="hl-hero-heading-break" aria-hidden="true"/> <span class="hl-accent">Zero secrets.</span></h1>
     <p class="hl-hero-lead">
       Generations-old regional recipes prepared in spotless kitchens. Every order includes a <strong>live stream</strong> so you can watch your exact meal being made in real time.
@@ -401,11 +416,11 @@
   </div>
   <div style="padding:16px 18px 24px;">
     <p style="font-size:13px;color:var(--text-mid);margin:0 0 12px;line-height:1.5;">
-      Enter your order ID to open the live stream (when the kitchen has enabled it).
+      Enter the last 4 digits on your confirmation (or your full internal order number) to open the live stream when the kitchen has enabled it.
     </p>
     <label for="liveOrderIdField" style="display:block;font-size:12px;font-weight:700;color:var(--text-dark);margin-bottom:6px;">Order ID</label>
     <input id="liveOrderIdField" class="rp-input" type="text" inputmode="numeric" autocomplete="off"
-           placeholder="e.g. 42 or OK000042"
+           placeholder="Last 4 digits or full order number"
            style="width:100%;padding:12px 14px;border:1px solid var(--border);border-radius:10px;font-size:15px;box-sizing:border-box;"
            onkeydown="if(event.key==='Enter'){event.preventDefault();submitLiveEntry();}"/>
     <p id="liveEntryMsg" style="font-size:13px;margin:10px 0 0;min-height:1.2em;"></p>
@@ -1555,40 +1570,56 @@ function closeLiveEntryDialog() {
   document.getElementById('liveEntryOverlay')?.classList.remove('open');
   document.getElementById('liveEntryPanel')?.classList.remove('open');
 }
-async function submitLiveEntry() {
-  var raw = document.getElementById('liveOrderIdField')?.value || '';
-  var msg = document.getElementById('liveEntryMsg');
-  if (msg) { msg.textContent = ''; msg.style.color = ''; }
+async function submitLiveEntryFromInput(raw, msgEl, closeDialog) {
   try {
     var res = await fetch('/api/public/live/session', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ orderId: raw.trim() }),
+      body: JSON.stringify({ orderId: String(raw || '').trim() }),
     });
     var text = await res.text();
     var data = {};
-    try { data = text ? JSON.parse(text) : {}; } catch (e) {
-      if (msg) {
-        msg.style.color = '#C62828';
-        msg.textContent = 'Server error (' + res.status + '). Restart the app if this continues.';
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch (e) {
+      if (msgEl) {
+        msgEl.style.color = '#C62828';
+        msgEl.textContent = 'Server error (' + res.status + '). Restart the app if this continues.';
       }
       return;
     }
     if (data.ok && data.streamUrl) {
-      closeLiveEntryDialog();
+      if (data.orderId != null && String(data.orderId).length) {
+        try {
+          localStorage.setItem('ok_order_id', String(Number(data.orderId)).slice(-4));
+        } catch (e) {}
+      }
+      if (closeDialog) closeLiveEntryDialog();
       window.location.href = data.streamUrl;
       return;
     }
-    if (msg) {
-      msg.style.color = '#C62828';
-      msg.textContent = data.error || 'Could not open live stream.';
+    if (msgEl) {
+      msgEl.style.color = '#C62828';
+      msgEl.textContent = data.error || 'Could not open live stream.';
     }
   } catch (e) {
-    if (msg) {
-      msg.style.color = '#C62828';
-      msg.textContent = 'Network error. Check your connection and that the server is running.';
+    if (msgEl) {
+      msgEl.style.color = '#C62828';
+      msgEl.textContent = 'Network error. Check your connection and that the server is running.';
     }
   }
+}
+async function submitLiveEntry() {
+  var raw = document.getElementById('liveOrderIdField')?.value || '';
+  var msg = document.getElementById('liveEntryMsg');
+  if (msg) { msg.textContent = ''; msg.style.color = ''; }
+  await submitLiveEntryFromInput(raw, msg, true);
+}
+async function submitLiveEntryHero() {
+  var raw = document.getElementById('liveOrderIdHeroField')?.value || '';
+  var msg = document.getElementById('liveEntryHeroMsg');
+  if (msg) { msg.textContent = ''; msg.style.color = ''; }
+  await submitLiveEntryFromInput(raw, msg, false);
 }
 </script>
 </body>

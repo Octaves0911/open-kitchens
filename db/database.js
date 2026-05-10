@@ -159,6 +159,18 @@ db.exec(`
     expires_at TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+
+  -- Stream feedback (customer ratings captured on stream page)
+  -- One row per public session token (overwrite on resubmit).
+  CREATE TABLE IF NOT EXISTS stream_feedback (
+    token        TEXT PRIMARY KEY,
+    order_id     INTEGER NOT NULL,
+    live_idea    INTEGER,
+    trust        INTEGER,
+    order_again  INTEGER,
+    created_at   DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE INDEX IF NOT EXISTS idx_stream_feedback_order_id ON stream_feedback(order_id);
 `);
 
 // ── Migrations: add restaurant_id to existing tables if missing ───────────────

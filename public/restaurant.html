@@ -388,6 +388,7 @@ button,input,select,textarea{font-family:inherit;}
   <div class="rp-tab" id="tab-btn-menu" onclick="switchTab('menu')">🍽️ Menu</div>
   <div class="rp-tab" id="tab-btn-offers" onclick="switchTab('offers')">🏷️ Offers</div>
   <div class="rp-tab" id="tab-btn-liveprep" onclick="switchTab('liveprep')">🎥 Live Prep</div>
+  <div class="rp-tab" id="tab-btn-ratings" onclick="switchTab('ratings')">⭐ Ratings</div>
   <div class="rp-tab" id="tab-btn-settings" onclick="switchTab('settings')">⚙️ Settings</div>
 </div>
 
@@ -621,10 +622,25 @@ button,input,select,textarea{font-family:inherit;}
 ══════════════════════════════════════════════════════════════════════ -->
 <div class="rp-tab-panel" id="tab-liveprep">
 
-  <!-- HLS Config -->
+  <!-- Live playback config -->
   <div class="rp-rtsp-section">
     <div class="rp-section-hdr" style="margin-bottom:10px;">
-      <div class="rp-section-title">📺 HLS Live Stream</div>
+      <div class="rp-section-title">📡 WebRTC (customer playback)</div>
+    </div>
+    <label class="rp-label">WebRTC viewer URL (embed)</label>
+    <input id="webrtcInput" class="rp-input" type="text" spellcheck="false" autocapitalize="off" autocomplete="off"
+           placeholder="https://your-provider.com/embed/… or any viewer page URL"
+           onkeydown="if(event.key==='Enter'){event.preventDefault();saveWebrtcUrl();}"/>
+    <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+      <button type="button" class="rp-btn rp-btn-primary" id="webrtcSaveBtn">💾 Save WebRTC URL</button>
+      <button type="button" class="rp-btn rp-btn-outline" id="webrtcPreviewBtn">▶ Preview in portal</button>
+    </div>
+    <p style="font-size:11px;color:var(--text-light);margin-top:8px;">
+      Save your provider’s <strong>viewer / embed</strong> URL (HTTPS). Customers on <code>/stream</code> load it through a secure iframe shell. Clear the field and save to fall back to HLS only.
+    </p>
+
+    <div class="rp-section-hdr" style="margin:18px 0 10px;padding-top:16px;border-top:1px solid var(--border);">
+      <div class="rp-section-title">📺 HLS fallback & preview</div>
     </div>
     <label class="rp-label">HLS Playlist URL (.m3u8)</label>
     <input id="hlsInput" class="rp-input" type="url"
@@ -650,11 +666,11 @@ button,input,select,textarea{font-family:inherit;}
     <div style="margin-top:18px;padding-top:16px;border-top:1px solid var(--border);">
       <div class="rp-section-title" style="font-size:14px;">Order IDs for customer “Live” entry</div>
       <p style="font-size:12px;color:var(--text-light);margin:6px 0 10px;">
-        Add numeric IDs (same as orders list, e.g. <code>#OK000042</code> → <strong>42</strong>).
+        Add the full internal order number (same as in the orders list). Chips show the customer-facing <strong>last 4 digits</strong> only.
       </p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
         <input id="liveOrderIdInput" class="rp-input" type="text" inputmode="numeric"
-               placeholder="e.g. 42 or OK000042" style="flex:1;min-width:160px;"
+               placeholder="Order # from list, e.g. 42" style="flex:1;min-width:160px;"
                onkeydown="if(event.key==='Enter'){event.preventDefault();addPublicOrderId();}"/>
         <button type="button" class="rp-btn rp-btn-outline rp-btn-sm" onclick="addPublicOrderId()">+ Add ID</button>
       </div>
@@ -673,6 +689,21 @@ button,input,select,textarea{font-family:inherit;}
 
 </div><!-- /#tab-liveprep -->
 
+<!-- ══════════════════════════════════════════════════════════════════════
+     RATINGS TAB
+══════════════════════════════════════════════════════════════════════ -->
+<div class="rp-tab-panel" id="tab-ratings">
+  <div class="rp-card">
+    <div class="rp-section-hdr">
+      <div class="rp-section-title">Stream feedback (1–5)</div>
+      <button class="rp-btn rp-btn-outline rp-btn-sm" onclick="loadRatings()">↻ Refresh</button>
+    </div>
+    <div id="ratingsList">
+      <div class="rp-loading">Loading ratings…</div>
+    </div>
+  </div>
+</div><!-- /#tab-ratings -->
+
 <!-- HLS preview modal -->
 <div id="hlsPreviewModal" class="rp-modal-overlay" aria-hidden="true"
      onclick="if(event.target===this)closeHlsPreview()">
@@ -683,6 +714,24 @@ button,input,select,textarea{font-family:inherit;}
     </div>
     <div id="hlsPreviewStatus" class="rp-preview-status"></div>
     <video id="hlsPreviewVideo" controls playsinline></video>
+  </div>
+</div>
+
+<!-- WebRTC preview modal (same embed customers use) -->
+<div id="webrtcPreviewModal" class="rp-modal-overlay" aria-hidden="true"
+     onclick="if(event.target===this)closeWebrtcPreview()">
+  <div class="rp-modal-card" role="dialog" aria-labelledby="webrtcPreviewTitle" onclick="event.stopPropagation()">
+    <div class="rp-modal-hdr">
+      <span id="webrtcPreviewTitle">WebRTC preview</span>
+      <button type="button" class="rp-btn rp-btn-sm rp-btn-outline" id="webrtcPreviewCloseBtn">Close</button>
+    </div>
+    <p style="font-size:12px;color:var(--text-light);margin:0 0 10px;line-height:1.45;">
+      Uses the URL in the field above (saved or unsaved). Your provider must allow embedding in an iframe.
+    </p>
+    <div id="webrtcPreviewStatus" class="rp-preview-status"></div>
+    <iframe id="webrtcPreviewFrame" title="WebRTC preview"
+      allow="autoplay; fullscreen; picture-in-picture; encrypted-media; camera; microphone"
+      allowfullscreen></iframe>
   </div>
 </div>
 

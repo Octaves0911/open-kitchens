@@ -78,7 +78,7 @@
 
   <div class="delivery-card">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
-      <div style="font-size:14px;font-weight:800;color:var(--brown-dark);">#OK287461</div>
+      <div style="font-size:14px;font-weight:800;color:var(--brown-dark);">#7461</div>
       <span style="background:var(--amber);color:var(--brown-dark);font-size:11px;font-weight:700;padding:3px 10px;border-radius:50px;">🛵 In Transit</span>
     </div>
 
@@ -148,7 +148,7 @@
     <h3 style="font-size:18px;font-weight:800;color:var(--brown-dark);text-align:center;margin-bottom:8px;">New Delivery Request!</h3>
     <div style="background:var(--cream);border-radius:10px;padding:12px;margin-bottom:14px;">
       <div style="font-size:13px;color:var(--text-mid);line-height:1.8;">
-        <strong>Order #OK287462</strong><br>
+        <strong>Order #7462</strong><br>
         📍 From: Open Kitchens Kitchen, Hebbal<br>
         🏁 To: MG Road, RT Nagar · 3.2 km<br>
         🛒 2 items · ₹299<br>
@@ -227,7 +227,7 @@ function markDelivered() {
   document.getElementById('activeDelivery').innerHTML = `
     <div style="background:var(--surface);border-radius:var(--radius);padding:24px;text-align:center;box-shadow:var(--shadow-sm);">
       <div style="font-size:48px;margin-bottom:12px;">🎉</div>
-      <div style="font-size:16px;font-weight:700;color:#2E7D32;">Order #OK287461 Delivered!</div>
+      <div style="font-size:16px;font-weight:700;color:#2E7D32;">Order #7461 delivered!</div>
       <div style="font-size:13px;color:var(--text-light);margin-top:6px;">Great job! +₹70 earned</div>
       <div style="margin-top:16px;font-size:13px;color:var(--text-mid);">Waiting for next order...</div>
     </div>`;
@@ -248,7 +248,7 @@ function acceptOrder() {
   document.getElementById('activeDelivery').innerHTML = `
     <div style="font-size:15px;font-weight:700;color:var(--brown-dark);margin-bottom:10px;">📦 Active Delivery</div>
     <div class="delivery-card">
-      <div style="font-size:14px;font-weight:800;color:var(--brown-dark);margin-bottom:10px;">#OK287462 · 🔵 Pickup Phase</div>
+      <div style="font-size:14px;font-weight:800;color:var(--brown-dark);margin-bottom:10px;">#7462 · 🔵 Pickup Phase</div>
       <div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;">
         📍 <strong>Go to Kitchen:</strong> 195, 3rd Cross, Kempapura, Hebbal<br>
         🛒 Paneer Butter Masala + Jeera Rice<br>💵 ₹299 — UPI
@@ -272,9 +272,9 @@ function markPickedUp() {
 // ─── Delivery history ─────────────────────────────────────────────────────────
 function renderHistory() {
   const history = [
-    { id: 'OK287461', items: 'Indori Poha, Aloo Paratha, Lassi', amount: 357, earned: 70, time: '2:14 PM', mins: 21 },
-    { id: 'OK287455', items: 'Veg Thali × 2', amount: 458, earned: 70, time: '11:30 AM', mins: 19 },
-    { id: 'OK287448', items: 'Rajma Meal + Chaas', amount: 218, earned: 70, time: '10:05 AM', mins: 24 },
+    { id: '7461', items: 'Indori Poha, Aloo Paratha, Lassi', amount: 357, earned: 70, time: '2:14 PM', mins: 21 },
+    { id: '7455', items: 'Veg Thali × 2', amount: 458, earned: 70, time: '11:30 AM', mins: 19 },
+    { id: '7448', items: 'Rajma Meal + Chaas', amount: 218, earned: 70, time: '10:05 AM', mins: 24 },
   ];
   document.getElementById('deliveryHistory').innerHTML = history.map(d => `
     <div style="background:var(--surface);border-radius:var(--radius);padding:14px;margin-bottom:10px;box-shadow:var(--shadow-sm);">

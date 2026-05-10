@@ -6,3 +6,7 @@ logs/
 .DS_Store
 dist/
 build/
+
+# Local SQLite DB files (do not commit production data)
+db/data/*.db
+db/data/*.db-*

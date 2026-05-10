@@ -283,13 +283,78 @@ body{
   flex-direction:column;
   gap:12px;
 }
-@media (min-width: 768px){
-  .stream-below-stack{
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:14px;
-    align-items:start;
-  }
+.stream-rating-block{
+  margin-top:18px;
+  padding-top:18px;
+  border-top:1px solid var(--border);
+}
+.stream-rating-block:first-of-type{margin-top:0;padding-top:0;border-top:0;}
+.stream-rating-q{
+  margin:0 0 10px;
+  font-size:13px;
+  font-weight:700;
+  color:var(--text-dark);
+  line-height:1.45;
+}
+.stream-rating-scale{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:6px;
+}
+.stream-rating-scale button{
+  width:40px;
+  height:40px;
+  border-radius:12px;
+  border:1.5px solid var(--border);
+  background:#fff;
+  color:#D7CCC8;
+  font-size:18px;
+  font-weight:900;
+  line-height:1;
+  cursor:pointer;
+  transition:background .15s,color .15s,border-color .15s,box-shadow .15s;
+}
+.stream-rating-scale button:hover{border-color:#D35400;color:#D35400;}
+.stream-rating-scale button:focus-visible{
+  outline:2px solid #E5B143;
+  outline-offset:2px;
+}
+.stream-rating-scale button.is-on{
+  color:#E5B143;
+  border-color:#E5B143;
+  background:#FFFBEB;
+}
+.stream-rating-scale button.is-selected{
+  box-shadow:0 1px 3px rgba(62,35,18,.18);
+}
+.stream-rating-hint{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  margin:0;
+  font-size:11px;
+  font-weight:600;
+  color:var(--text-light);
+  line-height:1.35;
+}
+.stream-feedback-thanks{
+  margin-top:14px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#ecfdf5;
+  border:1px solid #a7f3d0;
+  color:#065f46;
+  font-size:13px;
+  font-weight:700;
+  display:none;
+}
+.stream-feedback-thanks.is-visible{display:block;}
+.stream-feedback-note{
+  margin:14px 0 0;
+  font-size:12px;
+  color:var(--text-light);
+  line-height:1.45;
 }
 .stream-content-card{
   background:#fff;
@@ -341,7 +406,9 @@ body{
     <section class="stream-card" aria-label="Live stream player">
       <div id="videoWrapper">
         <video id="hlsVideo" controls playsinline></video>
-        <iframe id="webrtcFrame" title="Live kitchen stream" referrerpolicy="no-referrer" style="display:none;"></iframe>
+        <iframe id="webrtcFrame" title="Live kitchen stream" referrerpolicy="no-referrer"
+          allow="autoplay; fullscreen; picture-in-picture; encrypted-media; camera; microphone"
+          style="display:none;"></iframe>
         <div id="streamOverlay">
           <div class="overlay-icon">🎥</div>
           <div class="overlay-msg" id="overlayMsg">Validating your stream access…</div>
@@ -360,6 +427,22 @@ body{
         <p>
           A real feed from our kitchen — not stock footage. You're seeing prep as it happens for orders we've opened for live view.
         </p>
+      </article>
+      <article class="stream-content-card" aria-labelledby="stream-feedback-heading">
+        <h3 id="stream-feedback-heading">Quick feedback</h3>
+        <div class="stream-rating-block">
+          <p class="stream-rating-q" id="q-live-idea-label">How much do you like the idea of a live kitchen watching your meal being prepared in real time?</p>
+          <div class="stream-rating-scale" role="radiogroup" aria-labelledby="q-live-idea-label" data-feedback-key="liveIdea"></div>
+        </div>
+        <div class="stream-rating-block">
+          <p class="stream-rating-q" id="q-trust-label">Did this stream make you trust us more with how we handle your food?</p>
+          <div class="stream-rating-scale" role="radiogroup" aria-labelledby="q-trust-label" data-feedback-key="trust"></div>
+        </div>
+        <div class="stream-rating-block">
+          <p class="stream-rating-q" id="q-order-again-label">How likely are you to order from us again?</p>
+          <div class="stream-rating-scale" role="radiogroup" aria-labelledby="q-order-again-label" data-feedback-key="orderAgain"></div>
+        </div>
+        <p class="stream-feedback-thanks" id="streamFeedbackThanks" role="status">Thank you — we read every response.</p>
       </article>
       <article class="stream-content-card" aria-labelledby="stream-tips-heading">
         <h3 id="stream-tips-heading">Quick tips</h3>
@@ -447,7 +530,11 @@ body{
 
   // Validate token with backend
   try {
-    const res  = await fetch(`/api/restaurant/stream/token/${encodeURIComponent(token)}`);
+    const res  = await fetch(`/api/restaurant/stream/token/${encodeURIComponent(token)}`, {
+      cache: 'no-store',
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json', 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+    });
     const data = await res.json();
     if (!res.ok) {
       showError('Stream not found or has ended.', data.error || 'The restaurant may have stopped the stream.');
@@ -458,63 +545,83 @@ body{
       return;
     }
 
-    // Token valid — prefer WebRTC URL if configured, else use HLS
-    const oid   = data.orderId != null ? data.orderId : 'Live';
+    // Token valid — WebRTC when viewer URL is configured in portal; otherwise HLS
+    const oid =
+      data.orderLabel != null && data.orderLabel !== '—'
+        ? data.orderLabel
+        : (data.orderId != null ? String(data.orderId).slice(-4) : 'Live');
     titleEl.textContent = `Live Kitchen Preparation — Order #${oid}`;
     liveInfo.style.display = 'block';
     infoEl.textContent = '';
     if (netStatusEl) netStatusEl.textContent = 'Stream Status: Live';
 
-    // HLS playback
-    const hlsUrl = data.hlsUrl;
-    if (!hlsUrl) {
-      showError('Stream URL missing.', 'Restaurant has not configured the HLS URL yet.');
-      return;
-    }
-    if (webrtcFrame) {
-      webrtcFrame.removeAttribute('src');
-      webrtcFrame.style.display = 'none';
-    }
-    video.style.display = 'block';
-
-    if (Hls.isSupported()) {
-      const hls = makeLowLatencyHls();
-      // BunnyCDN / some origins rely on redirects + cookies. Let XHR carry them if present.
-      hls.config.xhrSetup = function (xhr) { xhr.withCredentials = true; };
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+    // Prefer iframe whenever API returns webrtcEmbedSrc (do not rely on cached/stale playback field alone)
+    const webrtcEmbed = (data.webrtcEmbedSrc != null ? String(data.webrtcEmbedSrc) : '').trim();
+    const useWebRtc = Boolean(webrtcEmbed) && !!webrtcFrame;
+    if (useWebRtc) {
+      video.style.display = 'none';
+      video.removeAttribute('src');
+      try { video.load?.(); } catch {}
+      const src = webrtcEmbed;
+      overlaySub.textContent = 'Loading live viewer…';
+      webrtcFrame.onload = () => {
         overlay.style.display = 'none';
-        video.play().catch(() => {});
-      });
-      hls.on(Hls.Events.ERROR, (_, errData) => {
-        // Surface useful diagnostics to the user (and console) instead of silently failing.
-        try { console.error('[HLS ERROR]', errData); } catch {}
-        const details = errData?.details || errData?.type || 'unknown_error';
-        const respCode = errData?.response?.code;
-        const respText = errData?.response?.text;
-        const more = [
-          respCode ? `HTTP ${respCode}` : '',
-          details ? String(details) : '',
-          respText ? String(respText).slice(0, 140) : '',
-        ].filter(Boolean).join(' · ');
-        if (errData.fatal) showError('Stream failed to load.', more || 'Please refresh the page.');
-      });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      // Safari native HLS
-      video.src = hlsUrl;
-      video.addEventListener('loadedmetadata', () => {
-        overlay.style.display = 'none';
-        video.play().catch(() => {});
-      });
+        overlaySub.textContent = 'Please wait';
+      };
+      webrtcFrame.src = src;
+      webrtcFrame.style.display = 'block';
     } else {
-      showError('Your browser does not support HLS streams.', 'Try opening this link in Chrome or Safari.');
+      const hlsUrl = data.hlsUrl;
+      if (!hlsUrl) {
+        showError('Stream URL missing.', 'Restaurant has not configured HLS or WebRTC yet.');
+        return;
+      }
+      if (webrtcFrame) {
+        webrtcFrame.removeAttribute('src');
+        webrtcFrame.style.display = 'none';
+      }
+      video.style.display = 'block';
+
+      if (Hls.isSupported()) {
+        const hls = makeLowLatencyHls();
+        hls.config.xhrSetup = function (xhr) { xhr.withCredentials = true; };
+        hls.loadSource(hlsUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          overlay.style.display = 'none';
+          video.play().catch(() => {});
+        });
+        hls.on(Hls.Events.ERROR, (_, errData) => {
+          try { console.error('[HLS ERROR]', errData); } catch {}
+          const details = errData?.details || errData?.type || 'unknown_error';
+          const respCode = errData?.response?.code;
+          const respText = errData?.response?.text;
+          const more = [
+            respCode ? `HTTP ${respCode}` : '',
+            details ? String(details) : '',
+            respText ? String(respText).slice(0, 140) : '',
+          ].filter(Boolean).join(' · ');
+          if (errData.fatal) showError('Stream failed to load.', more || 'Please refresh the page.');
+        });
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = hlsUrl;
+        video.addEventListener('loadedmetadata', () => {
+          overlay.style.display = 'none';
+          video.play().catch(() => {});
+        });
+      } else {
+        showError('Your browser does not support HLS streams.', 'Try opening this link in Chrome or Safari.');
+      }
     }
 
     // Poll for stream status every 10s
     const poll = setInterval(async () => {
       try {
-        const r = await fetch(`/api/restaurant/stream/token/${encodeURIComponent(token)}`);
+        const r = await fetch(`/api/restaurant/stream/token/${encodeURIComponent(token)}`, {
+          cache: 'no-store',
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json', 'Cache-Control': 'no-cache', Pragma: 'no-cache' },
+        });
         const d = await r.json();
         if (!r.ok || !d.valid) {
           clearInterval(poll);
@@ -526,6 +633,8 @@ body{
           overlaySub.textContent = d.reason === 'disabled' ? '' : 'Your order is on its way!';
           titleEl.textContent = 'Stream ended';
           liveInfo.style.display = 'none';
+          video.style.display = 'none';
+          try { video.removeAttribute('src'); video.load?.(); } catch {}
           if (webrtcFrame) {
             webrtcFrame.removeAttribute('src');
             webrtcFrame.style.display = 'none';
@@ -538,6 +647,131 @@ body{
     showError('Could not connect to the server.', 'Please check your connection and try again.');
     if (netStatusEl) netStatusEl.textContent = 'Stream Status: Offline';
   }
+})();
+</script>
+<script>
+(function initStreamFeedback() {
+  var LS_PREFIX = 'ok_stream_feedback_v1:';
+  var KEYS = ['liveIdea', 'trust', 'orderAgain'];
+  var submitting = false;
+
+  function storageKey() {
+    var t = new URLSearchParams(location.search).get('token') || '';
+    return LS_PREFIX + (t ? encodeURIComponent(t) : 'no-token');
+  }
+  function currentToken() {
+    return String(new URLSearchParams(location.search).get('token') || '').trim();
+  }
+
+  function loadState() {
+    try {
+      return JSON.parse(localStorage.getItem(storageKey()) || '{}');
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveState(data) {
+    try {
+      localStorage.setItem(storageKey(), JSON.stringify(data));
+    } catch (e) {}
+  }
+
+  function allAnswered(state) {
+    return KEYS.every(function (k) {
+      var v = state[k];
+      return typeof v === 'number' && v >= 1 && v <= 5;
+    });
+  }
+
+  function refreshThanks(state) {
+    var el = document.getElementById('streamFeedbackThanks');
+    if (!el) return;
+    el.classList.toggle('is-visible', allAnswered(state));
+  }
+
+  function paintGroup(group, value) {
+    var buttons = group.querySelectorAll('button[data-star-value]');
+    buttons.forEach(function (b) {
+      var v = Number(b.getAttribute('data-star-value') || 0);
+      var isOn = v <= value;
+      b.classList.toggle('is-on', isOn);
+      b.classList.toggle('is-selected', v === value);
+      b.setAttribute('aria-pressed', v === value ? 'true' : 'false');
+    });
+  }
+
+  async function submitIfComplete(state) {
+    if (!allAnswered(state)) return;
+    if (submitting) return;
+    var token = currentToken();
+    if (!token) return;
+
+    // Avoid duplicate submits when nothing changed.
+    var payloadSig = [state.liveIdea, state.trust, state.orderAgain].join('|');
+    if (state._submittedSig === payloadSig) return;
+
+    submitting = true;
+    try {
+      var res = await fetch('/api/public/live/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          token: token,
+          liveIdea: state.liveIdea,
+          trust: state.trust,
+          orderAgain: state.orderAgain,
+        }),
+        keepalive: true,
+      });
+      // Best-effort: even if it fails, keep local state; user can refresh later.
+      if (res && res.ok) {
+        var next = loadState();
+        next._submittedSig = payloadSig;
+        next._submittedAt = new Date().toISOString();
+        saveState(next);
+      }
+    } catch (e) {} finally {
+      submitting = false;
+    }
+  }
+
+  document.querySelectorAll('.stream-rating-scale[data-feedback-key]').forEach(function (group) {
+    var key = group.getAttribute('data-feedback-key');
+    if (!key) return;
+    var state = loadState();
+    var current = (state[key] >= 1 && state[key] <= 5) ? state[key] : 0;
+
+    for (var n = 1; n <= 5; n++) {
+      (function (value) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = '★';
+        btn.setAttribute('data-star-value', String(value));
+        btn.setAttribute('aria-label', 'Rate ' + value + ' out of 5');
+        btn.setAttribute('aria-pressed', 'false');
+
+        btn.addEventListener('click', function () {
+          paintGroup(group, value);
+          var next = loadState();
+          next[key] = value;
+          next.at = new Date().toISOString();
+          saveState(next);
+          refreshThanks(next);
+          submitIfComplete(next);
+        });
+
+        group.appendChild(btn);
+      })(n);
+    }
+
+    // Initial paint
+    paintGroup(group, current);
+  });
+
+  var initial = loadState();
+  refreshThanks(initial);
+  submitIfComplete(initial);
 })();
 </script>
 </body>

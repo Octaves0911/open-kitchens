@@ -86,7 +86,7 @@ function connectWS() {
 }
 
 // ── Tab Switching ─────────────────────────────────────────────────────────────
-const TABS = ['orders', 'menu', 'offers', 'liveprep', 'settings'];
+const TABS = ['orders', 'menu', 'offers', 'liveprep', 'ratings', 'settings'];
 let activeTab = 'orders';
 
 function switchTab(name) {
@@ -100,7 +100,115 @@ function switchTab(name) {
   if (name === 'menu')     loadMenu();
   if (name === 'offers')   loadOffers();
   if (name === 'liveprep') loadLivePrep();
+  if (name === 'ratings')  loadRatings();
   if (name === 'settings' && typeof settingsLoadAll === 'function') settingsLoadAll();
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// RATINGS TAB
+// ════════════════════════════════════════════════════════════════════════════════
+function starsRow(val) {
+  const v = Number(val) || 0;
+  let out = '';
+  for (let i = 1; i <= 5; i++) out += `<span style="color:${i <= v ? '#E5B143' : '#D7CCC8'};">★</span>`;
+  return `<span style="font-size:14px;letter-spacing:1px;">${out}</span>`;
+}
+
+function timeShort(s) {
+  if (!s) return '—';
+  try {
+    const d = new Date(String(s).replace(' ', 'T') + 'Z');
+    if (!isNaN(d.getTime())) return d.toLocaleString();
+  } catch {}
+  return String(s);
+}
+
+async function loadRatings() {
+  const container = document.getElementById('ratingsList');
+  if (!container) return;
+  container.innerHTML = '<div class="rp-loading">Loading ratings…</div>';
+  try {
+    const data = await API('/ratings');
+    const orders = (data && data.orders) || [];
+    if (!orders.length) {
+      container.innerHTML = '<div class="rp-empty">No stream feedback yet.</div>';
+      return;
+    }
+    const avg = (arr) => {
+      const nums = (arr || []).map(n => Number(n)).filter(n => Number.isFinite(n) && n >= 1 && n <= 5);
+      if (!nums.length) return 0;
+      return nums.reduce((a, b) => a + b, 0) / nums.length;
+    };
+
+    container.innerHTML = orders.map((o, idx) => {
+      const feedback = (o.feedback || []);
+      const aLive = avg(feedback.map(f => f.liveIdea));
+      const aTrust = avg(feedback.map(f => f.trust));
+      const aAgain = avg(feedback.map(f => f.orderAgain));
+      const aOverall = avg([aLive, aTrust, aAgain].filter(Boolean));
+      const orderLabel = o.orderLabel || String(o.orderId).slice(-4);
+      const detailsId = `ratings-details-${orderLabel}-${idx}`;
+
+      const header = `
+        <button type="button"
+          class="rp-btn rp-btn-ghost"
+          style="width:100%;padding:10px 10px;border:1.5px solid var(--border);border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:space-between;gap:12px;"
+          onclick="(function(){var d=document.getElementById('${detailsId}'); if(!d) return; d.style.display = (d.style.display==='none' || !d.style.display) ? 'block' : 'none';})()">
+          <span style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0;">
+            <span style="font-size:14px;font-weight:900;color:var(--brown-dark);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              Order #${orderLabel}
+              ${o.orderStatus ? `<span style="margin-left:8px;font-size:11px;color:var(--text-light);font-weight:800;">(${o.orderStatus})</span>` : ''}
+            </span>
+            <span style="font-size:11px;color:var(--text-light);font-weight:700;">
+              ${feedback.length} response${feedback.length === 1 ? '' : 's'}${o.orderCreatedAt ? ` · Placed: ${timeShort(o.orderCreatedAt)}` : ''}
+            </span>
+          </span>
+          <span style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+            <span title="Average (overall)" style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:var(--text-mid);">
+              <span style="font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono','Courier New',monospace;">${aOverall ? aOverall.toFixed(1) : '—'}</span>
+              ${starsRow(Math.round(aOverall || 0))}
+            </span>
+            <span aria-hidden="true" style="font-size:14px;color:var(--text-light);">▾</span>
+          </span>
+        </button>
+      `;
+
+      const rows = feedback.map((f, i) => `
+        <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap;">
+            <div style="font-size:12px;color:var(--text-light);font-weight:800;">Response ${i + 1}</div>
+            <div style="font-size:11px;color:var(--text-light);">Submitted: ${timeShort(f.createdAt)}</div>
+          </div>
+          <div style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;">
+            <div style="font-size:12px;color:var(--text-mid);font-weight:900;">Live kitchen idea</div>
+            ${starsRow(f.liveIdea)}
+            <div style="font-size:12px;color:var(--text-mid);font-weight:900;">Trust gained</div>
+            ${starsRow(f.trust)}
+            <div style="font-size:12px;color:var(--text-mid);font-weight:900;">Order again</div>
+            ${starsRow(f.orderAgain)}
+          </div>
+        </div>
+      `).join('');
+
+      const details = `
+        <div id="${detailsId}" style="display:none;margin-top:12px;">
+          <div style="display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px;border:1px dashed var(--border);border-radius:12px;background:var(--cream);">
+            <div style="font-size:12px;color:var(--text-mid);font-weight:900;">Averages</div>
+            <div style="display:flex;gap:14px;flex-wrap:wrap;justify-content:flex-end;">
+              <span style="font-size:12px;color:var(--text-mid);font-weight:900;">Idea ${starsRow(Math.round(aLive || 0))}</span>
+              <span style="font-size:12px;color:var(--text-mid);font-weight:900;">Trust ${starsRow(Math.round(aTrust || 0))}</span>
+              <span style="font-size:12px;color:var(--text-mid);font-weight:900;">Again ${starsRow(Math.round(aAgain || 0))}</span>
+            </div>
+          </div>
+          ${rows}
+        </div>
+      `;
+
+      return `<div class="rp-card">${header}${details}</div>`;
+    }).join('');
+  } catch (e) {
+    container.innerHTML = `<div class="rp-empty">Failed to load ratings: ${e.message}</div>`;
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
@@ -163,7 +271,7 @@ function orderCard(o) {
   <div class="rp-order-card ${o.status === 'placed' ? 'card-new' : ''}" id="order-${o.id}">
     <div class="rp-order-head">
       <div>
-        <span class="rp-order-id">#OK${String(o.id).padStart(6,'0')}</span>
+        <span class="rp-order-id">#${formatOrderShortLabel(o.id)}</span>
         <span class="rp-status-badge ${statusClass}">${statusLabel}</span>
       </div>
       <span class="rp-order-time">${since}</span>
@@ -569,6 +677,7 @@ async function saveOffer() {
 let livePublicOrderIds   = [];
 let portalHlsInstance    = null;
 let hlsUrl               = '';
+let webrtcViewerUrl      = '';
 
 function normalizeOrderIdInput(input) {
   if (input == null) return null;
@@ -580,7 +689,19 @@ function normalizeOrderIdInput(input) {
   return Number.isNaN(n) ? null : n;
 }
 
+/** Customer + portal display: last 4 characters of numeric id (no OK / no zero-pad beyond slice). */
+function formatOrderShortLabel(id) {
+  if (id == null || Number.isNaN(Number(id))) return '—';
+  return String(Number(id)).slice(-4);
+}
+
 async function loadLivePrep() {
+  try {
+    const { value } = await API('/config/webrtc_url');
+    webrtcViewerUrl = value || '';
+    const w = document.getElementById('webrtcInput');
+    if (w) w.value = webrtcViewerUrl;
+  } catch {}
   try {
     const { value } = await API('/config/hls_url');
     hlsUrl = value || '';
@@ -636,7 +757,7 @@ function renderPublicOrderIds() {
   const box = document.getElementById('liveOrderIdChips');
   if (!box) return;
   box.innerHTML = livePublicOrderIds.map((id) => `
-    <span class="rp-order-chip">#OK${String(id).padStart(6, '0')}
+    <span class="rp-order-chip">#${formatOrderShortLabel(id)}
       <button type="button" class="rp-order-chip-x" onclick="removePublicOrderId(${id})" aria-label="Remove">×</button>
     </span>
   `).join('');
@@ -737,6 +858,59 @@ function closeHlsPreview() {
   }
 }
 
+async function saveWebrtcUrl() {
+  const input = document.getElementById('webrtcInput');
+  const url = (input?.value || '').trim();
+  try {
+    await API('/config/webrtc_url', { method: 'PUT', body: { value: url } });
+    webrtcViewerUrl = url;
+    showToast(url ? 'WebRTC URL saved — customers will use WebRTC on /stream' : 'WebRTC cleared — customers use HLS');
+  } catch (e) {
+    showToast(e.message || 'Could not save WebRTC URL (check portal access)', 'error');
+  }
+}
+
+function closeWebrtcPreviewQuiet() {
+  const frame = document.getElementById('webrtcPreviewFrame');
+  if (frame) {
+    frame.onload = null;
+    frame.removeAttribute('src');
+    try { frame.src = 'about:blank'; } catch {}
+  }
+}
+
+function closeWebrtcPreview() {
+  const modal = document.getElementById('webrtcPreviewModal');
+  closeWebrtcPreviewQuiet();
+  if (modal) {
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function openWebrtcPreview() {
+  const input = document.getElementById('webrtcInput');
+  const url = (input?.value || webrtcViewerUrl || '').trim();
+  if (!url) {
+    showToast('Paste your WebRTC / embed URL in the field, then preview or save.', 'error');
+    return;
+  }
+  const modal = document.getElementById('webrtcPreviewModal');
+  const frame = document.getElementById('webrtcPreviewFrame');
+  const status = document.getElementById('webrtcPreviewStatus');
+  if (!modal || !frame) {
+    showToast('Preview UI missing — refresh the page.', 'error');
+    return;
+  }
+  closeWebrtcPreviewQuiet();
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  if (status) status.textContent = 'Loading embed…';
+  frame.onload = () => { if (status) status.textContent = ''; };
+  frame.referrerPolicy = 'no-referrer';
+  frame.src = url;
+}
+
 async function saveHlsUrl() {
   const input = document.getElementById('hlsInput');
   const url = (input?.value || '').trim();
@@ -769,7 +943,7 @@ async function loadAcceptedOrders() {
       return `
       <div class="rp-live-order" id="live-order-${o.id}">
         <div class="rp-live-order-info">
-          <span class="rp-order-id">#OK${String(o.id).padStart(6,'0')}</span>
+          <span class="rp-order-id">#${formatOrderShortLabel(o.id)}</span>
           <span class="rp-live-items">${items}</span>
           <span class="rp-live-user">👤 ${o.user_name || 'Guest'}</span>
         </div>
@@ -849,6 +1023,23 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('webrtcSaveBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    saveWebrtcUrl();
+  });
+  document.getElementById('webrtcPreviewBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openWebrtcPreview();
+  });
+  document.getElementById('webrtcPreviewCloseBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeWebrtcPreview();
+  });
   if (secret) init();
   else showAuthModal();
 });
+
+// Inline handlers in restaurant.html (e.g. Enter key) resolve on window
+window.saveWebrtcUrl = saveWebrtcUrl;
+window.openWebrtcPreview = openWebrtcPreview;
+window.closeWebrtcPreview = closeWebrtcPreview;

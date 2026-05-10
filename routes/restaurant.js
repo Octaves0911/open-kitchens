@@ -133,6 +133,51 @@ const RESTAURANT_ID = 1;
 // ORDERS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// GET /api/restaurant/ratings — list stream feedback grouped by order (newest first)
+router.get('/ratings', requireRestaurant, (req, res) => {
+  try {
+    const rows = db.prepare(`
+      SELECT
+        sf.order_id,
+        sf.live_idea,
+        sf.trust,
+        sf.order_again,
+        sf.created_at,
+        o.status AS order_status,
+        o.created_at AS order_created_at
+      FROM stream_feedback sf
+      LEFT JOIN orders o ON o.id = sf.order_id
+      ORDER BY sf.created_at DESC
+      LIMIT 200
+    `).all();
+
+    // Group by order_id for UI
+    const byOrder = new Map();
+    rows.forEach(r => {
+      const oid = r.order_id;
+      if (!byOrder.has(oid)) {
+        byOrder.set(oid, {
+          orderId: oid,
+          orderLabel: String(oid).slice(-4),
+          orderStatus: r.order_status || null,
+          orderCreatedAt: r.order_created_at || null,
+          feedback: [],
+        });
+      }
+      byOrder.get(oid).feedback.push({
+        liveIdea: r.live_idea,
+        trust: r.trust,
+        orderAgain: r.order_again,
+        createdAt: r.created_at,
+      });
+    });
+
+    res.json({ orders: Array.from(byOrder.values()) });
+  } catch (e) {
+    res.status(500).json({ error: 'Failed to load ratings' });
+  }
+});
+
 // GET /api/restaurant/orders — list all orders for this restaurant (newest first)
 router.get('/orders', requireRestaurant, (req, res) => {
   const { status } = req.query;
@@ -578,7 +623,7 @@ router.get('/stream/cdn/:token', async (req, res) => {
  * GET /api/restaurant/stream/webrtc/:token
  * Same-origin HTML shell that embeds the configured WebRTC viewer URL.
  * Validates the stream token on every request (unlike exposing a static embed URL in JSON).
- * The underlying viewer URL is not returned from GET /stream/token/:token.
+ * Viewer URL stays server-side; GET /stream/token/:token exposes only playback mode + iframe path.
  */
 router.get('/stream/webrtc/:token', (req, res) => {
   const token = req.params.token;
@@ -602,7 +647,7 @@ router.get('/stream/webrtc/:token', (req, res) => {
 <title>Live stream</title>
 <style>html,body{margin:0;height:100%;overflow:hidden;background:#000}iframe{border:0;width:100%;height:100%;display:block}</style>
 </head><body>
-<iframe src="${src}" title="Live kitchen stream" allow="autoplay; fullscreen; picture-in-picture; encrypted-media" allowfullscreen referrerpolicy="no-referrer"></iframe>
+<iframe src="${src}" title="Live kitchen stream" allow="autoplay; fullscreen; picture-in-picture; encrypted-media; camera; microphone" allowfullscreen referrerpolicy="no-referrer"></iframe>
 </body></html>`);
 });
 
@@ -679,6 +724,10 @@ router.post('/stream/stop/:orderId', requireRestaurant, (req, res) => {
 
 // GET /api/restaurant/stream/token/:token — validate stream token (customer side)
 router.get('/stream/token/:token', (req, res) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+
   const token = req.params.token;
   const v     = liveAccess.validatePlayback(db, token);
 
@@ -700,18 +749,28 @@ router.get('/stream/token/:token', (req, res) => {
     return res.status(404).json({ error: 'Stream not found or already stopped' });
   }
 
-  const orderLabel = v.orderId != null ? v.orderId : '—';
+  const orderLabel = v.orderId != null ? String(v.orderId).slice(-4) : '—';
+  const webrtcViewer = (liveAccess.getWebrtcUrl(db) || '').trim();
+  if (webrtcViewer) {
+    return res.json({
+      valid: true,
+      orderId: v.orderId,
+      orderLabel,
+      playback: 'webrtc',
+      webrtcEmbedSrc: `/api/restaurant/stream/webrtc/${encodeURIComponent(token)}`,
+    });
+  }
   const configuredHlsUrl = (liveAccess.getHlsUrl(db) || '').trim();
   const fallbackHlsUrl = `/api/restaurant/stream/hls/${token}/index.m3u8`;
-  // If a CDN URL is configured, serve it via same-origin proxy to avoid CORS issues.
   const hlsUrl = configuredHlsUrl
     ? `/api/restaurant/stream/cdn/${encodeURIComponent(token)}`
     : fallbackHlsUrl;
   res.json({
     valid: true,
     orderId: v.orderId,
-    hlsUrl,
     orderLabel,
+    playback: 'hls',
+    hlsUrl,
   });
 });
 

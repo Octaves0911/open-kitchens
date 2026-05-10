@@ -32,6 +32,14 @@ app.use((req, res, next) => {
 app.use(compression({ level: 6 }));
 app.use(express.json());
 
+// Graceful JSON parse errors (e.g., bad JSON in request body)
+app.use((err, req, res, next) => {
+  if (err && err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ error: 'Invalid JSON body' });
+  }
+  next(err);
+});
+
 // ── Database (before API routers) ─────────────────────────────────────────────
 require('./db/database');
 
@@ -227,7 +235,7 @@ app.post('/api/check-pincode', (req, res) => {
 
 // Order placement
 app.post('/api/order', (req, res) => {
-  const orderId = 'OK' + Date.now().toString().slice(-6);
+  const orderId = Date.now().toString().slice(-4);
   log('info', 'order_placed', { orderId, items: req.body.items });
   res.json({ success: true, orderId, estimatedTime: 30 });
 });
